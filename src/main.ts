@@ -1,0 +1,45 @@
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // Enable validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+
+  const options = new DocumentBuilder()
+    .addBearerAuth()
+    .setTitle('KMA')
+    .setDescription('KMA APIs')
+    .setVersion('1.0')
+    .addGlobalParameters({
+      name: 'x-correlation-id',
+      in: 'header',
+      required: false,
+      schema: {
+        type: 'string',
+        format: 'uuid',
+        example: 'c1d77e6e-585a-4af8-a258-0a7c19a4c38a',
+      },
+      description: 'Unique identifier for tracing requests (UUID v4)',
+    })
+    .build();
+
+  const document = SwaggerModule.createDocument(app, options);
+  SwaggerModule.setup('docs', app, document);
+
+  await app.listen(process.env.PORT ?? 3001);
+}
+
+bootstrap();
