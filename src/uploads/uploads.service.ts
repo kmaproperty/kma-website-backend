@@ -15,7 +15,6 @@ export class UploadsService {
         throw new HttpException(MESSAGES.FILE_UPLOAD.NO_FILE, HttpStatus.BAD_REQUEST);
       }
 
-      // Use the existing S3Service which already handles validation and upload
       const uploadResult = await this.s3Service.uploadFile(file);
 
       return {
