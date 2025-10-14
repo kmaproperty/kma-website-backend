@@ -1,56 +1,82 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService as NestConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
-import * as dotenv from 'dotenv';
-import * as fs from 'fs';
+import { User } from '../../user/entities/user.entity';
+import { ChannelPartnerCode } from '../../user/entities/channel-partner-code.entity';
 
 @Injectable()
 export class ConfigService implements TypeOrmOptionsFactory {
-  private readonly envConfig: { [key: string]: string | undefined };
-  private readonly logger = new Logger('Config');
+  private readonly logger = new Logger(ConfigService.name);
 
-  constructor() {
-    try {
-      this.envConfig = dotenv.parse(fs.readFileSync('.env'));
-    } catch {
-      this.envConfig = Object.fromEntries(
-        Object.entries(process.env).filter(([_, v]) => v != null)
+  constructor(private readonly nestConfigService: NestConfigService) {}
+
+  createTypeOrmOptions(): TypeOrmModuleOptions {
+    const useSSL =
+      this.nestConfigService.get<string>('POSTGRES_SSL') === 'true';
+
+    // Get environment variables using NestJS ConfigService with fallback to process.env
+    const host =
+      this.nestConfigService.get<string>('POSTGRES_HOST') ||
+      process.env.POSTGRES_HOST;
+    const username =
+      this.nestConfigService.get<string>('POSTGRES_USER') ||
+      process.env.POSTGRES_USER;
+    const password =
+      this.nestConfigService.get<string>('POSTGRES_PASS') ||
+      process.env.POSTGRES_PASS;
+    const database =
+      this.nestConfigService.get<string>('POSTGRES_DB') ||
+      process.env.POSTGRES_DB;
+
+    // Validate required environment variables
+    const missingVars: string[] = [];
+    if (!host) missingVars.push('POSTGRES_HOST');
+    if (!username) missingVars.push('POSTGRES_USER');
+    if (!password) missingVars.push('POSTGRES_PASS');
+    if (!database) missingVars.push('POSTGRES_DB');
+
+    if (missingVars.length > 0) {
+      throw new Error(
+        `Missing required environment variables: ${missingVars.join(', ')}`,
       );
     }
-    process.env = Object.assign(process.env, this.envConfig);
-  }
 
-  async createTypeOrmOptions(): Promise<TypeOrmModuleOptions> {
     return {
       type: 'postgres',
-      host: this.envConfig.POSTGRES_HOST,
-      port: parseInt(this.envConfig.POSTGRES_PORT || '5432', 10),
-      username: this.envConfig.POSTGRES_USER,
-      password: this.envConfig.POSTGRES_PASS,
-      database: this.envConfig.POSTGRES_DB,
-      synchronize: false,
+      host,
+      port: parseInt(
+        this.nestConfigService.get<string>('POSTGRES_PORT') || '5432',
+        10,
+      ),
+      username,
+      password,
+      database,
+      synchronize: true,
       logging: false,
-      entities: [__dirname + '/../*/entities/*.entity{.ts,.js}'],
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      entities: [User, ChannelPartnerCode],
+      ...(useSSL && {
+        ssl: {
+          rejectUnauthorized: false,
+        },
+      }),
       // migrationsTableName: 'migration',
       // migrations: ['src/migration/*.ts'],
       // migrationsRun: false,
     };
   }
   /**
-   * Get config value by its key with promise
+   * Get config value by its key
    * @param key: string
    */
-  public async get(key: string): Promise<string | null> {
-    return this.envConfig[key] || null;
+  public get(key: string): string | null {
+    return (this.nestConfigService.get<string>(key) as string) || null;
   }
 
   /**
-   * Get config value by its key without promise
+   * Get config value by its key
    * @param key
    */
   public getValue(key: string): string | null {
-    return this.envConfig[key] || null;
+    return (this.nestConfigService.get<string>(key) as string) || null;
   }
 }

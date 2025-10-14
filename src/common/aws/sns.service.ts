@@ -27,10 +27,14 @@ export class SnsService {
    */
   private validateEnvironmentVariables(): void {
     const requiredEnvVars = ['AWS_REGION', 'AWS_ACCESS_KEY', 'AWS_SECRET_KEY'];
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    const missingVars = requiredEnvVars.filter(
+      (varName) => !process.env[varName],
+    );
 
     if (missingVars.length > 0) {
-      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+      throw new Error(
+        `Missing required environment variables: ${missingVars.join(', ')}`,
+      );
     }
   }
 
@@ -46,7 +50,9 @@ export class SnsService {
    * Validate message content - check if message is not empty and within AWS SNS limits
    */
   private validateMessage(message: string): boolean {
-    return Boolean(message && message.trim().length > 0 && message.length <= 1600);
+    return Boolean(
+      message && message.trim().length > 0 && message.length <= 1600,
+    );
   }
 
   /**
@@ -55,11 +61,15 @@ export class SnsService {
   async sendMessage(mobileNo: string, message: string): Promise<any> {
     try {
       if (!this.validatePhoneNumber(mobileNo)) {
-        throw new BadRequestException('Invalid phone number format. Must be in international format (e.g., +1234567890)');
+        throw new BadRequestException(
+          'Invalid phone number format. Must be in international format (e.g., +1234567890)',
+        );
       }
 
       if (!this.validateMessage(message)) {
-        throw new BadRequestException('Invalid message. Message must not be empty and must be within 1600 characters');
+        throw new BadRequestException(
+          'Invalid message. Message must not be empty and must be within 1600 characters',
+        );
       }
 
       // Prepare SNS parameters
@@ -71,44 +81,64 @@ export class SnsService {
       // Send message via SNS
       const result = await this.sns.publish(params).promise();
 
-      this.logger.log(`SMS sent successfully to ${mobileNo}. Message ID: ${result.MessageId}`);
+      this.logger.log(
+        `SMS sent successfully to ${mobileNo}. Message ID: ${result.MessageId}`,
+      );
 
       return {
         success: true,
         messageId: result.MessageId,
         phoneNumber: mobileNo,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      this.logger.error(`Failed to send SMS to ${mobileNo}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to send SMS to ${mobileNo}: ${error.message}`,
+        error.stack,
+      );
 
       // Handle specific AWS errors
       if (error.code === 'InvalidParameter') {
-        this.errorHandler.handle(error, 'Invalid phone number or message format      ', {
-          mobileNo,
-          message
-        });
+        this.errorHandler.handle(
+          error,
+          'Invalid phone number or message format      ',
+          {
+            mobileNo,
+            message,
+          },
+        );
       } else if (error.code === 'OptOutError') {
-        this.errorHandler.handle(error, 'Phone number has opted out of SMS messages', {
-          mobileNo,
-          message
-        });
+        this.errorHandler.handle(
+          error,
+          'Phone number has opted out of SMS messages',
+          {
+            mobileNo,
+            message,
+          },
+        );
       } else if (error.code === 'ThrottlingException') {
-        this.errorHandler.handle(error, 'SMS sending rate limit exceeded. Please try again later', {
-          mobileNo,
-          message
-        });
+        this.errorHandler.handle(
+          error,
+          'SMS sending rate limit exceeded. Please try again later',
+          {
+            mobileNo,
+            message,
+          },
+        );
       } else if (error.code === 'AuthorizationError') {
-        this.errorHandler.handle(error, 'AWS credentials are invalid or insufficient permissions', {
-          mobileNo,
-          message
-        });
+        this.errorHandler.handle(
+          error,
+          'AWS credentials are invalid or insufficient permissions',
+          {
+            mobileNo,
+            message,
+          },
+        );
       }
 
       this.errorHandler.handle(error, 'Failed to send SMS', {
         mobileNo,
-        message
+        message,
       });
     }
   }
@@ -116,16 +146,24 @@ export class SnsService {
   /**
    * Send OTP message
    */
-  async sendOTP(mobileNo: string, otp: string, expiryMinutes: number = 10): Promise<any> {
+  async sendOTP(
+    mobileNo: string,
+    otp: string,
+    expiryMinutes: number = 10,
+  ): Promise<any> {
     const message = `Your KMA verification code is ${otp}. This code will expire in ${expiryMinutes} minutes. Do not share this code with anyone.`;
-    
+
     return this.sendMessage(mobileNo, message);
   }
 
   /**
    * Send notification message
    */
-  async sendNotification(mobileNo: string, title: string, body: string): Promise<any> {
+  async sendNotification(
+    mobileNo: string,
+    title: string,
+    body: string,
+  ): Promise<any> {
     const message = `${title}: ${body}`;
 
     return this.sendMessage(mobileNo, message);

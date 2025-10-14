@@ -16,7 +16,8 @@ export const USER_MESSAGES = {
     SENT: 'OTP sent successfully',
     INVALID: 'Invalid OTP code or OTP has expired',
     RATE_LIMITED: 'Please wait before requesting another code',
-    MAX_ATTEMPTS: 'Maximum OTP attempts exceeded. Please contact support for assistance',
+    MAX_ATTEMPTS:
+      'Maximum OTP attempts exceeded. Please contact support for assistance',
     VERIFIED: 'OTP verified successfully',
     CLEANUP_COMPLETED: 'OTP cleanup completed successfully',
     INVALID_ROLE: 'Only USER and AGENT roles are allowed for registration',
@@ -24,4 +25,4 @@ export const USER_MESSAGES = {
   ERROR: {
     SOMETHING_WENT_WRONG: 'Something went wrong',
   },
-} as const; 
+} as const;

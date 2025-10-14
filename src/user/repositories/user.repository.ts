@@ -26,6 +26,20 @@ export class UserRepository {
   }
 
   /**
+   * Find user by phone number
+   */
+  async findByPhone(phone: string): Promise<User | null> {
+    return await this.userRepository.findOne({ where: { phone } });
+  }
+
+  /**
+   * Find user by email
+   */
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findOne({ where: { email } });
+  }
+
+  /**
    * Update user by ID
    */
   async update(id: string, updateData: Partial<User>): Promise<User | null> {
@@ -40,4 +54,4 @@ export class UserRepository {
     const result = await this.userRepository.delete(id);
     return (result.affected || 0) > 0;
   }
-} 
+}

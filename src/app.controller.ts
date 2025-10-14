@@ -6,8 +6,8 @@ import { LoggerService } from './logger/logger.service';
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    private readonly logger: LoggerService)
-  {}
+    private readonly logger: LoggerService,
+  ) {}
 
   @Get()
   getHealthCheck(): string {

@@ -68,7 +68,11 @@ export class ApiResponseDto {
     };
   }
 
-  static error(message: string, error?: string, statusCode?: number): ApiResponse {
+  static error(
+    message: string,
+    error?: string,
+    statusCode?: number,
+  ): ApiResponse {
     return {
       success: false,
       message,
@@ -82,7 +86,7 @@ export class ApiResponseDto {
     total: number,
     page: number,
     limit: number,
-    message: string = 'Data fetched successfully.'
+    message: string = 'Data fetched successfully.',
   ): PaginatedApiResponse<T> {
     return {
       success: true,
@@ -96,4 +100,4 @@ export class ApiResponseDto {
       },
     };
   }
-} 
+}

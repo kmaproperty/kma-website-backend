@@ -8,7 +8,13 @@ import { UploadsService } from './uploads.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import { Auth } from '../user/auth/decorators/auth.decorator';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiTags,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { ApiResponseDto } from 'src/common/dto';
 import { MESSAGES } from './constants/upload.constant';
 
@@ -28,7 +34,8 @@ export class UploadsController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'Select a file to upload (PNG, JPG, JPEG files only, max 5MB)',
+          description:
+            'Select a file to upload (PNG, JPG, JPEG files only, max 5MB)',
         },
       },
       required: ['file'],
