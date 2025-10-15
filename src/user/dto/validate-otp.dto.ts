@@ -4,26 +4,30 @@ import {
   Length,
   IsOptional,
   IsEnum,
+  Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../enum/user-role.enum';
 
 export class ValidateOtpDto {
   @ApiProperty({
-    description: 'Token received from send OTP',
-    example: 'abc123def456',
+    description: 'Phone number',
+    example: '+1234567890',
   })
   @IsString()
   @IsNotEmpty()
-  token: string;
+  @Matches(/^\+?[1-9]\d{1,14}$/, {
+    message: 'Phone number must be a valid international format',
+  })
+  phone: string;
 
   @ApiProperty({
     description: 'OTP code to validate',
-    example: '1234',
+    example: '123456',
   })
   @IsString()
   @IsNotEmpty()
-  @Length(4, 4, { message: 'OTP must be exactly 4 digits' })
+  @Length(6, 6, { message: 'OTP must be exactly 6 digits' })
   otp: string;
 
   @ApiProperty({

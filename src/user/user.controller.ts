@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, Req } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -16,6 +16,11 @@ import {
   CreateOwnerResponseDto,
   CreateChannelPartnerDto,
   CreateChannelPartnerResponseDto,
+  ResendOtpDto,
+  ResendOtpResponseDto,
+  RefreshTokenDto,
+  RefreshTokenResponseDto,
+  LogoutResponseDto,
 } from './dto';
 
 @ApiTags('User Management')
@@ -30,8 +35,8 @@ export class UserController {
     description: 'OTP sent successfully',
     type: SendOtpResponseDto,
   })
-  sendOtp(@Body() sendOtpDto: SendOtpDto): SendOtpResponseDto {
-    return this.userService.sendOtp(sendOtpDto);
+  async sendOtp(@Body() sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
+    return await this.userService.sendOtp(sendOtpDto);
   }
 
   @Post('validate-otp')
@@ -80,17 +85,69 @@ export class UserController {
     );
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
+  @Get('/profile')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get user profile' })
   @ApiResponse({
     status: 200,
     description: 'User details',
   })
-  async getUserById(@Param('id') id: string) {
-    const user = await this.userService.getUserById(id);
+  async getUserProfile(@Req() req: Request) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const user = await this.userService.getUserById(userId);
     if (!user) {
       throw new Error('User not found');
     }
     return user;
+  }
+
+  @Post('resend-otp')
+  @ApiOperation({ summary: 'Resend OTP to phone number' })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP resent successfully',
+    type: ResendOtpResponseDto,
+  })
+  async resendOtp(
+    @Body() resendOtpDto: ResendOtpDto,
+  ): Promise<ResendOtpResponseDto> {
+    return await this.userService.resendOtp(resendOtpDto);
+  }
+
+  @Post('refresh-token')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Token refreshed successfully',
+    type: RefreshTokenResponseDto,
+  })
+  async refreshToken(
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ): Promise<RefreshTokenResponseDto> {
+    return await this.userService.refreshToken(refreshTokenDto);
+  }
+
+  @Post('logout')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Logout user and clear tokens' })
+  @ApiResponse({
+    status: 200,
+    description: 'Logged out successfully',
+    type: LogoutResponseDto,
+  })
+  async logout(@Req() req: Request): Promise<LogoutResponseDto> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    return await this.userService.logout(userId);
   }
 }

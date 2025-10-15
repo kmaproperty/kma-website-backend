@@ -24,10 +24,19 @@ export class AuthMiddleware implements NestMiddleware {
         );
       }
 
-      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
+      // Try to extract token from Authorization header first
+      const token = req.headers?.authorization?.split(' ')[1];
+      if (!token) {
+        throw new UnauthorizedException('Token is required');
+      }
       // Verify JWT token
-      const decodedToken = this.jwtService.verify(token);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      const decodedToken = this.jwtService.verify(token) as {
+        sub: string;
+        phone: string;
+        role: string;
+        type: string;
+      };
 
       // Validate token type
       if (decodedToken.type !== 'access_token') {
@@ -38,6 +47,11 @@ export class AuthMiddleware implements NestMiddleware {
       const user = await this.userRepository.findById(decodedToken.sub);
       if (!user) {
         throw new UnauthorizedException('User not found');
+      }
+
+      // Check if the token matches the one stored in database
+      if (!user.token || user.token !== token) {
+        throw new UnauthorizedException('Invalid or expired token');
       }
 
       // Check if user is active

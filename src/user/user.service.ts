@@ -2,6 +2,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserRepository } from './repositories/user.repository';
+import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
 import { User } from './entities/user.entity';
 import { UserRole } from './enum/user-role.enum';
@@ -14,12 +15,18 @@ import {
   CreateOwnerResponseDto,
   CreateChannelPartnerDto,
   CreateChannelPartnerResponseDto,
+  ResendOtpDto,
+  ResendOtpResponseDto,
+  RefreshTokenDto,
+  RefreshTokenResponseDto,
+  LogoutResponseDto,
 } from './dto';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
+    private readonly otpRepository: OtpRepository,
     private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
     private readonly jwtService: JwtService,
   ) {}
@@ -27,28 +34,36 @@ export class UserService {
   /**
    * Send OTP to phone number
    */
-  sendOtp(sendOtpDto: SendOtpDto): SendOtpResponseDto {
+  async sendOtp(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
     const { phone } = sendOtpDto;
 
-    // Generate JWT token with phone number and expiration
-    const payload = {
-      phone,
-      type: 'otp_verification',
-      timestamp: Date.now(),
-    };
+    // Generate 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const token = this.jwtService.sign(payload, {
-      expiresIn: '10m', // OTP token expires in 10 minutes
+    // Set expiration time (10 minutes from now)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    // Invalidate any existing OTPs for this phone
+    await this.otpRepository.deleteByPhone(phone);
+
+    // Create new OTP record
+    await this.otpRepository.create({
+      phone,
+      otpCode,
+      expiresAt,
+      isUsed: false,
+      attempts: 0,
     });
 
     // In production, integrate with SMS service
     // For now, we'll just log the OTP
-    console.log(`OTP for ${phone}: 1234`);
+    console.log(`OTP for ${phone}: ${otpCode}`);
 
     return {
       success: true,
       message: 'OTP sent successfully',
-      token,
+      otp: otpCode,
     };
   }
 
@@ -58,44 +73,54 @@ export class UserService {
   async validateOtp(
     validateOtpDto: ValidateOtpDto,
   ): Promise<ValidateOtpResponseDto> {
-    const { token, otp, role } = validateOtpDto;
+    const { phone, otp, role } = validateOtpDto;
 
-    // Validate OTP (static OTP is 1234)
-    if (otp !== '1234') {
+    // Find the OTP record for this phone
+    const otpRecord = await this.otpRepository.findActiveByPhone(phone);
+
+    if (!otpRecord) {
+      throw new BadRequestException(
+        'No valid OTP found. Please request a new OTP.',
+      );
+    }
+
+    // Check if OTP has expired
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException(
+        'OTP has expired. Please request a new OTP.',
+      );
+    }
+
+    // Check if OTP is already used
+    if (otpRecord.isUsed) {
+      throw new BadRequestException(
+        'OTP has already been used. Please request a new OTP.',
+      );
+    }
+
+    // Check if too many attempts
+    if (otpRecord.attempts >= 3) {
+      throw new BadRequestException(
+        'Too many failed attempts. Please request a new OTP.',
+      );
+    }
+
+    // Validate OTP code
+    if (otpRecord.otpCode !== otp) {
+      await this.otpRepository.incrementAttempts(otpRecord.id);
       throw new BadRequestException('Invalid OTP');
     }
 
-    // Verify JWT token and extract phone number
-    let phone: string;
-    try {
-      const decodedToken: {
-        phone: string;
-        type: string;
-        timestamp: number;
-      } = this.jwtService.verify(token);
-
-      // Validate token type
-      if (decodedToken.type !== 'otp_verification') {
-        throw new BadRequestException('Invalid token type');
-      }
-
-      phone = decodedToken.phone;
-    } catch (error: unknown) {
-      if (error instanceof Error && error.name === 'TokenExpiredError') {
-        throw new BadRequestException(
-          'Token has expired. Please request a new OTP.',
-        );
-      } else if (error instanceof Error && error.name === 'JsonWebTokenError') {
-        throw new BadRequestException('Invalid token');
-      } else {
-        throw new BadRequestException('Token verification failed');
-      }
-    }
+    // Mark OTP as used
+    await this.otpRepository.markAsUsed(otpRecord.id);
 
     // Check if user exists
     const existingUser = await this.userRepository.findByPhone(phone);
 
     if (existingUser) {
+      if (existingUser.role !== role) {
+        throw new BadRequestException('User role mismatch');
+      }
       // User exists, update phone_verified flag and generate tokens
       await this.userRepository.update(existingUser.id, {
         phoneVerified: true,
@@ -379,6 +404,134 @@ export class UserService {
         role: updatedUser.role,
         isActive: updatedUser.isActive,
       },
+    };
+  }
+
+  /**
+   * Resend OTP to phone number
+   */
+  async resendOtp(resendOtpDto: ResendOtpDto): Promise<ResendOtpResponseDto> {
+    const { phone } = resendOtpDto;
+
+    // Generate 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Set expiration time (10 minutes from now)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    // Invalidate any existing OTPs for this phone
+    await this.otpRepository.deleteByPhone(phone);
+
+    // Create new OTP record
+    await this.otpRepository.create({
+      phone,
+      otpCode,
+      expiresAt,
+      isUsed: false,
+      attempts: 0,
+    });
+
+    // In production, integrate with SMS service
+    // For now, we'll just log the OTP
+    console.log(`OTP for ${phone}: ${otpCode}`);
+
+    return {
+      success: true,
+      message: 'OTP resent successfully',
+      otp: otpCode,
+    };
+  }
+
+  /**
+   * Refresh access token using refresh token
+   */
+  async refreshToken(
+    refreshTokenDto: RefreshTokenDto,
+  ): Promise<RefreshTokenResponseDto> {
+    const { refreshToken } = refreshTokenDto;
+
+    try {
+      // Verify refresh token
+      const decodedToken = this.jwtService.verify(refreshToken);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (decodedToken.type !== 'refresh_token') {
+        throw new BadRequestException('Invalid token type');
+      }
+
+      // Find user by ID
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const user = await this.userRepository.findById(decodedToken.sub);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      // Check if the refresh token matches the one stored in database
+      if (user.refreshToken !== refreshToken) {
+        throw new BadRequestException('Invalid refresh token');
+      }
+
+      // Generate new tokens
+      const payload = {
+        sub: user.id,
+        phone: user.phone,
+        role: user.role,
+        type: 'access_token',
+      };
+
+      const refreshPayload = {
+        sub: user.id,
+        phone: user.phone,
+        role: user.role,
+        type: 'refresh_token',
+      };
+
+      const newAccessToken = this.jwtService.sign(payload, {
+        expiresIn: '24h',
+      });
+      const newRefreshToken = this.jwtService.sign(refreshPayload, {
+        expiresIn: '7d',
+      });
+
+      // Update user with new tokens
+      await this.userRepository.update(user.id, {
+        token: newAccessToken,
+        refreshToken: newRefreshToken,
+      });
+
+      return {
+        success: true,
+        message: 'Token refreshed successfully',
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
+        throw new BadRequestException(
+          'Refresh token has expired. Please login again.',
+        );
+      } else if (error instanceof Error && error.name === 'JsonWebTokenError') {
+        throw new BadRequestException('Invalid refresh token');
+      } else {
+        throw new BadRequestException('Token refresh failed');
+      }
+    }
+  }
+
+  /**
+   * Logout user and clear tokens
+   */
+  async logout(userId: string): Promise<LogoutResponseDto> {
+    // Clear tokens from database
+    await this.userRepository.update(userId, {
+      token: null,
+      refreshToken: null,
+    });
+
+    return {
+      success: true,
+      message: 'Logged out successfully',
     };
   }
 }

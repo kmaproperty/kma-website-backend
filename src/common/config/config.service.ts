@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService as NestConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
 import { User } from '../../user/entities/user.entity';
+import { Otp } from '../../user/entities/otp.entity';
 import { ChannelPartnerCode } from '../../user/entities/channel-partner-code.entity';
 
 @Injectable()
@@ -53,7 +54,7 @@ export class ConfigService implements TypeOrmOptionsFactory {
       database,
       synchronize: true,
       logging: false,
-      entities: [User, ChannelPartnerCode],
+      entities: [User, Otp, ChannelPartnerCode],
       ...(useSSL && {
         ssl: {
           rejectUnauthorized: false,

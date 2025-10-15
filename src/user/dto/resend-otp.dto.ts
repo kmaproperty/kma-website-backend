@@ -1,9 +1,9 @@
 import { IsString, IsNotEmpty, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class SendOtpDto {
+export class ResendOtpDto {
   @ApiProperty({
-    description: 'Phone number to send OTP',
+    description: 'Phone number to resend OTP',
     example: '+1234567890',
   })
   @IsString()
@@ -14,7 +14,7 @@ export class SendOtpDto {
   phone: string;
 }
 
-export class SendOtpResponseDto {
+export class ResendOtpResponseDto {
   @ApiProperty({
     description: 'Success status',
     example: true,
@@ -23,7 +23,7 @@ export class SendOtpResponseDto {
 
   @ApiProperty({
     description: 'Response message',
-    example: 'OTP sent successfully',
+    example: 'OTP resent successfully',
   })
   message: string;
 

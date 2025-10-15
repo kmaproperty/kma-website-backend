@@ -3,8 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from './entities/user.entity';
+import { Otp } from './entities/otp.entity';
 import { ChannelPartnerCode } from './entities/channel-partner-code.entity';
 import { UserRepository } from './repositories/user.repository';
+import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
@@ -14,8 +16,12 @@ import { LoggerService } from '../logger/logger.service';
 import { ErrorHandlerService } from '../common/errorHandler/error-handler.service';
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 
-const entities = [User, ChannelPartnerCode];
-const repositories = [UserRepository, ChannelPartnerCodeRepository];
+const entities = [User, Otp, ChannelPartnerCode];
+const repositories = [
+  UserRepository,
+  OtpRepository,
+  ChannelPartnerCodeRepository,
+];
 
 @Module({
   imports: [
@@ -43,6 +49,7 @@ const repositories = [UserRepository, ChannelPartnerCodeRepository];
   exports: [
     UserService,
     UserRepository,
+    OtpRepository,
     ChannelPartnerCodeService,
     ChannelPartnerCodeRepository,
   ],
@@ -52,6 +59,14 @@ export class UserModule implements NestModule {
     // Apply token verification middleware to create-owner and create-channel-partner endpoints
     consumer
       .apply(TokenVerificationMiddleware)
-      .forRoutes('users/create-owner', 'users/create-channel-partner');
+      .forRoutes(
+        'users/create-owner',
+        'users/create-channel-partner',
+        'users/profile',
+        'users/logout',
+      );
+
+    // Apply auth middleware to profile and logout endpoints
+    consumer.apply(AuthMiddleware).forRoutes('users/profile', 'users/logout');
   }
 }
