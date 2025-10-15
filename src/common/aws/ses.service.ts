@@ -1,4 +1,8 @@
-import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
+import {
+  SESClient,
+  SendEmailCommand,
+  SendEmailCommandInput,
+} from '@aws-sdk/client-ses';
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { LoggerService } from 'src/logger/logger.service';
 
@@ -6,9 +10,7 @@ import { LoggerService } from 'src/logger/logger.service';
 export class SesService {
   private client: SESClient;
 
-  constructor(
-    private readonly logger: LoggerService
-  ) {
+  constructor(private readonly logger: LoggerService) {
     this.validateEnvironmentVariables();
 
     this.client = new SESClient({
@@ -24,11 +26,20 @@ export class SesService {
    * Validate required environment variables
    */
   private validateEnvironmentVariables(): void {
-    const requiredEnvVars = ['AWS_REGION', 'AWS_ACCESS_KEY', 'AWS_SECRET_KEY', 'FROM_MAIL'];
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    const requiredEnvVars = [
+      'AWS_REGION',
+      'AWS_ACCESS_KEY',
+      'AWS_SECRET_KEY',
+      'FROM_MAIL',
+    ];
+    const missingVars = requiredEnvVars.filter(
+      (varName) => !process.env[varName],
+    );
 
     if (missingVars.length > 0) {
-      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+      throw new Error(
+        `Missing required environment variables: ${missingVars.join(', ')}`,
+      );
     }
   }
 
@@ -44,14 +55,18 @@ export class SesService {
    * Validate email template content
    */
   private validateEmailTemplate(template: string): boolean {
-    return Boolean(template && template.trim().length > 0 && template.length <= 100000);
+    return Boolean(
+      template && template.trim().length > 0 && template.length <= 100000,
+    );
   }
 
   /**
    * Validate subject line
    */
   private validateSubject(subject: string): boolean {
-    return Boolean(subject && subject.trim().length > 0 && subject.length <= 200);
+    return Boolean(
+      subject && subject.trim().length > 0 && subject.length <= 200,
+    );
   }
 
   /**
@@ -66,21 +81,31 @@ export class SesService {
     try {
       // Validate inputs
       if (!this.validateEmailTemplate(emailTemplate)) {
-        throw new BadRequestException('Invalid email template. Template must not be empty and must be within 100KB');
+        throw new BadRequestException(
+          'Invalid email template. Template must not be empty and must be within 100KB',
+        );
       }
 
       if (!destination || destination.length === 0) {
-        throw new BadRequestException('At least one destination email address is required');
+        throw new BadRequestException(
+          'At least one destination email address is required',
+        );
       }
 
       // Validate all destination emails
-      const invalidEmails = destination.filter(email => !this.validateEmail(email));
+      const invalidEmails = destination.filter(
+        (email) => !this.validateEmail(email),
+      );
       if (invalidEmails.length > 0) {
-        throw new BadRequestException(`Invalid email addresses: ${invalidEmails.join(', ')}`);
+        throw new BadRequestException(
+          `Invalid email addresses: ${invalidEmails.join(', ')}`,
+        );
       }
 
       if (subject && !this.validateSubject(subject)) {
-        throw new BadRequestException('Invalid subject. Subject must not be empty and must be within 200 characters');
+        throw new BadRequestException(
+          'Invalid subject. Subject must not be empty and must be within 200 characters',
+        );
       }
 
       const senderEmail = source || process.env.FROM_MAIL;
@@ -108,25 +133,30 @@ export class SesService {
         Source: `KMA <${senderEmail}>`,
       };
 
-      this.logger.log(`Sending email to ${destination.join(', ')} with subject: ${subject || 'Message from KMA'}`);
+      this.logger.log(
+        `Sending email to ${destination.join(', ')} with subject: ${subject || 'Message from KMA'}`,
+      );
 
       // Send email via SES
       const command = new SendEmailCommand(params);
       const response = await this.client.send(command);
 
-      this.logger.log(`Email sent successfully to ${destination.join(', ')}. Message ID: ${response.MessageId}`);
+      this.logger.log(
+        `Email sent successfully to ${destination.join(', ')}. Message ID: ${response.MessageId}`,
+      );
 
       return {
         success: true,
         messageId: response.MessageId,
         recipients: destination,
         subject: subject || 'Message from KMA',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      this.logger.error(`Failed to send email to ${destination?.join(', ') || 'unknown'}: ${error.message}`, error.stack);
-
+      this.logger.error(
+        `Failed to send email to ${destination?.join(', ') || 'unknown'}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 

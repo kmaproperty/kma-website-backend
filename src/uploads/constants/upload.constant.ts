@@ -14,4 +14,4 @@ export const MESSAGES = {
     S3_DOWNLOAD_FAILED: 'Failed to download file from S3',
     UNEXPECTED_ERROR: 'An unexpected error occurred while downloading the file',
   },
-} as const; 
+} as const;

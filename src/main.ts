@@ -19,9 +19,21 @@ async function bootstrap() {
   );
 
   const options = new DocumentBuilder()
-    .addBearerAuth()
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'access-token',
+    )
     .setTitle('KMA')
-    .setDescription('KMA APIs')
+    .setDescription(
+      'KMA APIs - Authentication via JWT tokens from OTP validation',
+    )
     .setVersion('1.0')
     .addGlobalParameters({
       name: 'x-correlation-id',

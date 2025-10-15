@@ -7,15 +7,9 @@ import { User } from '../user/entities/user.entity';
 import { S3Service } from '../common/aws/s3.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User]),
-    UserModule,
-  ],
+  imports: [TypeOrmModule.forFeature([User]), UserModule],
   controllers: [UploadsController],
-  providers: [
-    UploadsService,
-    S3Service,
-  ],
+  providers: [UploadsService, S3Service],
   exports: [UploadsService],
 })
 export class UploadsModule {}

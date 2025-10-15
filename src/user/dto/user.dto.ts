@@ -5,7 +5,7 @@ export class EmailDto {
   @ApiProperty({
     description: 'Email address',
     example: 'user@example.com',
-    type: 'string'
+    type: 'string',
   })
   @IsString()
   @IsEmail()

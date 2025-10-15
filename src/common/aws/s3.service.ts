@@ -1,6 +1,16 @@
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as crypto from 'crypto';
 import * as path from 'path';
@@ -18,11 +28,15 @@ export class S3Service {
   private cloudFrontDomain?: string;
 
   constructor(private configService: ConfigService) {
-
     this.validateEnvironmentVariables();
-    this.bucketName = this.configService.get<string>('AWS_BUCKET', "project-dev-files");
+    this.bucketName = this.configService.get<string>(
+      'AWS_BUCKET',
+      'project-dev-files',
+    );
     this.region = this.configService.get<string>('AWS_REGION', 'us-east-1');
-    this.cloudFrontDomain = this.configService.get<string>('AWS_BUCKET_CLOUDFRONT_URL');
+    this.cloudFrontDomain = this.configService.get<string>(
+      'AWS_BUCKET_CLOUDFRONT_URL',
+    );
 
     if (!this.bucketName) {
       throw new Error('AWS_BUCKET is required');
@@ -31,28 +45,32 @@ export class S3Service {
     this.s3Client = new S3Client({
       region: this.region,
       credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY', ""),
-        secretAccessKey: this.configService.get<string>('AWS_SECRET_KEY', ""),
+        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY', ''),
+        secretAccessKey: this.configService.get<string>('AWS_SECRET_KEY', ''),
       },
     });
   }
 
-    /**
+  /**
    * Validate required environment variables
    */
   private validateEnvironmentVariables(): void {
     const requiredEnvVars = ['AWS_REGION', 'AWS_ACCESS_KEY', 'AWS_SECRET_KEY'];
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    const missingVars = requiredEnvVars.filter(
+      (varName) => !process.env[varName],
+    );
 
     if (missingVars.length > 0) {
-      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+      throw new Error(
+        `Missing required environment variables: ${missingVars.join(', ')}`,
+      );
     }
   }
 
   async uploadFile(
     file: Express.Multer.File,
     folder: string = 'uploads',
-    userId?: string
+    userId?: string,
   ): Promise<UploadResult> {
     try {
       // Validate file
@@ -63,9 +81,9 @@ export class S3Service {
       const timestamp = Date.now();
       const randomString = crypto.randomBytes(8).toString('hex');
       const filename = `${timestamp}-${randomString}${fileExtension}`;
-      
+
       // Create S3 key with folder structure
-      const key = userId 
+      const key = userId
         ? `${folder}/${userId}/${filename}`
         : `${folder}/${filename}`;
 
@@ -94,7 +112,9 @@ export class S3Service {
       };
     } catch (error) {
       console.error('S3 upload error:', error);
-      throw new InternalServerErrorException(`Failed to upload file: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to upload file: ${error.message}`,
+      );
     }
   }
 
@@ -127,7 +147,10 @@ export class S3Service {
     }
   }
 
-  async generatePresignedUrl(key: string, expiresIn: number = 7200): Promise<string> {
+  async generatePresignedUrl(
+    key: string,
+    expiresIn: number = 7200,
+  ): Promise<string> {
     try {
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
@@ -136,7 +159,9 @@ export class S3Service {
 
       return await getSignedUrl(this.s3Client, command, { expiresIn });
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to generate presigned URL: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to generate presigned URL: ${error.message}`,
+      );
     }
   }
 
@@ -144,28 +169,30 @@ export class S3Service {
     // Check file size (20MB limit)
     const maxSize = 20 * 1024 * 1024; // 20MB
     if (file.size > maxSize) {
-      throw new BadRequestException('File size too large. Maximum size is 20MB');
+      throw new BadRequestException(
+        'File size too large. Maximum size is 20MB',
+      );
     }
 
     // Check file type for images
     const allowedMimeTypes = [
       'image/jpeg',
-      'image/jpg', 
+      'image/jpg',
       'image/png',
       'image/gif',
-      'image/webp'
+      'image/webp',
     ];
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed'
+        'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed',
       );
     }
 
     // Check file extension
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const fileExtension = path.extname(file.originalname).toLowerCase();
-    
+
     if (!allowedExtensions.includes(fileExtension)) {
       throw new BadRequestException('Invalid file extension');
     }
@@ -175,7 +202,7 @@ export class S3Service {
     if (this.cloudFrontDomain) {
       return `${this.cloudFrontDomain}/${key}`;
     }
-    
+
     return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
   }
 
@@ -187,9 +214,11 @@ export class S3Service {
       }
 
       // For direct S3 URLs
-      const s3UrlPattern = new RegExp(`https://${this.bucketName}\\.s3\\.${this.region}\\.amazonaws\\.com/(.+)`);
+      const s3UrlPattern = new RegExp(
+        `https://${this.bucketName}\\.s3\\.${this.region}\\.amazonaws\\.com/(.+)`,
+      );
       const match = url.match(s3UrlPattern);
-      
+
       return match ? match[1] : null;
     } catch (error) {
       return null;
