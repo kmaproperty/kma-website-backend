@@ -37,8 +37,8 @@ export class UserService {
   async sendOtp(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
     const { phone } = sendOtpDto;
 
-    // Generate 6-digit OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 4-digit OTP
+    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     // Set expiration time (10 minutes from now)
     const expiresAt = new Date();
@@ -413,8 +413,8 @@ export class UserService {
   async resendOtp(resendOtpDto: ResendOtpDto): Promise<ResendOtpResponseDto> {
     const { phone } = resendOtpDto;
 
-    // Generate 6-digit OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 4-digit OTP
+    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     // Set expiration time (10 minutes from now)
     const expiresAt = new Date();

@@ -23,11 +23,11 @@ export class ValidateOtpDto {
 
   @ApiProperty({
     description: 'OTP code to validate',
-    example: '123456',
+    example: '1234',
   })
   @IsString()
   @IsNotEmpty()
-  @Length(6, 6, { message: 'OTP must be exactly 6 digits' })
+  @Length(4, 4, { message: 'OTP must be exactly 4 digits' })
   otp: string;
 
   @ApiProperty({

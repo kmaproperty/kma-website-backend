@@ -29,7 +29,7 @@ export class ResendOtpResponseDto {
 
   @ApiProperty({
     description: 'OTP code',
-    example: '123456',
+    example: '1234',
   })
   otp: string;
 }
