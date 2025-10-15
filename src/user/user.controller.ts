@@ -1,12 +1,8 @@
 import { Controller, Post, Body, Get, Req } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UserService } from './user.service';
+import { ApiResponseDto, ApiResponse as ApiResponseType } from '../common/dto';
 import {
   SendOtpDto,
   SendOtpResponseDto,
@@ -149,5 +145,13 @@ export class UserController {
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return await this.userService.logout(userId);
+  }
+
+  @Get('cities')
+  @ApiOperation({ summary: 'Get list of supported cities' })
+  @ApiOkResponse({ description: 'Cities list' })
+  getCities(): ApiResponseType<string[]> {
+    const cities = this.userService.getCities();
+    return ApiResponseDto.success(cities, 'Cities fetched successfully');
   }
 }
