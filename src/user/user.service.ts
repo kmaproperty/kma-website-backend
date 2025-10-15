@@ -324,9 +324,9 @@ export class UserService {
       email,
       phone,
       channelPartnerCode,
-      experience,
-      state,
-      city,
+      firmName,
+      businessSince,
+      cities,
       aboutYourSelf,
       intent,
     } = createChannelPartnerDto;
@@ -381,9 +381,9 @@ export class UserService {
       email: email || null,
       role: UserRole.CHANNEL_PARTNER,
       channelPartnerCode,
-      experience,
-      state,
-      city,
+      firmName: firmName || null,
+      businessSince: businessSince || null,
+      cities: cities || null,
       aboutYourSelf: aboutYourSelf || null,
       intent: intent || null,
     });
@@ -441,6 +441,13 @@ export class UserService {
       message: 'OTP resent successfully',
       otp: otpCode,
     };
+  }
+
+  /**
+   * Get list of supported cities
+   */
+  getCities(): string[] {
+    return ['Delhi', 'Noida', 'Gurugram'];
   }
 
   /**

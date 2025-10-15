@@ -4,8 +4,8 @@ import {
   IsEmail,
   Matches,
   IsOptional,
-  IsNumber,
   IsEnum,
+  IsDateString,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserIntent } from '../enum/user-intent.enum';
@@ -48,28 +48,28 @@ export class CreateChannelPartnerDto {
   channelPartnerCode: string;
 
   @ApiProperty({
-    description: 'Years of experience',
-    example: 5,
-  })
-  @IsNumber()
-  @IsNotEmpty()
-  experience: number;
-
-  @ApiProperty({
-    description: 'State',
-    example: 'California',
+    description: 'Firm name',
+    example: 'Acme Realty',
   })
   @IsString()
   @IsNotEmpty()
-  state: string;
+  firmName: string;
 
   @ApiProperty({
-    description: 'City',
-    example: 'Los Angeles',
+    description: 'Business operating since (date in ISO format YYYY-MM-DD)',
+    example: '2018-06-15',
+  })
+  @IsDateString()
+  @IsNotEmpty()
+  businessSince: string;
+
+  @ApiProperty({
+    description: 'Cities covered (comma separated)',
+    example: 'Delhi, Noida, Gurugram',
   })
   @IsString()
   @IsNotEmpty()
-  city: string;
+  cities: string;
 
   @ApiProperty({
     description: 'About yourself (optional)',

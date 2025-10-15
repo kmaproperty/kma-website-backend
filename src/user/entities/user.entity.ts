@@ -83,27 +83,27 @@ export class User extends BaseEntity {
   channelPartnerCode: string | null;
 
   @Column({
-    name: 'experience',
-    type: 'int',
+    name: 'firm_name',
+    type: 'varchar',
+    length: 255,
     nullable: true,
   })
-  experience: number | null;
+  firmName: string | null;
 
   @Column({
-    name: 'state',
+    name: 'cities',
     type: 'varchar',
-    length: 100,
+    length: 500,
     nullable: true,
   })
-  state: string | null;
+  cities: string | null;
 
   @Column({
-    name: 'city',
-    type: 'varchar',
-    length: 100,
+    name: 'business_since',
+    type: 'date',
     nullable: true,
   })
-  city: string | null;
+  businessSince: string | null;
 
   @Column({
     name: 'about_yourself',
