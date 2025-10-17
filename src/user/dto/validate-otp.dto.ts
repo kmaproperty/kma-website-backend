@@ -6,7 +6,7 @@ import {
   IsEnum,
   Matches,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '../enum/user-role.enum';
 
 export class ValidateOtpDto {
@@ -30,7 +30,7 @@ export class ValidateOtpDto {
   @Length(4, 4, { message: 'OTP must be exactly 4 digits' })
   otp: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'User role for account creation',
     example: 'OWNER',
     enum: UserRole,

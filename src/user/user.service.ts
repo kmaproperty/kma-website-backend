@@ -118,9 +118,9 @@ export class UserService {
     const existingUser = await this.userRepository.findByPhone(phone);
 
     if (existingUser) {
-      if (existingUser.role !== role) {
-        throw new BadRequestException('User role mismatch');
-      }
+      // if (existingUser.role !== role) {
+      //   throw new BadRequestException('User role mismatch');
+      // }
       // User exists, update phone_verified flag and generate tokens
       await this.userRepository.update(existingUser.id, {
         phoneVerified: true,
