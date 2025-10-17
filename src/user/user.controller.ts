@@ -61,7 +61,7 @@ export class UserController {
     @Body() createOwnerDto: CreateOwnerDto,
     @Req() req: Request,
   ): Promise<CreateOwnerResponseDto> {
-    return await this.userService.createOwner(createOwnerDto, req.tokenData!);
+    return await this.userService.createOwner(createOwnerDto, (req as any).tokenData!);
   }
 
   @Post('create-channel-partner')
@@ -77,7 +77,7 @@ export class UserController {
   ): Promise<CreateChannelPartnerResponseDto> {
     return await this.userService.createChannelPartner(
       createChannelPartnerDto,
-      req.tokenData!,
+      (req as any).tokenData!,
     );
   }
 
