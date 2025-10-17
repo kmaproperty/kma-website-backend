@@ -55,6 +55,7 @@ export class ConfigService implements TypeOrmOptionsFactory {
       synchronize: true,
       logging: false,
       entities: [User, Otp, ChannelPartnerCode],
+      autoLoadEntities: true,
       ...(useSSL && {
         ssl: {
           rejectUnauthorized: false,
