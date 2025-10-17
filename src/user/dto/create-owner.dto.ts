@@ -28,13 +28,12 @@ export class CreateOwnerDto {
 
   @ApiProperty({
     description: 'Owner phone number',
-    example: '+1234567890',
+    example: '9876543210',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(/^\+[1-9]\d{1,14}$/, {
-    message:
-      'Phone number must be a valid international format (e.g., +1234567890)',
+  @Matches(/^[1-9]\d{9}$/, {
+    message: 'Phone number must be a valid 10-digit number',
   })
   phone: string;
 
@@ -47,6 +46,15 @@ export class CreateOwnerDto {
   @IsEnum(UserIntent, { message: 'Intent must be either SELL or RENT' })
   @IsOptional()
   intent?: UserIntent;
+
+  @ApiProperty({
+    description: 'City where the owner operates',
+    example: 'Mumbai',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  city?: string;
 }
 
 export class CreateOwnerResponseDto {
@@ -77,6 +85,7 @@ export class CreateOwnerResponseDto {
       phone: '+1234567890',
       role: 'OWNER',
       isActive: true,
+      city: 'Mumbai',
     },
   })
   user: {
@@ -86,5 +95,6 @@ export class CreateOwnerResponseDto {
     phone: string;
     role: string;
     isActive: boolean;
+    city?: string;
   };
 }

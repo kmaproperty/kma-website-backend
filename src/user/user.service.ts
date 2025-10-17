@@ -248,7 +248,7 @@ export class UserService {
     createOwnerDto: CreateOwnerDto,
     tokenData: { sub: string; phone: string; role: string; type: string },
   ): Promise<CreateOwnerResponseDto> {
-    const { name, email, phone, intent } = createOwnerDto;
+    const { name, email, phone, intent, city } = createOwnerDto;
 
     // Verify phone number matches token
     if (tokenData.phone !== phone) {
@@ -291,6 +291,7 @@ export class UserService {
       email: email || null,
       role: UserRole.OWNER,
       intent: intent || null,
+      cities: city || null,
     });
 
     if (!updatedUser) {
@@ -308,6 +309,7 @@ export class UserService {
         phone: updatedUser.phone,
         role: updatedUser.role,
         isActive: updatedUser.isActive,
+        city: updatedUser.cities || undefined,
       },
     };
   }

@@ -12,12 +12,12 @@ import { UserRole } from '../enum/user-role.enum';
 export class ValidateOtpDto {
   @ApiProperty({
     description: 'Phone number',
-    example: '+1234567890',
+    example: '9876543210',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(/^\+?[1-9]\d{1,14}$/, {
-    message: 'Phone number must be a valid international format',
+  @Matches(/^[1-9]\d{9}$/, {
+    message: 'Phone number must be a valid 10-digit number',
   })
   phone: string;
 
