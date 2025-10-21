@@ -74,9 +74,9 @@ export class PropertyModule implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      this.logger.log('Seeding property master data...');
-      await this.seederService.seedAll();
-      this.logger.log('Property master data seeded successfully');
+     // this.logger.log('Seeding property master data...');
+     // await this.seederService.seedAll();
+     // this.logger.log('Property master data seeded successfully');
     } catch (error) {
       this.logger.error('Failed to seed property master data', error);
     }
