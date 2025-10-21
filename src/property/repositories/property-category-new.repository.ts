@@ -12,20 +12,19 @@ export class PropertyCategoryNewRepository {
 
   async findAll(): Promise<MasterPropertyCategoryNew[]> {
     return await this.propertyCategoryRepository.find({
-      where: { isActive: true },
-      order: { sortOrder: 'ASC', name: 'ASC' },
+      order: { name: 'ASC' },
     });
   }
 
   async findById(id: string): Promise<MasterPropertyCategoryNew | null> {
     return await this.propertyCategoryRepository.findOne({
-      where: { id, isActive: true },
+      where: { id },
     });
   }
 
   async findByCode(code: string): Promise<MasterPropertyCategoryNew | null> {
     return await this.propertyCategoryRepository.findOne({
-      where: { code, isActive: true },
+      where: { code },
     });
   }
 
@@ -40,7 +39,7 @@ export class PropertyCategoryNewRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const result = await this.propertyCategoryRepository.update(id, { isActive: false });
+    const result = await this.propertyCategoryRepository.softDelete(id);
     return (result.affected ?? 0) > 0;
   }
 }

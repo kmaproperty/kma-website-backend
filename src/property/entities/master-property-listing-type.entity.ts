@@ -1,8 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { BaseEntity } from '../../common/database/base.entity';
 
-@Entity('property_categories')
-export class MasterPropertyCategoryNew extends BaseEntity {
+@Entity('property_listing_types')
+export class MasterPropertyListingType extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

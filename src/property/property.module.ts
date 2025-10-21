@@ -1,27 +1,84 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PropertyController } from './property.controller';
 import { PropertyService } from './property.service';
-import { PropertyTypeRepository } from './repositories/property-type.repository';
+import { PropertyListingTypeRepository } from './repositories/property-listing-type.repository';
 import { PropertyCategoryNewRepository } from './repositories/property-category-new.repository';
-import { MasterPropertyType } from './entities/master-property-type.entity';
+import { PropertyTypeRepository } from './repositories/property-type.repository';
+import { BhkTypeRepository } from './repositories/bhk-type.repository';
+import { BuiltUpAreaRepository } from './repositories/built-up-area.repository';
+import { CityRepository } from './repositories/city.repository';
+import { LocalityRepository } from './repositories/locality.repository';
+import { SocietyRepository } from './repositories/society.repository';
+import { MasterPropertyListingType } from './entities/master-property-listing-type.entity';
 import { MasterPropertyCategoryNew } from './entities/master-property-category-new.entity';
+import { MasterCity } from './entities/master-city.entity';
+import { MasterLocality } from './entities/master-locality.entity';
+import { MasterSociety } from './entities/master-society.entity';
+import { MasterPropertyType } from './entities/master-property-type.entity';
+import { MasterBhkType } from './entities/master-bhk-type.entity';
+import { MasterBuiltUpArea } from './entities/master-built-up-area.entity';
+import { UnitConfiguration } from './entities/unit-configuration.entity';
+import { Property } from './entities/property.entity';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
+import { GooglePlacesService } from './services/google-places.service';
+import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      MasterPropertyType,
+      MasterPropertyListingType,
       MasterPropertyCategoryNew,
+      MasterCity,
+      MasterLocality,
+      MasterSociety,
+      MasterPropertyType,
+      MasterBhkType,
+      MasterBuiltUpArea,
+      UnitConfiguration,
+      Property,
     ]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret:
+          configService.get<string>('JWT_SECRET') || 'fallback-secret-key',
+        signOptions: { expiresIn: '24h' },
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [PropertyController],
   providers: [
     PropertyService,
-    PropertyTypeRepository,
+    PropertyListingTypeRepository,
     PropertyCategoryNewRepository,
+    PropertyTypeRepository,
+    BhkTypeRepository,
+    BuiltUpAreaRepository,
+    CityRepository,
+    LocalityRepository,
+    SocietyRepository,
     MasterDataSeederService,
+    GooglePlacesService,
+    JwtAuthGuard,
   ],
   exports: [PropertyService, MasterDataSeederService],
 })
-export class PropertyModule {}
+export class PropertyModule implements OnModuleInit {
+  private readonly logger = new Logger(PropertyModule.name);
+
+  constructor(private readonly seederService: MasterDataSeederService) {}
+
+  async onModuleInit() {
+    try {
+      this.logger.log('Seeding property master data...');
+      await this.seederService.seedAll();
+      this.logger.log('Property master data seeded successfully');
+    } catch (error) {
+      this.logger.error('Failed to seed property master data', error);
+    }
+  }
+}

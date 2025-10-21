@@ -12,35 +12,29 @@ export class PropertyTypeRepository {
 
   async findAll(): Promise<MasterPropertyType[]> {
     return await this.propertyTypeRepository.find({
-      where: { isActive: true },
-      order: { sortOrder: 'ASC', name: 'ASC' },
+      order: { name: 'ASC' },
     });
   }
 
   async findById(id: string): Promise<MasterPropertyType | null> {
     return await this.propertyTypeRepository.findOne({
-      where: { id, isActive: true },
+      where: { id },
     });
   }
 
   async findByCode(code: string): Promise<MasterPropertyType | null> {
     return await this.propertyTypeRepository.findOne({
-      where: { code, isActive: true },
+      where: { code },
     });
   }
 
-  async create(propertyTypeData: Partial<MasterPropertyType>): Promise<MasterPropertyType> {
-    const propertyType = this.propertyTypeRepository.create(propertyTypeData);
-    return await this.propertyTypeRepository.save(propertyType);
-  }
-
-  async update(id: string, updateData: Partial<MasterPropertyType>): Promise<MasterPropertyType | null> {
-    await this.propertyTypeRepository.update(id, updateData);
-    return await this.findById(id);
-  }
-
-  async delete(id: string): Promise<boolean> {
-    const result = await this.propertyTypeRepository.update(id, { isActive: false });
-    return (result.affected ?? 0) > 0;
+  async findByListingTypeAndCategory(
+    listingTypeId: string,
+    categoryId: string,
+  ): Promise<MasterPropertyType[]> {
+    return await this.propertyTypeRepository.find({
+      where: { listingTypeId, categoryId },
+      order: { name: 'ASC' },
+    });
   }
 }

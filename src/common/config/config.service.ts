@@ -4,6 +4,16 @@ import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Otp } from '../../user/entities/otp.entity';
 import { ChannelPartnerCode } from '../../user/entities/channel-partner-code.entity';
+import { MasterPropertyListingType } from '../../property/entities/master-property-listing-type.entity';
+import { MasterPropertyCategoryNew } from '../../property/entities/master-property-category-new.entity';
+import { MasterCity } from '../../property/entities/master-city.entity';
+import { MasterLocality } from '../../property/entities/master-locality.entity';
+import { MasterSociety } from '../../property/entities/master-society.entity';
+import { MasterPropertyType } from '../../property/entities/master-property-type.entity';
+import { MasterBhkType } from '../../property/entities/master-bhk-type.entity';
+import { MasterBuiltUpArea } from '../../property/entities/master-built-up-area.entity';
+import { UnitConfiguration } from '../../property/entities/unit-configuration.entity';
+import { Property } from '../../property/entities/property.entity';
 
 @Injectable()
 export class ConfigService implements TypeOrmOptionsFactory {
@@ -54,7 +64,21 @@ export class ConfigService implements TypeOrmOptionsFactory {
       database,
       synchronize: true,
       logging: false,
-      entities: [User, Otp, ChannelPartnerCode],
+      entities: [
+        User, 
+        Otp, 
+        ChannelPartnerCode, 
+        MasterPropertyListingType, 
+        MasterPropertyCategoryNew,
+        MasterCity,
+        MasterLocality,
+        MasterSociety,
+        MasterPropertyType,
+        MasterBhkType,
+        MasterBuiltUpArea,
+        UnitConfiguration,
+        Property
+      ],
       ...(useSSL && {
         ssl: {
           rejectUnauthorized: false,
@@ -79,5 +103,12 @@ export class ConfigService implements TypeOrmOptionsFactory {
    */
   public getValue(key: string): string | null {
     return (this.nestConfigService.get<string>(key) as string) || null;
+  }
+
+  /**
+   * Get Google Maps API key
+   */
+  public getGoogleMapsApiKey(): string {
+    return this.nestConfigService.get<string>('GOOGLE_MAPS_API_KEY') || '';
   }
 }
