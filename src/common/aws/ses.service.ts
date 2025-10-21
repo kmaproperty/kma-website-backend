@@ -3,7 +3,7 @@ import {
   SendEmailCommand,
   SendEmailCommandInput,
 } from '@aws-sdk/client-ses';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { LoggerService } from 'src/logger/logger.service';
 
 @Injectable()
@@ -37,8 +37,8 @@ export class SesService {
     );
 
     if (missingVars.length > 0) {
-      throw new Error(
-        `Missing required environment variables: ${missingVars.join(', ')}`,
+      throw new InternalServerErrorException(
+        `Missing required AWS SES environment variables: ${missingVars.join(', ')}`,
       );
     }
   }

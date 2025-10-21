@@ -1,11 +1,13 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { DataSource } from 'typeorm';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
 import { User } from './entities/user.entity';
 import { UserRole } from './enum/user-role.enum';
+import { JwtPayload, RefreshTokenPayload } from './types/jwt-payload.interface';
+import { USER_MESSAGES } from './constants/user.messages';
 import {
   SendOtpDto,
   SendOtpResponseDto,
@@ -24,12 +26,84 @@ import {
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
+  private readonly ACCESS_TOKEN_EXPIRY = '24h';
+  private readonly REFRESH_TOKEN_EXPIRY = '7d';
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly otpRepository: OtpRepository,
     private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
     private readonly jwtService: JwtService,
+    private readonly dataSource: DataSource,
   ) {}
+
+  /**
+   * Create JWT payload for a user
+   */
+  private createTokenPayload(
+    userId: string,
+    phone: string,
+    role: UserRole,
+    type: 'access_token' | 'refresh_token',
+  ): JwtPayload {
+    return {
+      sub: userId,
+      phone,
+      role,
+      type,
+    };
+  }
+
+  /**
+   * Generate access token for a user
+   */
+  private generateAccessToken(user: User): string {
+    const payload = this.createTokenPayload(
+      user.id,
+      user.phone,
+      user.role,
+      'access_token',
+    );
+    return this.jwtService.sign(payload, { expiresIn: this.ACCESS_TOKEN_EXPIRY });
+  }
+
+  /**
+   * Generate refresh token for a user
+   */
+  private generateRefreshToken(user: User): string {
+    const payload = this.createTokenPayload(
+      user.id,
+      user.phone,
+      user.role,
+      'refresh_token',
+    );
+    return this.jwtService.sign(payload, { expiresIn: this.REFRESH_TOKEN_EXPIRY });
+  }
+
+  /**
+   * Generate both access and refresh tokens for a user
+   */
+  private generateTokens(user: User): { accessToken: string; refreshToken: string } {
+    return {
+      accessToken: this.generateAccessToken(user),
+      refreshToken: this.generateRefreshToken(user),
+    };
+  }
+
+  /**
+   * Update user with new tokens in database
+   */
+  private async updateUserTokens(
+    userId: string,
+    accessToken: string,
+    refreshToken: string,
+  ): Promise<void> {
+    await this.userRepository.update(userId, {
+      token: accessToken,
+      refreshToken: refreshToken,
+    });
+  }
 
   /**
    * Send OTP to phone number
@@ -57,18 +131,23 @@ export class UserService {
     });
 
     // In production, integrate with SMS service
-    // For now, we'll just log the OTP
-    console.log(`OTP for ${phone}: ${otpCode}`);
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.debug(`OTP generated for ${phone}: ${otpCode}`);
+    }
 
-    return {
+    // Only return OTP in development/staging environments
+    const response: SendOtpResponseDto = {
       success: true,
-      message: 'OTP sent successfully',
-      otp: otpCode,
+      message: USER_MESSAGES.OTP.SENT,
+      otp: process.env.NODE_ENV === 'production' ? undefined : otpCode,
     };
+
+    return response;
   }
 
   /**
    * Validate OTP and create user if not exists
+   * Uses database transaction to ensure atomicity
    */
   async validateOtp(
     validateOtpDto: ValidateOtpDto,
@@ -79,151 +158,120 @@ export class UserService {
     const otpRecord = await this.otpRepository.findActiveByPhone(phone);
 
     if (!otpRecord) {
-      throw new BadRequestException(
-        'No valid OTP found. Please request a new OTP.',
-      );
+      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
     }
 
     // Check if OTP has expired
     if (new Date() > otpRecord.expiresAt) {
-      throw new BadRequestException(
-        'OTP has expired. Please request a new OTP.',
-      );
+      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
     }
 
     // Check if OTP is already used
     if (otpRecord.isUsed) {
-      throw new BadRequestException(
-        'OTP has already been used. Please request a new OTP.',
-      );
+      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
     }
 
     // Check if too many attempts
     if (otpRecord.attempts >= 3) {
-      throw new BadRequestException(
-        'Too many failed attempts. Please request a new OTP.',
-      );
+      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
     }
 
     // Validate OTP code
     if (otpRecord.otpCode !== otp) {
       await this.otpRepository.incrementAttempts(otpRecord.id);
-      throw new BadRequestException('Invalid OTP');
+      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
     }
 
-    // Mark OTP as used
-    await this.otpRepository.markAsUsed(otpRecord.id);
+    // Use transaction to ensure atomicity of OTP marking and user creation/update
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    // Check if user exists
-    const existingUser = await this.userRepository.findByPhone(phone);
+    try {
+      // Mark OTP as used within transaction
+      await queryRunner.manager.update(
+        'otps',
+        { id: otpRecord.id },
+        { isUsed: true },
+      );
 
-    if (existingUser) {
-      // if (existingUser.role !== role) {
-      //   throw new BadRequestException('User role mismatch');
-      // }
-      // User exists, update phone_verified flag and generate tokens
-      await this.userRepository.update(existingUser.id, {
-        phoneVerified: true,
+      // Check if user exists
+      const existingUser = await queryRunner.manager.findOne(User, {
+        where: { phone },
       });
 
-      // Generate JWT tokens for existing user
-      const payload = {
-        sub: existingUser.id,
-        phone: existingUser.phone,
-        role: existingUser.role,
-        type: 'access_token',
-      };
+      let user: User;
+      let isNewUser = false;
 
-      const refreshPayload = {
-        sub: existingUser.id,
-        phone: existingUser.phone,
-        role: existingUser.role,
-        type: 'refresh_token',
-      };
+      if (existingUser) {
+        // User exists, update phone_verified flag
+        await queryRunner.manager.update(
+          User,
+          { id: existingUser.id },
+          { phoneVerified: true },
+        );
+        const updatedUser = await queryRunner.manager.findOne(User, {
+          where: { id: existingUser.id },
+        });
+        if (!updatedUser) {
+          throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
+        }
+        user = updatedUser;
+      } else {
+        // User doesn't exist, create user with phone number and phone_verified = true
+        const userData: Partial<User> = {
+          phone,
+          role: role || UserRole.OWNER,
+          isActive: true,
+          phoneVerified: true,
+          name: null,
+          email: null,
+          intent: null,
+        };
 
-      const accessToken = this.jwtService.sign(payload, { expiresIn: '24h' });
-      const refreshToken = this.jwtService.sign(refreshPayload, {
-        expiresIn: '7d',
-      });
+        user = queryRunner.manager.create(User, userData);
+        user = await queryRunner.manager.save(user);
+        isNewUser = true;
+      }
+
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = this.generateTokens(user);
 
       // Update user with tokens
-      await this.userRepository.update(existingUser.id, {
-        token: accessToken,
-        refreshToken: refreshToken,
-      });
+      await queryRunner.manager.update(
+        User,
+        { id: user.id },
+        { token: accessToken, refreshToken: refreshToken },
+      );
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
 
       return {
         success: true,
-        message: 'OTP validated successfully',
-        requiredOtherDetails: false,
-        userId: existingUser.id,
+        message: isNewUser
+          ? USER_MESSAGES.OTP.VALIDATED_NEW_USER(user.role)
+          : USER_MESSAGES.OTP.VALIDATED,
+        requiredOtherDetails: isNewUser,
+        userId: user.id,
         accessToken,
         refreshToken,
         user: {
-          id: existingUser.id,
-          name: existingUser.name,
-          email: existingUser.email,
-          phone: existingUser.phone,
-          role: existingUser.role,
-          isActive: existingUser.isActive,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          isActive: user.isActive,
         },
       };
-    } else {
-      // User doesn't exist, create user with phone number and phone_verified = true
-      const userData: Partial<User> = {
-        phone,
-        role: role || UserRole.OWNER, // Use provided role or default to OWNER
-        isActive: true,
-        phoneVerified: true, // Phone is verified through OTP
-        name: null,
-        email: null,
-        intent: null,
-      };
-
-      const newUser = await this.userRepository.create(userData);
-
-      // Generate JWT tokens for new user
-      const payload = {
-        sub: newUser.id,
-        phone: newUser.phone,
-        role: newUser.role,
-        type: 'access_token',
-      };
-
-      const refreshPayload = {
-        sub: newUser.id,
-        phone: newUser.phone,
-        role: newUser.role,
-        type: 'refresh_token',
-      };
-
-      const accessToken = this.jwtService.sign(payload, { expiresIn: '24h' });
-      const refreshToken = this.jwtService.sign(refreshPayload, {
-        expiresIn: '7d',
-      });
-
-      // Update user with tokens
-      await this.userRepository.update(newUser.id, {
-        token: accessToken,
-        refreshToken: refreshToken,
-      });
-
-      return {
-        success: true,
-        message: `OTP validated successfully. User created with ${newUser.role} role.`,
-        requiredOtherDetails: true,
-        userId: newUser.id,
-        accessToken,
-        refreshToken,
-        user: {
-          id: newUser.id,
-          name: newUser.name,
-          email: newUser.email,
-          phone: newUser.phone,
-          role: newUser.role,
-          isActive: newUser.isActive,
-        },
-      };
+    } catch (error) {
+      // Rollback transaction on error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
     }
   }
 
@@ -246,33 +294,28 @@ export class UserService {
    */
   async createOwner(
     createOwnerDto: CreateOwnerDto,
-    tokenData: { sub: string; phone: string; role: string; type: string },
+    tokenData: { sub: string; phone: string; role: UserRole; type: 'access_token' | 'refresh_token' },
   ): Promise<CreateOwnerResponseDto> {
     const { name, email, phone, intent, city } = createOwnerDto;
 
     // Verify phone number matches token
     if (tokenData.phone !== phone) {
-      throw new BadRequestException('Phone number mismatch');
+      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NUMBER_MISMATCH);
     }
 
     // Find user by phone
     const existingUser = await this.userRepository.findByPhone(phone);
     if (!existingUser) {
-      throw new BadRequestException('User not found. Please verify OTP first.');
+      throw new BadRequestException(USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (tokenData.role !== UserRole.OWNER) {
-      throw new BadRequestException(
-        'User is not authorized to create OWNER account.',
-      );
+      throw new BadRequestException(USER_MESSAGES.OWNER.UNAUTHORIZED);
     }
 
     // Check if phone is verified
     if (!existingUser.phoneVerified) {
-      throw new BadRequestException(
-        'Phone number is not verified. Please verify OTP first.',
-      );
+      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NOT_VERIFIED);
     }
 
     // Check if email is already used by another user
@@ -295,12 +338,12 @@ export class UserService {
     });
 
     if (!updatedUser) {
-      throw new BadRequestException('Failed to update user');
+      throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
     }
 
     return {
       success: true,
-      message: 'Owner account created successfully',
+      message: USER_MESSAGES.OWNER.CREATED,
       userId: updatedUser.id,
       user: {
         id: updatedUser.id,
@@ -319,7 +362,7 @@ export class UserService {
    */
   async createChannelPartner(
     createChannelPartnerDto: CreateChannelPartnerDto,
-    tokenData: { sub: string; phone: string; role: string; type: string },
+    tokenData: { sub: string; phone: string; role: UserRole; type: 'access_token' | 'refresh_token' },
   ): Promise<CreateChannelPartnerResponseDto> {
     const {
       name,
@@ -335,45 +378,36 @@ export class UserService {
 
     // Verify phone number matches token
     if (tokenData.phone !== phone) {
-      throw new BadRequestException('Phone number mismatch');
+      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NUMBER_MISMATCH);
     }
 
     // Find user by phone
     const existingUser = await this.userRepository.findByPhone(phone);
     if (!existingUser) {
-      throw new BadRequestException('User not found. Please verify OTP first.');
+      throw new BadRequestException(USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (tokenData.role !== UserRole.CHANNEL_PARTNER) {
-      throw new BadRequestException(
-        'User is not authorized to create CHANNEL_PARTNER account.',
-      );
+      throw new BadRequestException(USER_MESSAGES.CHANNEL_PARTNER.UNAUTHORIZED);
     }
 
     // Check if phone is verified
     if (!existingUser.phoneVerified) {
-      throw new BadRequestException(
-        'Phone number is not verified. Please verify OTP first.',
-      );
+      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NOT_VERIFIED);
     }
 
     // Validate channel partner code
     const validCode =
       await this.channelPartnerCodeRepository.findByCode(channelPartnerCode);
     if (!validCode) {
-      throw new BadRequestException(
-        'Invalid channel partner code. Please provide a valid code.',
-      );
+      throw new BadRequestException(USER_MESSAGES.CHANNEL_PARTNER.INVALID_CODE);
     }
 
     // Check if email is already used by another user
     if (email) {
       const existingUserByEmail = await this.userRepository.findByEmail(email);
       if (existingUserByEmail && existingUserByEmail.id !== existingUser.id) {
-        throw new BadRequestException(
-          'Email address is already registered with another user.',
-        );
+        throw new BadRequestException(USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED);
       }
     }
 
@@ -391,12 +425,12 @@ export class UserService {
     });
 
     if (!updatedUser) {
-      throw new BadRequestException('Failed to update user');
+      throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
     }
 
     return {
       success: true,
-      message: 'Channel partner account created successfully',
+      message: USER_MESSAGES.CHANNEL_PARTNER.CREATED,
       userId: updatedUser.id,
       user: {
         id: updatedUser.id,
@@ -435,14 +469,19 @@ export class UserService {
     });
 
     // In production, integrate with SMS service
-    // For now, we'll just log the OTP
-    console.log(`OTP for ${phone}: ${otpCode}`);
+    // For development, log the OTP (only in non-production)
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.debug(`OTP resent for ${phone}: ${otpCode}`);
+    }
 
-    return {
+    // Only return OTP in development/staging environments
+    const response: ResendOtpResponseDto = {
       success: true,
-      message: 'OTP resent successfully',
-      otp: otpCode,
+      message: USER_MESSAGES.OTP.RESENT,
+      otp: process.env.NODE_ENV === 'production' ? undefined : otpCode,
     };
+
+    return response;
   }
 
   /**
@@ -461,69 +500,43 @@ export class UserService {
     const { refreshToken } = refreshTokenDto;
 
     try {
-      // Verify refresh token
-      const decodedToken = this.jwtService.verify(refreshToken);
+      // Verify refresh token with proper typing
+      const decodedToken = this.jwtService.verify<RefreshTokenPayload>(refreshToken);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (decodedToken.type !== 'refresh_token') {
-        throw new BadRequestException('Invalid token type');
+        throw new BadRequestException(USER_MESSAGES.AUTH.INVALID_TOKEN_TYPE);
       }
 
       // Find user by ID
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const user = await this.userRepository.findById(decodedToken.sub);
       if (!user) {
-        throw new BadRequestException('User not found');
+        throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
       }
 
       // Check if the refresh token matches the one stored in database
       if (user.refreshToken !== refreshToken) {
-        throw new BadRequestException('Invalid refresh token');
+        throw new BadRequestException(USER_MESSAGES.AUTH.INVALID_REFRESH_TOKEN);
       }
 
       // Generate new tokens
-      const payload = {
-        sub: user.id,
-        phone: user.phone,
-        role: user.role,
-        type: 'access_token',
-      };
-
-      const refreshPayload = {
-        sub: user.id,
-        phone: user.phone,
-        role: user.role,
-        type: 'refresh_token',
-      };
-
-      const newAccessToken = this.jwtService.sign(payload, {
-        expiresIn: '24h',
-      });
-      const newRefreshToken = this.jwtService.sign(refreshPayload, {
-        expiresIn: '7d',
-      });
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken } = this.generateTokens(user);
 
       // Update user with new tokens
-      await this.userRepository.update(user.id, {
-        token: newAccessToken,
-        refreshToken: newRefreshToken,
-      });
+      await this.updateUserTokens(user.id, newAccessToken, newRefreshToken);
 
       return {
         success: true,
-        message: 'Token refreshed successfully',
+        message: USER_MESSAGES.AUTH.TOKEN_REFRESHED,
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
       };
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'TokenExpiredError') {
-        throw new BadRequestException(
-          'Refresh token has expired. Please login again.',
-        );
+        throw new BadRequestException(USER_MESSAGES.AUTH.TOKEN_EXPIRED);
       } else if (error instanceof Error && error.name === 'JsonWebTokenError') {
-        throw new BadRequestException('Invalid refresh token');
+        throw new BadRequestException(USER_MESSAGES.AUTH.INVALID_REFRESH_TOKEN);
       } else {
-        throw new BadRequestException('Token refresh failed');
+        throw new BadRequestException(USER_MESSAGES.AUTH.TOKEN_REFRESH_FAILED);
       }
     }
   }
@@ -532,15 +545,20 @@ export class UserService {
    * Logout user and clear tokens
    */
   async logout(userId: string): Promise<LogoutResponseDto> {
-    // Clear tokens from database
+    await this.clearUserTokens(userId);
+    return {
+      success: true,
+      message: USER_MESSAGES.AUTH.LOGOUT_SUCCESSFUL,
+    };
+  }
+
+  /**
+   * Clear user tokens from database
+   */
+  private async clearUserTokens(userId: string): Promise<void> {
     await this.userRepository.update(userId, {
       token: null,
       refreshToken: null,
     });
-
-    return {
-      success: true,
-      message: 'Logged out successfully',
-    };
   }
 }

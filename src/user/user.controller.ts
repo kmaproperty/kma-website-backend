@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, Req, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UserService } from './user.service';
@@ -61,7 +61,10 @@ export class UserController {
     @Body() createOwnerDto: CreateOwnerDto,
     @Req() req: Request,
   ): Promise<CreateOwnerResponseDto> {
-    return await this.userService.createOwner(createOwnerDto, (req as any).tokenData!);
+    if (!req.tokenData) {
+      throw new BadRequestException('Token data not found');
+    }
+    return await this.userService.createOwner(createOwnerDto, req.tokenData);
   }
 
   @Post('create-channel-partner')
@@ -75,9 +78,12 @@ export class UserController {
     @Body() createChannelPartnerDto: CreateChannelPartnerDto,
     @Req() req: Request,
   ): Promise<CreateChannelPartnerResponseDto> {
+    if (!req.tokenData) {
+      throw new BadRequestException('Token data not found');
+    }
     return await this.userService.createChannelPartner(
       createChannelPartnerDto,
-      (req as any).tokenData!,
+      req.tokenData,
     );
   }
 
@@ -89,15 +95,12 @@ export class UserController {
     description: 'User details',
   })
   async getUserProfile(@Req() req: Request) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      throw new Error('User not authenticated');
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    const user = await this.userService.getUserById(userId);
+    const user = await this.userService.getUserById(req.user.id);
     if (!user) {
-      throw new Error('User not found');
+      throw new BadRequestException('User not found');
     }
     return user;
   }
@@ -138,13 +141,10 @@ export class UserController {
     type: LogoutResponseDto,
   })
   async logout(@Req() req: Request): Promise<LogoutResponseDto> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      throw new Error('User not authenticated');
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    return await this.userService.logout(userId);
+    return await this.userService.logout(req.user.id);
   }
 
   @Get('cities')

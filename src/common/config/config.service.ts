@@ -25,6 +25,9 @@ export class ConfigService implements TypeOrmOptionsFactory {
     const useSSL =
       this.nestConfigService.get<string>('POSTGRES_SSL') === 'true';
 
+    // const sslEnv = this.nestConfigService.get<string>('POSTGRES_SSL');
+    // const useSSL = sslEnv !== 'false';  
+
     // Get environment variables using NestJS ConfigService with fallback to process.env
     const host =
       this.nestConfigService.get<string>('POSTGRES_HOST') ||
@@ -52,6 +55,17 @@ export class ConfigService implements TypeOrmOptionsFactory {
       );
     }
 
+    // IMPORTANT: synchronize should be false in production
+    // Use migrations for production database changes
+    const isProduction = process.env.NODE_ENV === 'production';
+    const synchronize = process.env.DB_SYNCHRONIZE === 'true' && !isProduction;
+
+    if (isProduction && synchronize) {
+      this.logger.warn(
+        'Database synchronize is enabled in production! This can cause data loss.',
+      );
+    }
+
     return {
       type: 'postgres',
       host,
@@ -62,8 +76,8 @@ export class ConfigService implements TypeOrmOptionsFactory {
       username,
       password,
       database,
-      synchronize: true,
-      logging: false,
+      synchronize, // Only true in non-production environments
+      logging: !isProduction,
       entities: [
         User, 
         Otp, 
