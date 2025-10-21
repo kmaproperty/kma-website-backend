@@ -6,6 +6,7 @@ import { LoggerModule } from './logger/logger.module';
 import { UserModule } from './user/user.module';
 import { UserController } from './user/user.controller';
 import { PropertyModule } from './property/property.module';
+import { ContactUsModule } from './contact-us/contact-us.module';
 import { ConfigModule } from './common/config/config.module';
 import { ConfigService } from './common/config/config.service';
 
@@ -21,6 +22,7 @@ import { ConfigService } from './common/config/config.service';
     LoggerModule,
     UserModule,
     PropertyModule,
+    ContactUsModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService],
