@@ -79,6 +79,7 @@ export class ConfigService implements TypeOrmOptionsFactory {
         UnitConfiguration,
         Property
       ],
+      autoLoadEntities: true,
       ...(useSSL && {
         ssl: {
           rejectUnauthorized: false,
