@@ -197,6 +197,15 @@ export class MasterDataSeederService {
 
   private async seedBhkTypes(): Promise<void> {
     this.logger.log('Seeding BHK types...');
+    
+    // Get all societies
+    const allSocieties = await this.societyRepository.find();
+    
+    if (allSocieties.length === 0) {
+      this.logger.log('⚠ Skipping BHK type seeding - societies not found');
+      return;
+    }
+
     // Get property types that should have BHK configurations
     // BHK types are only applicable to residential property types
     const propertyTypesWithBhk = await this.propertyTypeRepository.find({
@@ -239,11 +248,25 @@ export class MasterDataSeederService {
       { name: '5+ BHK', code: '5plus', sortOrder: 12 },
     ];
 
-    // Create BHK types for each applicable property type
+    // Create BHK types for each society
     let created = 0;
-    for (const propertyType of propertyTypesWithBhk) {
+    for (const society of allSocieties) {
+      // Randomly select which BHK types this society has
+      // Common types (1bhk, 2bhk, 3bhk) are more likely
+      const commonBhkCodes = ['1bhk', '2bhk', '3bhk'];
+      
+      // Randomly select one property type for this society (e.g., flat, house, villa)
+      const randomPropertyType = propertyTypesWithBhk[Math.floor(Math.random() * propertyTypesWithBhk.length)];
+      
       for (const bhkDef of bhkTypeDefinitions) {
-        const code = `${propertyType.code}-${bhkDef.code}`;
+        // Always include common BHK types, randomly include others
+        const shouldInclude = commonBhkCodes.includes(bhkDef.code) || Math.random() > 0.5;
+        
+        if (!shouldInclude) {
+          continue;
+        }
+
+        const code = `${randomPropertyType.code}-${bhkDef.code}-${society.id.substring(0, 8)}`;
         
         const existing = await this.bhkTypeRepository.findOne({
           where: { code },
@@ -254,27 +277,22 @@ export class MasterDataSeederService {
             name: bhkDef.name,
             code: code,
             sortOrder: bhkDef.sortOrder,
-            propertyTypeId: propertyType.id,
+            propertyTypeId: randomPropertyType.id,
+            societyId: society.id,
           });
           await this.bhkTypeRepository.save(bhkType);
           created++;
         }
       }
     }
-    this.logger.log(`✓ Created ${created} BHK types for ${propertyTypesWithBhk.length} property types`);
+    this.logger.log(`✓ Created ${created} BHK types for ${allSocieties.length} societies`);
   }
 
   private async seedBuiltUpAreas(): Promise<void> {
     this.logger.log('Seeding built-up areas...');
 
-    // Get all societies and BHK types
-    const allSocieties = await this.societyRepository.find();
+    // Get all BHK types (which are already society-specific)
     const allBhkTypes = await this.bhkTypeRepository.find();
-
-    if (allSocieties.length === 0) {
-      this.logger.log('⚠ Skipping built-up area seeding - societies not found');
-      return;
-    }
 
     if (allBhkTypes.length === 0) {
       this.logger.log('⚠ Skipping built-up area seeding - BHK types not found');
@@ -354,60 +372,51 @@ export class MasterDataSeederService {
 
     let created = 0;
     
-    // Create built-up areas for each society
-    for (const society of allSocieties) {
-      // For each society, create built-up areas for a subset of BHK types
-      // We'll select some common BHK types (1bhk, 2bhk, 3bhk) for each society
-      const commonBhkCodes = ['1bhk', '2bhk', '3bhk'];
+    // Create built-up areas for each BHK type
+    // Since BHK types are now society-specific, we just create built-up areas for each BHK type
+    for (const bhkType of allBhkTypes) {
+      // Extract the BHK code from the code (format: "property-type-bhk-societyid")
+      const parts = bhkType.code.split('-');
+      const bhkCode = parts.find(part => ['studio', '1rk', '1bhk', '1.5bhk', '2bhk', '2.5bhk', '3bhk', '3.5bhk', '4bhk', '4.5bhk', '5bhk', '5plus'].includes(part));
       
-      for (const bhkType of allBhkTypes) {
-        // Extract the BHK code from the full code (e.g., "res-rent-flat-2bhk" -> "2bhk")
-        const bhkCode = bhkType.code.split('-').pop();
-        if (!bhkCode) {
-          continue; // Skip if bhkCode is undefined
-        }
+      if (!bhkCode) {
+        continue; // Skip if bhkCode not found
+      }
+
+      const configurations = builtUpAreaData[bhkCode as keyof typeof builtUpAreaData];
+
+      if (configurations) {
+        // Select 2-3 configurations randomly for variety
+        const numConfigs = Math.floor(Math.random() * 2) + 2; // 2 or 3 configs
+        const selectedConfigs = configurations.slice(0, numConfigs);
         
-        // Only create built-up areas for common BHK types or randomly include others
-        const shouldInclude = commonBhkCodes.includes(bhkCode) || Math.random() > 0.6;
-        if (!shouldInclude) {
-          continue;
-        }
+        for (const config of selectedConfigs) {
+          // Check if this configuration already exists for this BHK type
+          const existing = await this.builtUpAreaRepository.findOne({
+            where: {
+              societyId: bhkType.societyId,
+              bhkTypeId: bhkType.id,
+              superBuiltUpArea: config.superBuiltUpArea,
+              carpetArea: config.carpetArea,
+              noOfBathrooms: config.noOfBathrooms,
+            },
+          });
 
-        const configurations = builtUpAreaData[bhkCode as keyof typeof builtUpAreaData];
-
-        if (configurations) {
-          // Select 2-3 configurations randomly for variety
-          const numConfigs = Math.floor(Math.random() * 2) + 2; // 2 or 3 configs
-          const selectedConfigs = configurations.slice(0, numConfigs);
-          
-          for (const config of selectedConfigs) {
-            // Check if this configuration already exists for this society and BHK type
-            const existing = await this.builtUpAreaRepository.findOne({
-              where: {
-                societyId: society.id,
-                bhkTypeId: bhkType.id,
-                superBuiltUpArea: config.superBuiltUpArea,
-                carpetArea: config.carpetArea,
-                noOfBathrooms: config.noOfBathrooms,
-              },
+          if (!existing) {
+            const builtUpArea = this.builtUpAreaRepository.create({
+              societyId: bhkType.societyId,
+              bhkTypeId: bhkType.id,
+              superBuiltUpArea: config.superBuiltUpArea,
+              carpetArea: config.carpetArea,
+              noOfBathrooms: config.noOfBathrooms,
             });
-
-            if (!existing) {
-              const builtUpArea = this.builtUpAreaRepository.create({
-                societyId: society.id,
-                bhkTypeId: bhkType.id,
-                superBuiltUpArea: config.superBuiltUpArea,
-                carpetArea: config.carpetArea,
-                noOfBathrooms: config.noOfBathrooms,
-              });
-              await this.builtUpAreaRepository.save(builtUpArea);
-              created++;
-            }
+            await this.builtUpAreaRepository.save(builtUpArea);
+            created++;
           }
         }
       }
     }
-    this.logger.log(`✓ Created ${created} built-up area configurations for ${allSocieties.length} societies`);
+    this.logger.log(`✓ Created ${created} built-up area configurations for ${allBhkTypes.length} BHK types`);
   }
 
   private async seedPropertyTypes(): Promise<void> {

@@ -41,4 +41,26 @@ export class BhkTypeRepository {
       order: { sortOrder: 'ASC' },
     });
   }
+
+  async findBySocietyId(societyId: string): Promise<MasterBhkType[]> {
+    return await this.bhkTypeRepository.find({
+      where: { societyId },
+      order: { sortOrder: 'ASC' },
+    });
+  }
+
+  async findBySocietyIds(societyIds: string[]): Promise<MasterBhkType[]> {
+    if (societyIds.length === 0) {
+      return [];
+    }
+    return await this.bhkTypeRepository.find({
+      where: { societyId: In(societyIds) },
+      order: { sortOrder: 'ASC' },
+    });
+  }
+
+  async createBhkType(bhkTypeData: Partial<MasterBhkType>): Promise<MasterBhkType> {
+    const bhkType = this.bhkTypeRepository.create(bhkTypeData);
+    return await this.bhkTypeRepository.save(bhkType);
+  }
 }

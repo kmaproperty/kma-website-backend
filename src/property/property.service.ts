@@ -25,80 +25,6 @@ export class PropertyService {
     private readonly googlePlacesService: GooglePlacesService,
   ) {}
 
-  async getAllMasterData(): Promise<any> {
-    const listingTypes = await this.propertyListingTypeRepository.findAll();
-    const categories = await this.propertyCategoryRepository.findAll();
-    const propertyTypes = await this.propertyTypeRepository.findAll();
-    const allBhkTypes = await this.bhkTypeRepository.findAll();
-    const cities = await this.cityRepository.findAll();
-    const localities = await this.localityRepository.findAll();
-    const societies = await this.societyRepository.findAll();
-    const allBuiltUpAreas = await this.builtUpAreaRepository.findAll();
-
-    // Structure the data hierarchically
-    const structuredData = listingTypes.map(listingType => ({
-      id: listingType.id,
-      name: listingType.name,
-      code: listingType.code,
-      categories: categories.map(category => ({
-        id: category.id,
-        name: category.name,
-        code: category.code,
-        propertyTypes: propertyTypes.filter(pt => 
-          pt.listingTypeId === listingType.id && pt.categoryId === category.id
-        ).map(pt => ({
-          id: pt.id,
-          name: pt.name,
-          code: pt.code,
-          bhkTypes: allBhkTypes.filter(bhk => bhk.propertyTypeId === pt.id).map(bhk => ({
-            id: bhk.id,
-            name: bhk.name,
-            code: bhk.code,
-            sortOrder: bhk.sortOrder,
-          })),
-        })),
-      })),
-      cities: cities.map(city => ({
-        id: city.id,
-        name: city.name,
-        code: city.code,
-        state: city.state,
-        localities: localities.filter(loc => loc.cityId === city.id).map(loc => ({
-          id: loc.id,
-          name: loc.name,
-          sector: loc.sector,
-          societies: societies
-            .filter(soc => soc.localityId === loc.id)
-            .map(soc => ({
-              id: soc.id,
-              name: soc.name,
-              address: soc.address,
-              pincode: soc.pincode,
-              isVerified: soc.isVerified,
-              builtUpAreas: allBuiltUpAreas
-                .filter(bua => bua.societyId === soc.id)
-                .map(bua => {
-                  const bhkType = allBhkTypes.find(bhk => bhk.id === bua.bhkTypeId);
-                  return {
-                    id: bua.id,
-                    superBuiltUpArea: bua.superBuiltUpArea,
-                    carpetArea: bua.carpetArea,
-                    noOfBathrooms: bua.noOfBathrooms,
-                    bhkType: bhkType ? {
-                      id: bhkType.id,
-                      name: bhkType.name,
-                      code: bhkType.code,
-                    } : null,
-                  };
-                }),
-            })),
-        })),
-      })),
-    }));
-
-    return structuredData;
-  }
-
   async getFilteredMasterData(listingTypeCode: string, categoryCode: string): Promise<any> {
     // Validate and get listing type
     const listingType = await this.propertyListingTypeRepository.findByCode(listingTypeCode);
@@ -118,70 +44,12 @@ export class PropertyService {
       category.id,
     );
 
-    // Get BHK types for the filtered property types
-    const propertyTypeIds = propertyTypes.map(pt => pt.id);
-    const bhkTypes = propertyTypeIds.length > 0 
-      ? await this.bhkTypeRepository.findByPropertyTypeIds(propertyTypeIds)
-      : [];
-
-    // Get all cities with localities and societies
-    const cities = await this.cityRepository.findAll();
-    const localities = await this.localityRepository.findAll();
-    const societies = await this.societyRepository.findAll();
-    const allBuiltUpAreas = await this.builtUpAreaRepository.findAll();
-
-    // Structure the response
+    // Structure the response - only return property types
     return {
       propertyTypes: propertyTypes.map(pt => ({
         id: pt.id,
         name: pt.name,
         code: pt.code,
-        bhkTypes: bhkTypes
-          .filter(bhk => bhk.propertyTypeId === pt.id)
-          .map(bhk => ({
-            id: bhk.id,
-            name: bhk.name,
-            code: bhk.code,
-            sortOrder: bhk.sortOrder,
-          })),
-      })),
-      cities: cities.map(city => ({
-        id: city.id,
-        name: city.name,
-        code: city.code,
-        state: city.state,
-        localities: localities
-          .filter(loc => loc.cityId === city.id)
-          .map(loc => ({
-            id: loc.id,
-            name: loc.name,
-            sector: loc.sector,
-            societies: societies
-              .filter(soc => soc.localityId === loc.id)
-              .map(soc => ({
-                id: soc.id,
-                name: soc.name,
-                address: soc.address,
-                pincode: soc.pincode,
-                isVerified: soc.isVerified,
-                builtUpAreas: allBuiltUpAreas
-                  .filter(bua => bua.societyId === soc.id)
-                  .map(bua => {
-                    const bhkType = bhkTypes.find(bhk => bhk.id === bua.bhkTypeId);
-                    return {
-                      id: bua.id,
-                      superBuiltUpArea: bua.superBuiltUpArea,
-                      carpetArea: bua.carpetArea,
-                      noOfBathrooms: bua.noOfBathrooms,
-                      bhkType: bhkType ? {
-                        id: bhkType.id,
-                        name: bhkType.name,
-                        code: bhkType.code,
-                      } : null,
-                    };
-                  }),
-              })),
-          })),
       })),
     };
   }

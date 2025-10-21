@@ -16,17 +16,7 @@ import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
-  @Get('master/all')
-  @ApiOperation({ summary: 'Get all master data with hierarchical structure' })
-  @ApiResponse({
-    status: 200,
-    description: 'All master data retrieved successfully with dependencies (listing types -> categories -> property types -> BHK types, cities -> localities -> societies -> built-up areas with BHK type info)',
-  })
-  async getAllMasterData() {
-    return await this.propertyService.getAllMasterData();
-  }
-
-  @Get('master/filtered')
+  @Get('master/property-types')
   @ApiOperation({ summary: 'Get filtered master data based on listing type and category' })
   @ApiQuery({
     name: 'property-listing-type',
@@ -42,7 +32,7 @@ export class PropertyController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Filtered master data retrieved successfully (property types with nested BHK types, cities with localities, societies with built-up areas)',
+    description: 'Filtered property types retrieved successfully based on listing type and category',
   })
   @ApiResponse({
     status: 400,
