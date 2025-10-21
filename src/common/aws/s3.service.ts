@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -22,6 +23,7 @@ export interface UploadResult {
 
 @Injectable()
 export class S3Service {
+  private readonly logger = new Logger(S3Service.name);
   private s3Client: S3Client;
   private bucketName: string;
   private region: string;
@@ -39,7 +41,7 @@ export class S3Service {
     );
 
     if (!this.bucketName) {
-      throw new Error('AWS_BUCKET is required');
+      throw new InternalServerErrorException('AWS_BUCKET environment variable is required');
     }
 
     this.s3Client = new S3Client({
@@ -61,8 +63,8 @@ export class S3Service {
     );
 
     if (missingVars.length > 0) {
-      throw new Error(
-        `Missing required environment variables: ${missingVars.join(', ')}`,
+      throw new InternalServerErrorException(
+        `Missing required AWS environment variables: ${missingVars.join(', ')}`,
       );
     }
   }
@@ -111,9 +113,10 @@ export class S3Service {
         url,
       };
     } catch (error) {
-      console.error('S3 upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`S3 upload error: ${errorMessage}`, error instanceof Error ? error.stack : '');
       throw new InternalServerErrorException(
-        `Failed to upload file: ${error.message}`,
+        `Failed to upload file: ${errorMessage}`,
       );
     }
   }
@@ -128,7 +131,8 @@ export class S3Service {
       await this.s3Client.send(deleteCommand);
       return true;
     } catch (error) {
-      console.error('S3 delete error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`S3 delete error: ${errorMessage}`, error instanceof Error ? error.stack : '');
       return false;
     }
   }

@@ -28,11 +28,18 @@ const repositories = [
     TypeOrmModule.forFeature(entities),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret:
-          configService.get<string>('JWT_SECRET') || 'fallback-secret-key',
-        signOptions: { expiresIn: '24h' },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error(
+            'JWT_SECRET is not defined in environment variables. This is required for security.',
+          );
+        }
+        return {
+          secret,
+          signOptions: { expiresIn: '24h' },
+        };
+      },
       inject: [ConfigService],
     }),
   ],

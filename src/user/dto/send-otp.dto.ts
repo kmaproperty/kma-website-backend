@@ -28,8 +28,9 @@ export class SendOtpResponseDto {
   message: string;
 
   @ApiProperty({
-    description: 'OTP code',
+    description: 'OTP code (only in development)',
     example: '1234',
+    required: false,
   })
-  otp: string;
+  otp?: string;
 }

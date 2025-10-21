@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ContactUsRepository } from './repositories/contact-us.repository';
 import { CreateContactUsDto, CreateContactUsResponseDto } from './dto';
 import { ContactUs } from './entities/contact-us.entity';
 
 @Injectable()
 export class ContactUsService {
+  private readonly logger = new Logger(ContactUsService.name);
+
   constructor(private readonly contactUsRepository: ContactUsRepository) {}
 
   /**
@@ -30,7 +32,11 @@ export class ContactUsService {
         contactId: contact.id,
       };
     } catch (error) {
-      throw new Error(`Failed to create contact form: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to create contact form: ${errorMessage}`, error instanceof Error ? error.stack : '');
+      throw new InternalServerErrorException(
+        'Failed to submit contact form. Please try again later.',
+      );
     }
   }
 

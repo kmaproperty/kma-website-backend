@@ -29,14 +29,13 @@ export class AuthMiddleware implements NestMiddleware {
       if (!token) {
         throw new UnauthorizedException('Token is required');
       }
-      // Verify JWT token
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      const decodedToken = this.jwtService.verify(token) as {
+      // Verify JWT token with proper typing
+      const decodedToken = this.jwtService.verify<{
         sub: string;
         phone: string;
         role: string;
         type: string;
-      };
+      }>(token);
 
       // Validate token type
       if (decodedToken.type !== 'access_token') {
@@ -68,7 +67,7 @@ export class AuthMiddleware implements NestMiddleware {
       req.user = {
         id: user.id,
         phone: user.phone,
-        role: user.role,
+        role: user.role as any,
         isActive: user.isActive,
         phoneVerified: user.phoneVerified,
       };

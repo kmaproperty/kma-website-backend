@@ -2,34 +2,36 @@ import {
   Injectable,
   NestMiddleware,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class TokenVerificationMiddleware implements NestMiddleware {
+  private readonly logger = new Logger(TokenVerificationMiddleware.name);
+
   constructor(private readonly jwtService: JwtService) {}
 
   use(req: Request, res: Response, next: NextFunction) {
     try {
-      console.log('Authorization header:', req.headers.authorization);
+      this.logger.debug(`Authorization header: ${req.headers.authorization ? 'present' : 'missing'}`);
 
       // Try to extract token from Authorization header first
       const token = req.headers?.authorization?.split(' ')[1];
 
       if (!token) {
-        console.log('No token found in header or body');
+        this.logger.warn('No token found in authorization header');
         throw new UnauthorizedException('Token is required');
       }
 
-      // Verify JWT token
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      const decodedToken = this.jwtService.verify(token) as {
+      // Verify JWT token with proper typing
+      const decodedToken = this.jwtService.verify<{
         sub: string;
         phone: string;
         role: string;
         type: string;
-      };
+      }>(token);
 
       // Validate token type
       if (decodedToken.type !== 'access_token') {
@@ -40,13 +42,18 @@ export class TokenVerificationMiddleware implements NestMiddleware {
       req.tokenData = {
         sub: decodedToken.sub,
         phone: decodedToken.phone,
-        role: decodedToken.role,
-        type: decodedToken.type,
+        role: decodedToken.role as any, // Role is validated by enum in database
+        type: decodedToken.type as 'access_token' | 'refresh_token',
       };
 
       next();
     } catch (error) {
-      console.log(error);
+      if (error instanceof UnauthorizedException) {
+        throw error; // Re-throw UnauthorizedException as-is
+      }
+      
+      this.logger.error(`Token verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
       if (error instanceof Error && error.name === 'TokenExpiredError') {
         throw new UnauthorizedException(
           'Token has expired. Please verify OTP again.',

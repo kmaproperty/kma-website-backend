@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MasterPropertyListingType } from '../entities/master-property-listing-type.entity';
@@ -13,6 +13,8 @@ import { Property } from '../entities/property.entity';
 
 @Injectable()
 export class MasterDataSeederService {
+  private readonly logger = new Logger(MasterDataSeederService.name);
+
   constructor(
     @InjectRepository(MasterPropertyListingType)
     private readonly propertyListingTypeRepository: Repository<MasterPropertyListingType>,
@@ -38,80 +40,80 @@ export class MasterDataSeederService {
    * Delete all master data in reverse dependency order
    */
   async deleteAll(): Promise<void> {
-    console.log('Starting deletion of all master data...');
+    this.logger.log('Starting deletion of all master data...');
     
     // Delete in reverse dependency order
     // 1. Properties first (depends on everything)
     const propertiesCount = await this.propertyRepository.count();
     if (propertiesCount > 0) {
       await this.propertyRepository.delete({});
-      console.log(`Deleted ${propertiesCount} properties`);
+      this.logger.log(`Deleted ${propertiesCount} properties`);
     }
 
     // 2. Societies (depends on localities and cities)
     const societiesCount = await this.societyRepository.count();
     if (societiesCount > 0) {
       await this.societyRepository.delete({});
-      console.log(`Deleted ${societiesCount} societies`);
+      this.logger.log(`Deleted ${societiesCount} societies`);
     }
 
     // 3. Localities (depends on cities)
     const localitiesCount = await this.localityRepository.count();
     if (localitiesCount > 0) {
       await this.localityRepository.delete({});
-      console.log(`Deleted ${localitiesCount} localities`);
+      this.logger.log(`Deleted ${localitiesCount} localities`);
     }
 
     // 4. Built-up Areas (depends on BHK types)
     const builtUpAreasCount = await this.builtUpAreaRepository.count();
     if (builtUpAreasCount > 0) {
       await this.builtUpAreaRepository.delete({});
-      console.log(`Deleted ${builtUpAreasCount} built-up areas`);
+      this.logger.log(`Deleted ${builtUpAreasCount} built-up areas`);
     }
 
     // 5. BHK Types (depends on property types)
     const bhkTypesCount = await this.bhkTypeRepository.count();
     if (bhkTypesCount > 0) {
       await this.bhkTypeRepository.delete({});
-      console.log(`Deleted ${bhkTypesCount} BHK types`);
+      this.logger.log(`Deleted ${bhkTypesCount} BHK types`);
     }
 
     // 6. Property Types (depends on listing types and categories)
     const propertyTypesCount = await this.propertyTypeRepository.count();
     if (propertyTypesCount > 0) {
       await this.propertyTypeRepository.delete({});
-      console.log(`Deleted ${propertyTypesCount} property types`);
+      this.logger.log(`Deleted ${propertyTypesCount} property types`);
     }
 
     // 7. Cities (independent at this point)
     const citiesCount = await this.cityRepository.count();
     if (citiesCount > 0) {
       await this.cityRepository.delete({});
-      console.log(`Deleted ${citiesCount} cities`);
+      this.logger.log(`Deleted ${citiesCount} cities`);
     }
 
     // 8. Property Categories (independent)
     const categoriesCount = await this.propertyCategoryRepository.count();
     if (categoriesCount > 0) {
       await this.propertyCategoryRepository.delete({});
-      console.log(`Deleted ${categoriesCount} property categories`);
+      this.logger.log(`Deleted ${categoriesCount} property categories`);
     }
 
     // 9. Property Listing Types (independent)
     const listingTypesCount = await this.propertyListingTypeRepository.count();
     if (listingTypesCount > 0) {
       await this.propertyListingTypeRepository.delete({});
-      console.log(`Deleted ${listingTypesCount} property listing types`);
+      this.logger.log(`Deleted ${listingTypesCount} property listing types`);
     }
 
-    console.log('All master data deleted successfully');
+    this.logger.log('All master data deleted successfully');
   }
 
   /**
    * Seed all master data in proper dependency order
    */
   async seedAll(): Promise<void> {
-    console.log('Starting seeding of all master data...');
+    this.logger.log('Starting seeding of all master data...');
     
     await this.seedPropertyListingTypes();
     await this.seedPropertyCategories();
@@ -122,7 +124,7 @@ export class MasterDataSeederService {
     await this.seedLocalities();
     await this.seedSocieties();
     
-    console.log('All master data seeded successfully');
+    this.logger.log('All master data seeded successfully');
   }
 
   /**
@@ -160,13 +162,13 @@ export class MasterDataSeederService {
         },
       };
     } catch (error) {
-      console.error('Error during reseeding:', error);
+      this.logger.error('Error during reseeding:', error);
       throw error;
     }
   }
 
   private async seedPropertyListingTypes(): Promise<void> {
-    console.log('Seeding property listing types...');
+    this.logger.log('Seeding property listing types...');
     const propertyListingTypeOptions = [
       { 
         name: 'Sale', 
@@ -190,11 +192,11 @@ export class MasterDataSeederService {
         created++;
       }
     }
-    console.log(`✓ Created ${created} property listing types`);
+    this.logger.log(`✓ Created ${created} property listing types`);
   }
 
   private async seedBhkTypes(): Promise<void> {
-    console.log('Seeding BHK types...');
+    this.logger.log('Seeding BHK types...');
     // Get property types that should have BHK configurations
     // BHK types are only applicable to residential property types
     const propertyTypesWithBhk = await this.propertyTypeRepository.find({
@@ -217,7 +219,7 @@ export class MasterDataSeederService {
     });
 
     if (propertyTypesWithBhk.length === 0) {
-      console.log('⚠ Skipping BHK type seeding - property types not found');
+      this.logger.log('⚠ Skipping BHK type seeding - property types not found');
       return;
     }
 
@@ -259,23 +261,23 @@ export class MasterDataSeederService {
         }
       }
     }
-    console.log(`✓ Created ${created} BHK types for ${propertyTypesWithBhk.length} property types`);
+    this.logger.log(`✓ Created ${created} BHK types for ${propertyTypesWithBhk.length} property types`);
   }
 
   private async seedBuiltUpAreas(): Promise<void> {
-    console.log('Seeding built-up areas...');
+    this.logger.log('Seeding built-up areas...');
 
     // Get all societies and BHK types
     const allSocieties = await this.societyRepository.find();
     const allBhkTypes = await this.bhkTypeRepository.find();
 
     if (allSocieties.length === 0) {
-      console.log('⚠ Skipping built-up area seeding - societies not found');
+      this.logger.log('⚠ Skipping built-up area seeding - societies not found');
       return;
     }
 
     if (allBhkTypes.length === 0) {
-      console.log('⚠ Skipping built-up area seeding - BHK types not found');
+      this.logger.log('⚠ Skipping built-up area seeding - BHK types not found');
       return;
     }
 
@@ -405,11 +407,11 @@ export class MasterDataSeederService {
         }
       }
     }
-    console.log(`✓ Created ${created} built-up area configurations for ${allSocieties.length} societies`);
+    this.logger.log(`✓ Created ${created} built-up area configurations for ${allSocieties.length} societies`);
   }
 
   private async seedPropertyTypes(): Promise<void> {
-    console.log('Seeding property types...');
+    this.logger.log('Seeding property types...');
     // Get listing types and categories first
     const saleType = await this.propertyListingTypeRepository.findOne({ where: { code: 'sale' } });
     const rentType = await this.propertyListingTypeRepository.findOne({ where: { code: 'rent' } });
@@ -417,7 +419,7 @@ export class MasterDataSeederService {
     const commercialCategory = await this.propertyCategoryRepository.findOne({ where: { code: 'commercial' } });
 
     if (!saleType || !rentType || !residentialCategory || !commercialCategory) {
-      console.log('⚠ Skipping property type seeding - prerequisites not met');
+      this.logger.log('⚠ Skipping property type seeding - prerequisites not met');
       return;
     }
 
@@ -457,11 +459,11 @@ export class MasterDataSeederService {
         created++;
       }
     }
-    console.log(`✓ Created ${created} property types`);
+    this.logger.log(`✓ Created ${created} property types`);
   }
 
   private async seedPropertyCategories(): Promise<void> {
-    console.log('Seeding property categories...');
+    this.logger.log('Seeding property categories...');
     const categories = [
       { 
         name: 'Residential', 
@@ -485,11 +487,11 @@ export class MasterDataSeederService {
         created++;
       }
     }
-    console.log(`✓ Created ${created} property categories`);
+    this.logger.log(`✓ Created ${created} property categories`);
   }
 
   private async seedCities(): Promise<void> {
-    console.log('Seeding cities...');
+    this.logger.log('Seeding cities...');
     const cities = [
       { name: 'Gurgaon', code: 'gurgaon', state: 'Haryana', latitude: 28.4595, longitude: 77.0266 },
       { name: 'Delhi', code: 'delhi', state: 'Delhi', latitude: 28.7041, longitude: 77.1025 },
@@ -510,17 +512,17 @@ export class MasterDataSeederService {
         created++;
       }
     }
-    console.log(`✓ Created ${created} cities`);
+    this.logger.log(`✓ Created ${created} cities`);
   }
 
   private async seedLocalities(): Promise<void> {
-    console.log('Seeding localities...');
+    this.logger.log('Seeding localities...');
     const gurgaon = await this.cityRepository.findOne({ where: { code: 'gurgaon' } });
     const delhi = await this.cityRepository.findOne({ where: { code: 'delhi' } });
     const noida = await this.cityRepository.findOne({ where: { code: 'noida' } });
 
     if (!gurgaon || !delhi || !noida) {
-      console.log('⚠ Skipping locality seeding - cities not found');
+      this.logger.log('⚠ Skipping locality seeding - cities not found');
       return;
     }
 
@@ -552,14 +554,14 @@ export class MasterDataSeederService {
         created++;
       }
     }
-    console.log(`✓ Created ${created} localities`);
+    this.logger.log(`✓ Created ${created} localities`);
   }
 
   private async seedSocieties(): Promise<void> {
-    console.log('Seeding societies...');
+    this.logger.log('Seeding societies...');
     const gurgaon = await this.cityRepository.findOne({ where: { code: 'gurgaon' } });
     if (!gurgaon) {
-      console.log('⚠ Skipping society seeding - city not found');
+      this.logger.log('⚠ Skipping society seeding - city not found');
       return;
     }
 
@@ -574,7 +576,7 @@ export class MasterDataSeederService {
     });
 
     if (!dlfPhase1 || !dlfPhase2 || !golfCourseRoad) {
-      console.log('⚠ Skipping society seeding - localities not found');
+      this.logger.log('⚠ Skipping society seeding - localities not found');
       return;
     }
 
@@ -625,7 +627,7 @@ export class MasterDataSeederService {
         created++;
       }
     }
-    console.log(`✓ Created ${created} societies`);
+    this.logger.log(`✓ Created ${created} societies`);
   }
 
 }

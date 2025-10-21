@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { User } from '../../entities/user.entity';
@@ -11,6 +12,8 @@ import { USER_MESSAGES } from '../../constants/user.messages';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+  private readonly logger = new Logger(RolesGuard.name);
+
   constructor(private reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -38,10 +41,14 @@ export class RolesGuard implements CanActivate {
       }
       return true;
     } catch (error) {
-      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStatus = (error as any).status || HttpStatus.UNAUTHORIZED;
+      
+      this.logger.error(`Role guard failed: ${errorMessage}`);
+      
       throw new HttpException(
-        error.message,
-        error.status || HttpStatus.UNAUTHORIZED,
+        errorMessage,
+        errorStatus,
       );
     }
   }

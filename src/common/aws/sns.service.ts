@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { SNS, config } from 'aws-sdk';
 import { LoggerService } from 'src/logger/logger.service';
 import { ErrorHandlerService } from 'src/common/errorHandler/error-handler.service';
@@ -32,8 +32,8 @@ export class SnsService {
     );
 
     if (missingVars.length > 0) {
-      throw new Error(
-        `Missing required environment variables: ${missingVars.join(', ')}`,
+      throw new InternalServerErrorException(
+        `Missing required AWS SNS environment variables: ${missingVars.join(', ')}`,
       );
     }
   }
