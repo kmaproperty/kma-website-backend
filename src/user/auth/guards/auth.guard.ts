@@ -72,7 +72,9 @@ export class AuthGuard implements CanActivate {
   private verifyAccessToken(token: string): any {
     const secret = process.env.ACCESS_TOKEN_SECRET;
     if (!secret) {
-      this.logger.error('ACCESS_TOKEN_SECRET environment variable is not defined');
+      this.logger.error(
+        'ACCESS_TOKEN_SECRET environment variable is not defined',
+      );
       throw new HttpException(
         'Server configuration error',
         HttpStatus.INTERNAL_SERVER_ERROR,

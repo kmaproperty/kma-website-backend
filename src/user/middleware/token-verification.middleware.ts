@@ -15,7 +15,9 @@ export class TokenVerificationMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction) {
     try {
-      this.logger.debug(`Authorization header: ${req.headers.authorization ? 'present' : 'missing'}`);
+      this.logger.debug(
+        `Authorization header: ${req.headers.authorization ? 'present' : 'missing'}`,
+      );
 
       // Try to extract token from Authorization header first
       const token = req.headers?.authorization?.split(' ')[1];
@@ -51,9 +53,11 @@ export class TokenVerificationMiddleware implements NestMiddleware {
       if (error instanceof UnauthorizedException) {
         throw error; // Re-throw UnauthorizedException as-is
       }
-      
-      this.logger.error(`Token verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      
+
+      this.logger.error(
+        `Token verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+
       if (error instanceof Error && error.name === 'TokenExpiredError') {
         throw new UnauthorizedException(
           'Token has expired. Please verify OTP again.',

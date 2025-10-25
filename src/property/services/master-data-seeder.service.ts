@@ -41,7 +41,7 @@ export class MasterDataSeederService {
    */
   async deleteAll(): Promise<void> {
     this.logger.log('Starting deletion of all master data...');
-    
+
     // Delete in reverse dependency order
     // 1. Properties first (depends on everything)
     const propertiesCount = await this.propertyRepository.count();
@@ -114,7 +114,7 @@ export class MasterDataSeederService {
    */
   async seedAll(): Promise<void> {
     this.logger.log('Starting seeding of all master data...');
-    
+
     await this.seedPropertyListingTypes();
     await this.seedPropertyCategories();
     await this.seedPropertyTypes();
@@ -123,7 +123,7 @@ export class MasterDataSeederService {
     await this.seedCities();
     await this.seedLocalities();
     await this.seedSocieties();
-    
+
     this.logger.log('All master data seeded successfully');
   }
 
@@ -132,14 +132,14 @@ export class MasterDataSeederService {
    */
   async reseedAll(): Promise<{ message: string; details: any }> {
     const startTime = Date.now();
-    
+
     try {
       // Delete existing data
       await this.deleteAll();
-      
+
       // Seed new data
       await this.seedAll();
-      
+
       // Get counts of seeded data
       const counts = {
         propertyListingTypes: await this.propertyListingTypeRepository.count(),
@@ -151,9 +151,9 @@ export class MasterDataSeederService {
         localities: await this.localityRepository.count(),
         societies: await this.societyRepository.count(),
       };
-      
+
       const duration = Date.now() - startTime;
-      
+
       return {
         message: 'Master data reseeded successfully',
         details: {
@@ -170,13 +170,13 @@ export class MasterDataSeederService {
   private async seedPropertyListingTypes(): Promise<void> {
     this.logger.log('Seeding property listing types...');
     const propertyListingTypeOptions = [
-      { 
-        name: 'Sale', 
-        code: 'sale'
+      {
+        name: 'Sale',
+        code: 'sale',
       },
-      { 
-        name: 'Rent', 
-        code: 'rent'
+      {
+        name: 'Rent',
+        code: 'rent',
       },
     ];
 
@@ -187,7 +187,8 @@ export class MasterDataSeederService {
       });
 
       if (!existing) {
-        const propertyListingType = this.propertyListingTypeRepository.create(optionData);
+        const propertyListingType =
+          this.propertyListingTypeRepository.create(optionData);
         await this.propertyListingTypeRepository.save(propertyListingType);
         created++;
       }
@@ -197,10 +198,10 @@ export class MasterDataSeederService {
 
   private async seedBhkTypes(): Promise<void> {
     this.logger.log('Seeding BHK types...');
-    
+
     // Get all societies
     const allSocieties = await this.societyRepository.find();
-    
+
     if (allSocieties.length === 0) {
       this.logger.log('⚠ Skipping BHK type seeding - societies not found');
       return;
@@ -228,7 +229,9 @@ export class MasterDataSeederService {
     });
 
     if (propertyTypesWithBhk.length === 0) {
-      this.logger.log('⚠ Skipping BHK type seeding - property types not found');
+      this.logger.log(
+        '⚠ Skipping BHK type seeding - property types not found',
+      );
       return;
     }
 
@@ -254,20 +257,24 @@ export class MasterDataSeederService {
       // Randomly select which BHK types this society has
       // Common types (1bhk, 2bhk, 3bhk) are more likely
       const commonBhkCodes = ['1bhk', '2bhk', '3bhk'];
-      
+
       // Randomly select one property type for this society (e.g., flat, house, villa)
-      const randomPropertyType = propertyTypesWithBhk[Math.floor(Math.random() * propertyTypesWithBhk.length)];
-      
+      const randomPropertyType =
+        propertyTypesWithBhk[
+          Math.floor(Math.random() * propertyTypesWithBhk.length)
+        ];
+
       for (const bhkDef of bhkTypeDefinitions) {
         // Always include common BHK types, randomly include others
-        const shouldInclude = commonBhkCodes.includes(bhkDef.code) || Math.random() > 0.5;
-        
+        const shouldInclude =
+          commonBhkCodes.includes(bhkDef.code) || Math.random() > 0.5;
+
         if (!shouldInclude) {
           continue;
         }
 
         const code = `${randomPropertyType.code}-${bhkDef.code}-${society.id.substring(0, 8)}`;
-        
+
         const existing = await this.bhkTypeRepository.findOne({
           where: { code },
         });
@@ -285,7 +292,9 @@ export class MasterDataSeederService {
         }
       }
     }
-    this.logger.log(`✓ Created ${created} BHK types for ${allSocieties.length} societies`);
+    this.logger.log(
+      `✓ Created ${created} BHK types for ${allSocieties.length} societies`,
+    );
   }
 
   private async seedBuiltUpAreas(): Promise<void> {
@@ -295,14 +304,16 @@ export class MasterDataSeederService {
     const allBhkTypes = await this.bhkTypeRepository.find();
 
     if (allBhkTypes.length === 0) {
-      this.logger.log('⚠ Skipping built-up area seeding - BHK types not found');
+      this.logger.log(
+        '⚠ Skipping built-up area seeding - BHK types not found',
+      );
       return;
     }
 
     // Define built-up area configurations for different BHK types
     // Format: { bhkCode: suffix, configurations: [{ superBuiltUpArea, carpetArea, noOfBathrooms }] }
     const builtUpAreaData = {
-      'studio': [
+      studio: [
         { superBuiltUpArea: 350, carpetArea: 280, noOfBathrooms: 1 },
         { superBuiltUpArea: 450, carpetArea: 360, noOfBathrooms: 1 },
         { superBuiltUpArea: 550, carpetArea: 440, noOfBathrooms: 1 },
@@ -371,25 +382,41 @@ export class MasterDataSeederService {
     };
 
     let created = 0;
-    
+
     // Create built-up areas for each BHK type
     // Since BHK types are now society-specific, we just create built-up areas for each BHK type
     for (const bhkType of allBhkTypes) {
       // Extract the BHK code from the code (format: "property-type-bhk-societyid")
       const parts = bhkType.code.split('-');
-      const bhkCode = parts.find(part => ['studio', '1rk', '1bhk', '1.5bhk', '2bhk', '2.5bhk', '3bhk', '3.5bhk', '4bhk', '4.5bhk', '5bhk', '5plus'].includes(part));
-      
+      const bhkCode = parts.find((part) =>
+        [
+          'studio',
+          '1rk',
+          '1bhk',
+          '1.5bhk',
+          '2bhk',
+          '2.5bhk',
+          '3bhk',
+          '3.5bhk',
+          '4bhk',
+          '4.5bhk',
+          '5bhk',
+          '5plus',
+        ].includes(part),
+      );
+
       if (!bhkCode) {
         continue; // Skip if bhkCode not found
       }
 
-      const configurations = builtUpAreaData[bhkCode as keyof typeof builtUpAreaData];
+      const configurations =
+        builtUpAreaData[bhkCode as keyof typeof builtUpAreaData];
 
       if (configurations) {
         // Select 2-3 configurations randomly for variety
         const numConfigs = Math.floor(Math.random() * 2) + 2; // 2 or 3 configs
         const selectedConfigs = configurations.slice(0, numConfigs);
-        
+
         for (const config of selectedConfigs) {
           // Check if this configuration already exists for this BHK type
           const existing = await this.builtUpAreaRepository.findOne({
@@ -416,44 +443,146 @@ export class MasterDataSeederService {
         }
       }
     }
-    this.logger.log(`✓ Created ${created} built-up area configurations for ${allBhkTypes.length} BHK types`);
+    this.logger.log(
+      `✓ Created ${created} built-up area configurations for ${allBhkTypes.length} BHK types`,
+    );
   }
 
   private async seedPropertyTypes(): Promise<void> {
     this.logger.log('Seeding property types...');
     // Get listing types and categories first
-    const saleType = await this.propertyListingTypeRepository.findOne({ where: { code: 'sale' } });
-    const rentType = await this.propertyListingTypeRepository.findOne({ where: { code: 'rent' } });
-    const residentialCategory = await this.propertyCategoryRepository.findOne({ where: { code: 'residential' } });
-    const commercialCategory = await this.propertyCategoryRepository.findOne({ where: { code: 'commercial' } });
+    const saleType = await this.propertyListingTypeRepository.findOne({
+      where: { code: 'sale' },
+    });
+    const rentType = await this.propertyListingTypeRepository.findOne({
+      where: { code: 'rent' },
+    });
+    const residentialCategory = await this.propertyCategoryRepository.findOne({
+      where: { code: 'residential' },
+    });
+    const commercialCategory = await this.propertyCategoryRepository.findOne({
+      where: { code: 'commercial' },
+    });
 
     if (!saleType || !rentType || !residentialCategory || !commercialCategory) {
-      this.logger.log('⚠ Skipping property type seeding - prerequisites not met');
+      this.logger.log(
+        '⚠ Skipping property type seeding - prerequisites not met',
+      );
       return;
     }
 
     const propertyTypes = [
       // Residential Rent
-      { name: 'Flat/Apartment', code: 'res-rent-flat', categoryId: residentialCategory.id, listingTypeId: rentType.id },
-      { name: 'Independent House', code: 'res-rent-house', categoryId: residentialCategory.id, listingTypeId: rentType.id },
-      { name: 'Duplex', code: 'res-rent-duplex', categoryId: residentialCategory.id, listingTypeId: rentType.id },
-      { name: 'Builder Floor', code: 'res-rent-builder-floor', categoryId: residentialCategory.id, listingTypeId: rentType.id },
-      { name: 'Villa', code: 'res-rent-villa', categoryId: residentialCategory.id, listingTypeId: rentType.id },
-      { name: 'Penthouse', code: 'res-rent-penthouse', categoryId: residentialCategory.id, listingTypeId: rentType.id },
-      { name: 'Studio', code: 'res-rent-studio', categoryId: residentialCategory.id, listingTypeId: rentType.id },
-      { name: 'Farm House', code: 'res-rent-farmhouse', categoryId: residentialCategory.id, listingTypeId: rentType.id },
-      
+      {
+        name: 'Flat/Apartment',
+        code: 'res-rent-flat',
+        categoryId: residentialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Independent House',
+        code: 'res-rent-house',
+        categoryId: residentialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Duplex',
+        code: 'res-rent-duplex',
+        categoryId: residentialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Builder Floor',
+        code: 'res-rent-builder-floor',
+        categoryId: residentialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Villa',
+        code: 'res-rent-villa',
+        categoryId: residentialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Penthouse',
+        code: 'res-rent-penthouse',
+        categoryId: residentialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Studio',
+        code: 'res-rent-studio',
+        categoryId: residentialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Farm House',
+        code: 'res-rent-farmhouse',
+        categoryId: residentialCategory.id,
+        listingTypeId: rentType.id,
+      },
+
       // Residential Sale
-      { name: 'Flat/Apartment', code: 'res-sale-flat', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: 'Independent House', code: 'res-sale-house', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: 'Duplex', code: 'res-sale-duplex', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: 'Builder Floor', code: 'res-sale-builder-floor', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: 'Villa', code: 'res-sale-villa', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: 'Penthouse', code: 'res-sale-penthouse', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: '1 RK/Studio', code: 'res-sale-studio', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: 'Farm House', code: 'res-sale-farmhouse', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: 'Plot', code: 'res-sale-plot', categoryId: residentialCategory.id, listingTypeId: saleType.id },
-      { name: 'Agricultural Land', code: 'res-sale-agri-land', categoryId: residentialCategory.id, listingTypeId: saleType.id },
+      {
+        name: 'Flat/Apartment',
+        code: 'res-sale-flat',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Independent House',
+        code: 'res-sale-house',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Duplex',
+        code: 'res-sale-duplex',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Builder Floor',
+        code: 'res-sale-builder-floor',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Villa',
+        code: 'res-sale-villa',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Penthouse',
+        code: 'res-sale-penthouse',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: '1 RK/Studio',
+        code: 'res-sale-studio',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Farm House',
+        code: 'res-sale-farmhouse',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Plot',
+        code: 'res-sale-plot',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Agricultural Land',
+        code: 'res-sale-agri-land',
+        categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
     ];
 
     let created = 0;
@@ -474,13 +603,13 @@ export class MasterDataSeederService {
   private async seedPropertyCategories(): Promise<void> {
     this.logger.log('Seeding property categories...');
     const categories = [
-      { 
-        name: 'Residential', 
-        code: 'residential'
+      {
+        name: 'Residential',
+        code: 'residential',
       },
-      { 
-        name: 'Commercial', 
-        code: 'commercial'
+      {
+        name: 'Commercial',
+        code: 'commercial',
       },
     ];
 
@@ -502,11 +631,41 @@ export class MasterDataSeederService {
   private async seedCities(): Promise<void> {
     this.logger.log('Seeding cities...');
     const cities = [
-      { name: 'Gurgaon', code: 'gurgaon', state: 'Haryana', latitude: 28.4595, longitude: 77.0266 },
-      { name: 'Delhi', code: 'delhi', state: 'Delhi', latitude: 28.7041, longitude: 77.1025 },
-      { name: 'Noida', code: 'noida', state: 'Uttar Pradesh', latitude: 28.5355, longitude: 77.3910 },
-      { name: 'Mumbai', code: 'mumbai', state: 'Maharashtra', latitude: 19.0760, longitude: 72.8777 },
-      { name: 'Bangalore', code: 'bangalore', state: 'Karnataka', latitude: 12.9716, longitude: 77.5946 },
+      {
+        name: 'Gurgaon',
+        code: 'gurgaon',
+        state: 'Haryana',
+        latitude: 28.4595,
+        longitude: 77.0266,
+      },
+      {
+        name: 'Delhi',
+        code: 'delhi',
+        state: 'Delhi',
+        latitude: 28.7041,
+        longitude: 77.1025,
+      },
+      {
+        name: 'Noida',
+        code: 'noida',
+        state: 'Uttar Pradesh',
+        latitude: 28.5355,
+        longitude: 77.391,
+      },
+      {
+        name: 'Mumbai',
+        code: 'mumbai',
+        state: 'Maharashtra',
+        latitude: 19.076,
+        longitude: 72.8777,
+      },
+      {
+        name: 'Bangalore',
+        code: 'bangalore',
+        state: 'Karnataka',
+        latitude: 12.9716,
+        longitude: 77.5946,
+      },
     ];
 
     let created = 0;
@@ -526,9 +685,15 @@ export class MasterDataSeederService {
 
   private async seedLocalities(): Promise<void> {
     this.logger.log('Seeding localities...');
-    const gurgaon = await this.cityRepository.findOne({ where: { code: 'gurgaon' } });
-    const delhi = await this.cityRepository.findOne({ where: { code: 'delhi' } });
-    const noida = await this.cityRepository.findOne({ where: { code: 'noida' } });
+    const gurgaon = await this.cityRepository.findOne({
+      where: { code: 'gurgaon' },
+    });
+    const delhi = await this.cityRepository.findOne({
+      where: { code: 'delhi' },
+    });
+    const noida = await this.cityRepository.findOne({
+      where: { code: 'noida' },
+    });
 
     if (!gurgaon || !delhi || !noida) {
       this.logger.log('⚠ Skipping locality seeding - cities not found');
@@ -537,18 +702,63 @@ export class MasterDataSeederService {
 
     const localities = [
       // Gurgaon localities
-      { name: 'DLF Phase 1', sector: 'Sector 26', cityId: gurgaon.id, latitude: 28.4749, longitude: 77.0937 },
-      { name: 'DLF Phase 2', sector: 'Sector 25', cityId: gurgaon.id, latitude: 28.4840, longitude: 77.0883 },
-      { name: 'Golf Course Road', cityId: gurgaon.id, latitude: 28.4511, longitude: 77.0677 },
-      { name: 'Sohna Road', cityId: gurgaon.id, latitude: 28.4089, longitude: 77.0824 },
-      
+      {
+        name: 'DLF Phase 1',
+        sector: 'Sector 26',
+        cityId: gurgaon.id,
+        latitude: 28.4749,
+        longitude: 77.0937,
+      },
+      {
+        name: 'DLF Phase 2',
+        sector: 'Sector 25',
+        cityId: gurgaon.id,
+        latitude: 28.484,
+        longitude: 77.0883,
+      },
+      {
+        name: 'Golf Course Road',
+        cityId: gurgaon.id,
+        latitude: 28.4511,
+        longitude: 77.0677,
+      },
+      {
+        name: 'Sohna Road',
+        cityId: gurgaon.id,
+        latitude: 28.4089,
+        longitude: 77.0824,
+      },
+
       // Delhi localities
-      { name: 'Connaught Place', cityId: delhi.id, latitude: 28.6315, longitude: 77.2167 },
-      { name: 'Dwarka', sector: 'Sector 10', cityId: delhi.id, latitude: 28.5921, longitude: 77.0460 },
-      
+      {
+        name: 'Connaught Place',
+        cityId: delhi.id,
+        latitude: 28.6315,
+        longitude: 77.2167,
+      },
+      {
+        name: 'Dwarka',
+        sector: 'Sector 10',
+        cityId: delhi.id,
+        latitude: 28.5921,
+        longitude: 77.046,
+      },
+
       // Noida localities
-      { name: 'Sector 62', sector: 'Sector 62', cityId: noida.id, latitude: 28.6260, longitude: 77.3705 },
-      { name: 'Sector 18', sector: 'Sector 18', cityId: noida.id, latitude: 28.5687, longitude: 77.3243 },
+      {
+        name: 'Sector 62',
+        sector: 'Sector 62',
+        cityId: noida.id,
+        latitude: 28.626,
+        longitude: 77.3705,
+      },
+      {
+        name: 'Sector 18',
+        sector: 'Sector 18',
+        cityId: noida.id,
+        latitude: 28.5687,
+        longitude: 77.3243,
+      },
     ];
 
     let created = 0;
@@ -568,20 +778,22 @@ export class MasterDataSeederService {
 
   private async seedSocieties(): Promise<void> {
     this.logger.log('Seeding societies...');
-    const gurgaon = await this.cityRepository.findOne({ where: { code: 'gurgaon' } });
+    const gurgaon = await this.cityRepository.findOne({
+      where: { code: 'gurgaon' },
+    });
     if (!gurgaon) {
       this.logger.log('⚠ Skipping society seeding - city not found');
       return;
     }
 
-    const dlfPhase1 = await this.localityRepository.findOne({ 
-      where: { name: 'DLF Phase 1', cityId: gurgaon.id } 
+    const dlfPhase1 = await this.localityRepository.findOne({
+      where: { name: 'DLF Phase 1', cityId: gurgaon.id },
     });
-    const dlfPhase2 = await this.localityRepository.findOne({ 
-      where: { name: 'DLF Phase 2', cityId: gurgaon.id } 
+    const dlfPhase2 = await this.localityRepository.findOne({
+      where: { name: 'DLF Phase 2', cityId: gurgaon.id },
     });
-    const golfCourseRoad = await this.localityRepository.findOne({ 
-      where: { name: 'Golf Course Road', cityId: gurgaon.id } 
+    const golfCourseRoad = await this.localityRepository.findOne({
+      where: { name: 'Golf Course Road', cityId: gurgaon.id },
     });
 
     if (!dlfPhase1 || !dlfPhase2 || !golfCourseRoad) {
@@ -590,37 +802,37 @@ export class MasterDataSeederService {
     }
 
     const societies = [
-      { 
-        name: 'DLF Park Place', 
-        cityId: gurgaon.id, 
+      {
+        name: 'DLF Park Place',
+        cityId: gurgaon.id,
         localityId: dlfPhase1.id,
         address: 'Sector 26, DLF Phase 1, Gurgaon',
         pincode: '122002',
-        isVerified: true
+        isVerified: true,
       },
-      { 
-        name: 'DLF Aralias', 
-        cityId: gurgaon.id, 
+      {
+        name: 'DLF Aralias',
+        cityId: gurgaon.id,
         localityId: golfCourseRoad.id,
         address: 'Golf Course Road, Gurgaon',
         pincode: '122002',
-        isVerified: true
+        isVerified: true,
       },
-      { 
-        name: 'DLF Magnolias', 
-        cityId: gurgaon.id, 
+      {
+        name: 'DLF Magnolias',
+        cityId: gurgaon.id,
         localityId: golfCourseRoad.id,
         address: 'Golf Course Road, Gurgaon',
         pincode: '122002',
-        isVerified: true
+        isVerified: true,
       },
-      { 
-        name: 'Belaire', 
-        cityId: gurgaon.id, 
+      {
+        name: 'Belaire',
+        cityId: gurgaon.id,
         localityId: dlfPhase2.id,
         address: 'Sector 25, DLF Phase 2, Gurgaon',
         pincode: '122002',
-        isVerified: true
+        isVerified: true,
       },
     ];
 
@@ -638,5 +850,4 @@ export class MasterDataSeederService {
     }
     this.logger.log(`✓ Created ${created} societies`);
   }
-
 }

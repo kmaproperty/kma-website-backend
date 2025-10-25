@@ -28,12 +28,17 @@ export class PropertyCategoryNewRepository {
     });
   }
 
-  async create(categoryData: Partial<MasterPropertyCategoryNew>): Promise<MasterPropertyCategoryNew> {
+  async create(
+    categoryData: Partial<MasterPropertyCategoryNew>,
+  ): Promise<MasterPropertyCategoryNew> {
     const category = this.propertyCategoryRepository.create(categoryData);
     return await this.propertyCategoryRepository.save(category);
   }
 
-  async update(id: string, updateData: Partial<MasterPropertyCategoryNew>): Promise<MasterPropertyCategoryNew | null> {
+  async update(
+    id: string,
+    updateData: Partial<MasterPropertyCategoryNew>,
+  ): Promise<MasterPropertyCategoryNew | null> {
     await this.propertyCategoryRepository.update(id, updateData);
     return await this.findById(id);
   }

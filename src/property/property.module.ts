@@ -12,6 +12,7 @@ import { BuiltUpAreaRepository } from './repositories/built-up-area.repository';
 import { CityRepository } from './repositories/city.repository';
 import { LocalityRepository } from './repositories/locality.repository';
 import { SocietyRepository } from './repositories/society.repository';
+import { PropertyRepository } from './repositories/property.repository';
 import { MasterPropertyListingType } from './entities/master-property-listing-type.entity';
 import { MasterPropertyCategoryNew } from './entities/master-property-category-new.entity';
 import { MasterCity } from './entities/master-city.entity';
@@ -61,6 +62,7 @@ import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
     CityRepository,
     LocalityRepository,
     SocietyRepository,
+    PropertyRepository,
     MasterDataSeederService,
     GooglePlacesService,
     JwtAuthGuard,

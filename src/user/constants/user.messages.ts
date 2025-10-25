@@ -18,8 +18,10 @@ export const USER_MESSAGES = {
     LIST_FETCHED: 'Users fetched successfully',
     FAILED_TO_UPDATE: 'Failed to update user',
     PHONE_NUMBER_MISMATCH: 'Phone number mismatch',
-    PHONE_NOT_VERIFIED: 'Phone number is not verified. Please verify OTP first.',
-    EMAIL_ALREADY_REGISTERED: 'Email address is already registered with another user.',
+    PHONE_NOT_VERIFIED:
+      'Phone number is not verified. Please verify OTP first.',
+    EMAIL_ALREADY_REGISTERED:
+      'Email address is already registered with another user.',
   },
   OTP: {
     SENT: 'OTP sent successfully',
@@ -31,7 +33,8 @@ export const USER_MESSAGES = {
     ALREADY_USED: 'OTP has already been used. Please request a new OTP.',
     TOO_MANY_ATTEMPTS: 'Too many failed attempts. Please request a new OTP.',
     VALIDATED: 'OTP validated successfully',
-    VALIDATED_NEW_USER: (role: string) => `OTP validated successfully. User created with ${role} role.`,
+    VALIDATED_NEW_USER: (role: string) =>
+      `OTP validated successfully. User created with ${role} role.`,
     RATE_LIMITED: 'Please wait before requesting another code',
     MAX_ATTEMPTS:
       'Maximum OTP attempts exceeded. Please contact support for assistance',

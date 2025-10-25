@@ -26,7 +26,7 @@ export class ConfigService implements TypeOrmOptionsFactory {
       this.nestConfigService.get<string>('POSTGRES_SSL') === 'true';
 
     // const sslEnv = this.nestConfigService.get<string>('POSTGRES_SSL');
-    // const useSSL = sslEnv !== 'false';  
+    // const useSSL = sslEnv !== 'false';
 
     // Get environment variables using NestJS ConfigService with fallback to process.env
     const host =
@@ -79,10 +79,10 @@ export class ConfigService implements TypeOrmOptionsFactory {
       synchronize, // Only true in non-production environments
       logging: !isProduction,
       entities: [
-        User, 
-        Otp, 
-        ChannelPartnerCode, 
-        MasterPropertyListingType, 
+        User,
+        Otp,
+        ChannelPartnerCode,
+        MasterPropertyListingType,
         MasterPropertyCategoryNew,
         MasterCity,
         MasterLocality,
@@ -91,7 +91,7 @@ export class ConfigService implements TypeOrmOptionsFactory {
         MasterBhkType,
         MasterBuiltUpArea,
         UnitConfiguration,
-        Property
+        Property,
       ],
       autoLoadEntities: true,
       ...(useSSL && {

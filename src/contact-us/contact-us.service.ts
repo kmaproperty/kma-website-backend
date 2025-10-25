@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ContactUsRepository } from './repositories/contact-us.repository';
 import { CreateContactUsDto, CreateContactUsResponseDto } from './dto';
 import { ContactUs } from './entities/contact-us.entity';
@@ -32,8 +36,12 @@ export class ContactUsService {
         contactId: contact.id,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed to create contact form: ${errorMessage}`, error instanceof Error ? error.stack : '');
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to create contact form: ${errorMessage}`,
+        error instanceof Error ? error.stack : '',
+      );
       throw new InternalServerErrorException(
         'Failed to submit contact form. Please try again later.',
       );
@@ -43,7 +51,10 @@ export class ContactUsService {
   /**
    * Get all contact forms with pagination
    */
-  async getAllContacts(skip: number = 0, take: number = 10): Promise<{
+  async getAllContacts(
+    skip: number = 0,
+    take: number = 10,
+  ): Promise<{
     contacts: ContactUs[];
     total: number;
   }> {

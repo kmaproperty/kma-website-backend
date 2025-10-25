@@ -91,10 +91,10 @@ export class Property extends BaseEntity {
   userId: string;
 
   // Property status
-  @Column({ 
+  @Column({
     type: 'enum',
     enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
-    default: 'draft'
+    default: 'draft',
   })
   status: string;
 }

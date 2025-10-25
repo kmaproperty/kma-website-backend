@@ -28,12 +28,19 @@ export class PropertyListingTypeRepository {
     });
   }
 
-  async create(propertyListingTypeData: Partial<MasterPropertyListingType>): Promise<MasterPropertyListingType> {
-    const propertyListingType = this.propertyListingTypeRepository.create(propertyListingTypeData);
+  async create(
+    propertyListingTypeData: Partial<MasterPropertyListingType>,
+  ): Promise<MasterPropertyListingType> {
+    const propertyListingType = this.propertyListingTypeRepository.create(
+      propertyListingTypeData,
+    );
     return await this.propertyListingTypeRepository.save(propertyListingType);
   }
 
-  async update(id: string, updateData: Partial<MasterPropertyListingType>): Promise<MasterPropertyListingType | null> {
+  async update(
+    id: string,
+    updateData: Partial<MasterPropertyListingType>,
+  ): Promise<MasterPropertyListingType | null> {
     await this.propertyListingTypeRepository.update(id, updateData);
     return await this.findById(id);
   }

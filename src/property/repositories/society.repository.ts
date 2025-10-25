@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { MasterSociety } from '../entities/master-society.entity';
 
 @Injectable()
@@ -34,5 +34,45 @@ export class SocietyRepository {
       where: { localityId },
       order: { name: 'ASC' },
     });
+  }
+
+  async searchByNameAndCity(
+    query: string,
+    cityId: string,
+    limit: number = 10,
+  ): Promise<MasterSociety[]> {
+    return await this.societyRepository.find({
+      where: {
+        name: ILike(`%${query}%`),
+        cityId: cityId,
+      },
+      order: { name: 'ASC' },
+      take: limit,
+    });
+  }
+
+  async searchByName(
+    query: string,
+    limit: number = 10,
+  ): Promise<MasterSociety[]> {
+    return await this.societyRepository.find({
+      where: { name: ILike(`%${query}%`) },
+      order: { name: 'ASC' },
+      take: limit,
+    });
+  }
+
+  async createSociety(
+    societyData: Partial<MasterSociety>,
+  ): Promise<MasterSociety> {
+    const society = this.societyRepository.create(societyData);
+    return await this.societyRepository.save(society);
+  }
+
+  async updateSociety(
+    id: string,
+    updateData: Partial<MasterSociety>,
+  ): Promise<void> {
+    await this.societyRepository.update(id, updateData);
   }
 }
