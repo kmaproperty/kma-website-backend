@@ -57,22 +57,6 @@ export class Property extends BaseEntity {
   @JoinColumn({ name: 'bhkTypeId' })
   bhkType: MasterBhkType;
 
-  // Custom BHK if user selected "Other"
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  customBhk: string;
-
-  // Number of bathrooms
-  @Column({ type: 'int' })
-  bathrooms: number;
-
-  // Built-up Area
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  builtUpAreaSqFt: number;
-
-  // Carpet Area
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  carpetAreaSqFt: number;
-
   // Age of Property (in Years)
   @Column({ type: 'int' })
   ageOfProperty: number;

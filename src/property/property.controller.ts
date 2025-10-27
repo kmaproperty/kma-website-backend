@@ -7,7 +7,9 @@ import {
   Param,
   Body,
   BadRequestException,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -17,7 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
-import { CreatePropertyDto } from './dto/create-property.dto';
+import { CreatePropertyStep1Dto } from './dto/create-property.dto';
 import { 
   MasterDataResponseDto, 
   ReseedMasterDataResponseDto, 
@@ -41,7 +43,7 @@ import {
 
 @ApiTags('Property')
 @Controller('property')
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
@@ -258,22 +260,30 @@ export class PropertyController {
 
   @Post('/step-1')
   @ApiOperation({
-    summary: 'Step 1: Create a new property',
+    summary: 'Step 1: Create or update a property',
     description:
-      'Creates a new property with automatic master data creation if needed. Can accept either IDs or names for city, society, BHK type, and built-up area. Locality information should be provided via society.localityName field (no separate locality object needed). If names are provided, new entries will be created in master tables.',
+      'Creates a new property or updates an existing property with automatic master data creation if needed. If propertyId is provided, updates the existing property; otherwise creates a new one. Can accept either IDs or names for city, society, BHK type, and built-up area. Locality information should be provided via society.localityName field. If names are provided, new entries will be created in master tables.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Property created successfully',
+    description: 'Property created or updated successfully',
     type: PropertyResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid property data or missing required fields',
+    description: 'Invalid property data, missing required fields, or property not found',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'You can only update your own properties',
   })
   async createProperty(
-    @Body() createPropertyDto: CreatePropertyDto,
+    @Body() createPropertyDto: CreatePropertyStep1Dto,
+    @Req() req: Request,
   ): Promise<PropertyResponseDto> {
-    return await this.propertyService.createProperty(createPropertyDto);
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.createProperty(createPropertyDto, req.user.id);
   }
 }

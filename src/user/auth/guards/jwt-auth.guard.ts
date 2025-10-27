@@ -17,13 +17,13 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('No token provided');
     }
     try {
-      const payload = await this.jwtService.verifyAsync<{ userId: string }>(
+      const payload = await this.jwtService.verifyAsync<{ sub: string }>(
         token,
         {
           secret: process.env.JWT_SECRET,
         },
       );
-      (request as any)['user'] = { id: payload.userId };
+      (request as any)['user'] = { id: payload.sub };
       return true;
     } catch {
       throw new UnauthorizedException('Invalid token');
