@@ -297,25 +297,20 @@ export class PropertyService {
   }
 
   /**
-   * Create a new property with automatic master data creation if needed
+   * Create a new property or update existing property with automatic master data creation if needed
+   * If propertyId is provided, updates the existing property; otherwise creates a new one
    */
-  async createProperty(createPropertyDto: any): Promise<any> {
+  async createProperty(createPropertyDto: any, userId: string): Promise<any> {
     const {
+      propertyId,
       listingTypeId,
       categoryId,
       propertyTypeId,
-      bathrooms,
-      builtUpAreaSqFt,
-      carpetAreaSqFt,
+      bhk,
       ageOfProperty,
-      userId,
-      customBhk,
       status = 'draft',
       city,
       society,
-      locality,
-      bhkType,
-      builtUpArea,
     } = createPropertyDto;
 
     // Helper function to get or create city
@@ -392,72 +387,49 @@ export class PropertyService {
     };
 
     // Helper function to get or create BHK type
-    const getOrCreateBhkType = async (bhkTypeInfo: any, societyId: string) => {
-      if (bhkTypeInfo.id) {
-        const existingBhkType = await this.bhkTypeRepository.findById(
-          bhkTypeInfo.id,
-        );
-        if (!existingBhkType) {
+    const getOrCreateBhk = async (bhkInfo: any, societyId: string) => {
+      if (bhkInfo.id) {
+        const existingBhk = await this.bhkTypeRepository.findById(bhkInfo.id);
+        if (!existingBhk) {
           throw new BadRequestException(
-            `BHK Type with ID ${bhkTypeInfo.id} not found`,
+            `BHK Type with ID ${bhkInfo.id} not found`,
           );
         }
-        return existingBhkType.id;
-      } else if (bhkTypeInfo.name) {
+        return existingBhk.id;
+      } else if (bhkInfo.name) {
         // Check if BHK type exists by name for the society
-        const existingBhkType =
-          await this.bhkTypeRepository.findBySocietyId(societyId);
-        const matchingBhkType = existingBhkType.find(
-          (bt) => bt.name.toLowerCase() === bhkTypeInfo.name.toLowerCase(),
+        const existingBhkTypes = await this.bhkTypeRepository.findBySocietyId(societyId);
+        const matchingBhkType = existingBhkTypes.find(
+          (bt) => bt.name.toLowerCase() === bhkInfo.name.toLowerCase(),
         );
         if (matchingBhkType) {
           return matchingBhkType.id;
         }
         // Create new BHK type
         const newBhkType = await this.bhkTypeRepository.createBhkType({
-          name: bhkTypeInfo.name,
-          code:
-            bhkTypeInfo.code ||
-            bhkTypeInfo.name.toLowerCase().replace(/\s+/g, '-'),
-          sortOrder: bhkTypeInfo.sortOrder || 1,
+          name: bhkInfo.name,
+          code: bhkInfo.name.toLowerCase().replace(/\s+/g, '-'),
+          sortOrder: 1,
           propertyTypeId: propertyTypeId,
           societyId: societyId,
         });
         return newBhkType.id;
       } else {
-        throw new BadRequestException('BHK Type ID or name is required');
+        throw new BadRequestException('BHK ID or name is required');
       }
     };
 
     // Helper function to get or create built-up area
-    const getOrCreateBuiltUpArea = async (
-      builtUpAreaInfo: any,
-      bhkTypeId: string,
-      societyId: string,
-    ) => {
-      if (builtUpAreaInfo.id) {
-        const existingBuiltUpArea = await this.builtUpAreaRepository.findById(
-          builtUpAreaInfo.id,
-        );
-        if (!existingBuiltUpArea) {
-          throw new BadRequestException(
-            `Built-up Area with ID ${builtUpAreaInfo.id} not found`,
-          );
-        }
-        return existingBuiltUpArea.id;
-      } else {
-        // Create new built-up area
-        const newBuiltUpArea =
-          await this.builtUpAreaRepository.createBuiltUpArea({
-            superBuiltUpArea:
-              builtUpAreaInfo.superBuiltUpArea || builtUpAreaSqFt,
-            carpetArea: builtUpAreaInfo.carpetArea || carpetAreaSqFt,
-            noOfBathrooms: builtUpAreaInfo.noOfBathrooms || bathrooms,
-            bhkTypeId: bhkTypeId,
-            societyId: societyId,
-          });
-        return newBuiltUpArea.id;
-      }
+    const getOrCreateBuiltUpArea = async (bhkInfo: any, bhkTypeId: string, societyId: string) => {
+      // Create new built-up area based on BHK info
+      const newBuiltUpArea = await this.builtUpAreaRepository.createBuiltUpArea({
+        superBuiltUpArea: bhkInfo.buildUpAreaSqFt,
+        carpetArea: bhkInfo.carpetAreaSqFt,
+        noOfBathrooms: bhkInfo.noOfBathrooms,
+        bhkTypeId: bhkTypeId,
+        societyId: societyId,
+      });
+      return newBuiltUpArea.id;
     };
 
     try {
@@ -468,45 +440,57 @@ export class PropertyService {
       const societyId = await getOrCreateSociety(society, cityId);
 
       // Get or create BHK type
-      const bhkTypeId = await getOrCreateBhkType(bhkType, societyId);
+      const bhkTypeId = await getOrCreateBhk(bhk, societyId);
 
-      // Get or create built-up area (not used in property creation, but kept for future use)
-      await getOrCreateBuiltUpArea(builtUpArea, bhkTypeId, societyId);
+      // Get or create built-up area
+      await getOrCreateBuiltUpArea(bhk, bhkTypeId, societyId);
 
-      // Create the property (no localityId needed)
-      const property = await this.propertyRepository.createProperty({
-        listingTypeId,
-        categoryId,
-        cityId,
-        societyId,
-        propertyTypeId,
-        bhkTypeId,
-        customBhk,
-        bathrooms,
-        builtUpAreaSqFt,
-        carpetAreaSqFt,
-        ageOfProperty,
-        userId,
-        status,
-      });
+      let property;
+
+      if (propertyId) {
+        // Update existing property
+        const existingProperty = await this.propertyRepository.findById(propertyId);
+        if (!existingProperty) {
+          throw new BadRequestException(`Property with ID ${propertyId} not found`);
+        }
+
+        // Check if user owns this property
+        if (existingProperty.userId !== userId) {
+          throw new BadRequestException('You can only update your own properties');
+        }
+
+        // Update the property
+        await this.propertyRepository.updateProperty(propertyId, {
+          listingTypeId,
+          categoryId,
+          cityId,
+          societyId,
+          propertyTypeId,
+          bhkTypeId,
+          ageOfProperty,
+          status,
+        });
+
+        // Get the updated property
+        property = await this.propertyRepository.findById(propertyId);
+      } else {
+        // Create new property
+        property = await this.propertyRepository.createProperty({
+          listingTypeId,
+          categoryId,
+          cityId,
+          societyId,
+          propertyTypeId,
+          bhkTypeId,
+          ageOfProperty,
+          userId,
+          status,
+        });
+      }
 
       return {
         id: property.id,
-        listingTypeId: property.listingTypeId,
-        categoryId: property.categoryId,
-        cityId: property.cityId,
-        societyId: property.societyId,
-        propertyTypeId: property.propertyTypeId,
-        bhkTypeId: property.bhkTypeId,
-        customBhk: property.customBhk,
-        bathrooms: property.bathrooms,
-        builtUpAreaSqFt: property.builtUpAreaSqFt,
-        carpetAreaSqFt: property.carpetAreaSqFt,
-        ageOfProperty: property.ageOfProperty,
-        userId: property.userId,
-        status: property.status,
-        createdAt: property.createdAt,
-        updatedAt: property.updatedAt,
+        status: property.status
       };
     } catch (error) {
       throw new BadRequestException(

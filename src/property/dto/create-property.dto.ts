@@ -125,52 +125,6 @@ export class SocietyInfo {
   longitude?: number;
 }
 
-export class LocalityInfo {
-  @ApiProperty({ 
-    description: 'Locality ID (if locality already exists in database)', 
-    example: 'uuid-string',
-    required: false
-  })
-  @IsOptional()
-  @IsUUID()
-  id?: string;
-
-  @ApiProperty({ 
-    description: 'Locality name (if creating new locality)', 
-    example: 'Sector 15',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @ApiProperty({ 
-    description: 'Sector name', 
-    example: 'Sector 15',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  sector?: string;
-
-  @ApiProperty({ 
-    description: 'Latitude coordinate', 
-    example: 28.4595,
-    required: false
-  })
-  @IsOptional()
-  @IsNumber()
-  latitude?: number;
-
-  @ApiProperty({ 
-    description: 'Longitude coordinate', 
-    example: 77.0266,
-    required: false
-  })
-  @IsOptional()
-  @IsNumber()
-  longitude?: number;
-}
 
 export class BhkTypeInfo {
   @ApiProperty({ 
@@ -208,6 +162,70 @@ export class BhkTypeInfo {
   @IsOptional()
   @IsNumber()
   sortOrder?: number;
+}
+
+export class BhkInfo {
+  @ApiProperty({ 
+    description: 'BHK ID (if BHK already exists in database)', 
+    example: 'uuid-string',
+    required: false
+  })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
+  @ApiProperty({ 
+    description: 'BHK name (e.g., "2 BHK", "3 BHK")', 
+    example: '2 BHK',
+    required: true
+  })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @ApiProperty({ 
+    description: 'Built-up area in square feet', 
+    example: 1200,
+    required: true,
+    minimum: 1
+  })
+  @IsNumber()
+  @Min(1)
+  buildUpAreaSqFt: number;
+
+  @ApiProperty({ 
+    description: 'Carpet area in square feet', 
+    example: 1000,
+    required: true,
+    minimum: 1
+  })
+  @IsNumber()
+  @Min(1)
+  carpetAreaSqFt: number;
+
+  @ApiProperty({ 
+    description: 'Number of bathrooms', 
+    example: 2,
+    required: true,
+    minimum: 1,
+    maximum: 10
+  })
+  @IsNumber()
+  @Min(1)
+  @Max(10)
+  noOfBathrooms: number;
+
+  @ApiProperty({ 
+    description: 'Number of balconies', 
+    example: 2,
+    required: true,
+    minimum: 0,
+    maximum: 10
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  noOfBalconies: number;
 }
 
 export class BuiltUpAreaInfo {
@@ -252,7 +270,17 @@ export class BuiltUpAreaInfo {
   noOfBathrooms?: number;
 }
 
-export class CreatePropertyDto {
+export class CreatePropertyStep1Dto {
+  @ApiProperty({ 
+    description: 'Property ID (if updating existing property, leave empty for new property)', 
+    example: 'uuid-string',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  propertyId?: string;
+
   @ApiProperty({ 
     description: 'Property listing type ID (Sale/Rent)', 
     example: 'uuid-string',
@@ -281,37 +309,13 @@ export class CreatePropertyDto {
   propertyTypeId: string;
 
   @ApiProperty({ 
-    description: 'Number of bathrooms', 
-    example: 2,
-    required: true,
-    minimum: 1,
-    maximum: 10
+    description: 'BHK information with area and room details', 
+    type: BhkInfo,
+    required: true
   })
-  @IsNumber()
-  @Min(1)
-  @Max(10)
-  bathrooms: number;
-
-  @ApiProperty({ 
-    description: 'Built-up area in square feet', 
-    example: 1200,
-    required: true,
-    minimum: 1
-  })
-  @IsNumber()
-  @Min(1)
-  builtUpAreaSqFt: number;
-
-  @ApiProperty({ 
-    description: 'Carpet area in square feet', 
-    example: 1000,
-    required: false,
-    minimum: 1
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  carpetAreaSqFt?: number;
+  @ValidateNested()
+  @Type(() => BhkInfo)
+  bhk: BhkInfo;
 
   @ApiProperty({ 
     description: 'Age of property in years', 
@@ -325,23 +329,7 @@ export class CreatePropertyDto {
   @Max(100)
   ageOfProperty: number;
 
-  @ApiProperty({ 
-    description: 'User ID who is creating the property', 
-    example: 'uuid-string',
-    required: true
-  })
-  @IsString()
-  @IsNotEmpty()
-  userId: string;
 
-  @ApiProperty({ 
-    description: 'Custom BHK description (if user selected "Other")', 
-    example: '2.5 BHK',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  customBhk?: string;
 
   @ApiProperty({ 
     description: 'Property status', 
@@ -372,31 +360,6 @@ export class CreatePropertyDto {
   @Type(() => SocietyInfo)
   society: SocietyInfo;
 
-  @ApiProperty({ 
-    description: 'Locality information (DEPRECATED - use society.localityName instead. This field is kept for backward compatibility but will be ignored)', 
-    type: LocalityInfo,
-    required: false
-  })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => LocalityInfo)
-  locality?: LocalityInfo;
 
-  @ApiProperty({ 
-    description: 'BHK type information (can be ID or name for new BHK type creation)', 
-    type: BhkTypeInfo,
-    required: true
-  })
-  @ValidateNested()
-  @Type(() => BhkTypeInfo)
-  bhkType: BhkTypeInfo;
 
-  @ApiProperty({ 
-    description: 'Built-up area information (can be ID or new area details)', 
-    type: BuiltUpAreaInfo,
-    required: true
-  })
-  @ValidateNested()
-  @Type(() => BuiltUpAreaInfo)
-  builtUpArea: BuiltUpAreaInfo;
 }
