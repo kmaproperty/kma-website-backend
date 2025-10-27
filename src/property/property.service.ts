@@ -365,14 +365,14 @@ export class PropertyService {
   }
 
   /**
-   * Get BHK types for a specific society
-   * If no data found for the society, returns default BHK options (1,2,3,4,5)
-   * If data found, returns only the BHK types that exist in DB for that society
+   * Get BHK types and their built-up areas for a specific society
+   * If no data found for the society, returns default BHK options (1,2,3,4,5) with default built-up areas
+   * If data found, returns only the BHK types and their built-up areas that exist in DB for that society
    */
-  async getBhkTypesBySociety(
+  async getBhkTypesAndBuiltUpAreasBySociety(
     societyId: string,
     propertyTypeId?: string,
-  ): Promise<any[]> {
+  ): Promise<any> {
     if (!societyId) {
       throw new BadRequestException('Society ID is required');
     }
@@ -398,115 +398,121 @@ export class PropertyService {
 
     // If no BHK types found for this society, return default options
     if (bhkTypes.length === 0) {
-      return [
+      const defaultBhkTypes = [
         { id: 'default-1', name: '1 BHK', code: '1bhk', sortOrder: 1 },
         { id: 'default-2', name: '2 BHK', code: '2bhk', sortOrder: 2 },
         { id: 'default-3', name: '3 BHK', code: '3bhk', sortOrder: 3 },
         { id: 'default-4', name: '4 BHK', code: '4bhk', sortOrder: 4 },
         { id: 'default-5', name: '5 BHK', code: '5bhk', sortOrder: 5 },
       ];
-    }
 
-    // Return the BHK types that exist in the database for this society
-    return bhkTypes.map((bhkType) => ({
-      id: bhkType.id,
-      name: bhkType.name,
-      code: bhkType.code,
-      sortOrder: bhkType.sortOrder,
-      propertyTypeId: bhkType.propertyTypeId,
-      societyId: bhkType.societyId,
-    }));
-  }
-
-  /**
-   * Get built-up areas for a specific BHK type
-   * If no data found for the BHK type, returns default built-up area options
-   * If data found, returns only the built-up areas that exist in DB for that BHK type
-   */
-  async getBuiltUpAreasByBhkType(
-    bhkTypeId: string,
-    societyId?: string,
-  ): Promise<any[]> {
-    if (!bhkTypeId) {
-      throw new BadRequestException('BHK Type ID is required');
-    }
-
-    // Check if BHK type exists
-    const bhkType = await this.bhkTypeRepository.findById(bhkTypeId);
-    if (!bhkType) {
-      throw new BadRequestException(`BHK Type with ID ${bhkTypeId} not found`);
-    }
-
-    let builtUpAreas: any[] = [];
-
-    if (societyId) {
-      // Get built-up areas for specific BHK type and society
-      builtUpAreas =
-        await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
-          bhkTypeId,
-          societyId,
-        );
-    } else {
-      // Get all built-up areas for the BHK type
-      builtUpAreas =
-        await this.builtUpAreaRepository.findByBhkTypeId(bhkTypeId);
-    }
-
-    // If no built-up areas found for this BHK type, return default options
-    if (builtUpAreas.length === 0) {
-      return [
+      const defaultBuiltUpAreas = [
         {
           id: 'default-1',
           superBuiltUpArea: 1000,
           carpetArea: 800,
           noOfBathrooms: 1,
-          bhkTypeId: bhkTypeId,
-          societyId: societyId || null,
+          bhkTypeId: 'default-1',
+          societyId: societyId,
         },
         {
           id: 'default-2',
           superBuiltUpArea: 1200,
           carpetArea: 1000,
           noOfBathrooms: 2,
-          bhkTypeId: bhkTypeId,
-          societyId: societyId || null,
+          bhkTypeId: 'default-2',
+          societyId: societyId,
         },
         {
           id: 'default-3',
           superBuiltUpArea: 1500,
           carpetArea: 1200,
           noOfBathrooms: 2,
-          bhkTypeId: bhkTypeId,
-          societyId: societyId || null,
+          bhkTypeId: 'default-3',
+          societyId: societyId,
         },
         {
           id: 'default-4',
           superBuiltUpArea: 1800,
           carpetArea: 1500,
           noOfBathrooms: 3,
-          bhkTypeId: bhkTypeId,
-          societyId: societyId || null,
+          bhkTypeId: 'default-4',
+          societyId: societyId,
         },
         {
           id: 'default-5',
           superBuiltUpArea: 2000,
           carpetArea: 1700,
           noOfBathrooms: 3,
-          bhkTypeId: bhkTypeId,
-          societyId: societyId || null,
+          bhkTypeId: 'default-5',
+          societyId: societyId,
         },
       ];
+
+      // Return nested structure with BHK types and their built-up areas mapped
+      return defaultBhkTypes.map(bhkType => ({
+        ...bhkType,
+        builtUpAreas: defaultBuiltUpAreas.filter(area => area.bhkTypeId === bhkType.id)
+      }));
     }
 
-    // Return the built-up areas that exist in the database for this BHK type
-    return builtUpAreas.map((area) => ({
-      id: area.id,
-      superBuiltUpArea: area.superBuiltUpArea,
-      carpetArea: area.carpetArea,
-      noOfBathrooms: area.noOfBathrooms,
-      bhkTypeId: area.bhkTypeId,
-      societyId: area.societyId,
-    }));
+    // Get built-up areas for each BHK type
+    const bhkTypesWithBuiltUpAreas = await Promise.all(
+      bhkTypes.map(async (bhkType) => {
+        const builtUpAreas = await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
+          bhkType.id,
+          societyId,
+        );
+
+        // If no built-up areas found for this BHK type, return default options
+        const areas = builtUpAreas.length === 0 ? [
+          {
+            id: `default-${bhkType.id}-1`,
+            superBuiltUpArea: 1000,
+            carpetArea: 800,
+            noOfBathrooms: 1,
+            bhkTypeId: bhkType.id,
+            societyId: societyId,
+          },
+          {
+            id: `default-${bhkType.id}-2`,
+            superBuiltUpArea: 1200,
+            carpetArea: 1000,
+            noOfBathrooms: 2,
+            bhkTypeId: bhkType.id,
+            societyId: societyId,
+          },
+          {
+            id: `default-${bhkType.id}-3`,
+            superBuiltUpArea: 1500,
+            carpetArea: 1200,
+            noOfBathrooms: 2,
+            bhkTypeId: bhkType.id,
+            societyId: societyId,
+          },
+        ] : builtUpAreas.map((area) => ({
+          id: area.id,
+          superBuiltUpArea: area.superBuiltUpArea,
+          carpetArea: area.carpetArea,
+          noOfBathrooms: area.noOfBathrooms,
+          bhkTypeId: area.bhkTypeId,
+          societyId: area.societyId,
+        }));
+
+        return {
+          id: bhkType.id,
+          name: bhkType.name,
+          code: bhkType.code,
+          sortOrder: bhkType.sortOrder,
+          propertyTypeId: bhkType.propertyTypeId,
+          societyId: bhkType.societyId,
+          builtUpAreas: areas,
+        };
+      }),
+    );
+
+    // Return nested structure with BHK types and their built-up areas mapped
+    return bhkTypesWithBuiltUpAreas;
   }
 
   /**

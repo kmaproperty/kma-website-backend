@@ -240,11 +240,11 @@ export class PropertyController {
     );
   }
 
-  @Get('bhk-types/society/:societyId')
+  @Get('bhk-types-and-areas/society/:societyId')
   @ApiOperation({
-    summary: 'Get BHK types for a specific society',
+    summary: 'Get BHK types and built-up areas for a specific society',
     description:
-      'Returns BHK types available for a specific society. If no data found for the society, returns default BHK options (1,2,3,4,5). If data found, returns only the BHK types that exist in DB for that society.',
+      'Returns BHK types and their corresponding built-up areas available for a specific society. If no data found for the society, returns default BHK options (1,2,3,4,5) with default built-up areas. If data found, returns only the BHK types and built-up areas that exist in DB for that society.',
   })
   @ApiQuery({
     name: 'propertyTypeId',
@@ -254,49 +254,47 @@ export class PropertyController {
   })
   @ApiResponse({
     status: 200,
-    description: 'BHK types retrieved successfully for the society',
+    description: 'BHK types and built-up areas retrieved successfully for the society',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          code: { type: 'string' },
+          sortOrder: { type: 'number' },
+          propertyTypeId: { type: 'string' },
+          societyId: { type: 'string' },
+          builtUpAreas: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                superBuiltUpArea: { type: 'number' },
+                carpetArea: { type: 'number' },
+                noOfBathrooms: { type: 'number' },
+                bhkTypeId: { type: 'string' },
+                societyId: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid society ID or society not found',
   })
-  async getBhkTypesBySociety(
+  async getBhkTypesAndBuiltUpAreasBySociety(
     @Param('societyId') societyId: string,
     @Query('propertyTypeId') propertyTypeId?: string,
-  ): Promise<any[]> {
-    return await this.propertyService.getBhkTypesBySociety(
+  ): Promise<any> {
+    return await this.propertyService.getBhkTypesAndBuiltUpAreasBySociety(
       societyId,
       propertyTypeId,
-    );
-  }
-
-  @Get('built-up-areas/bhk-type/:bhkTypeId')
-  @ApiOperation({
-    summary: 'Get built-up areas for a specific BHK type',
-    description:
-      'Returns built-up areas available for a specific BHK type. If no data found for the BHK type, returns default built-up area options. If data found, returns only the built-up areas that exist in DB for that BHK type.',
-  })
-  @ApiQuery({
-    name: 'societyId',
-    required: false,
-    description: 'Optional society ID to filter built-up areas by society',
-    example: 'uuid-of-society',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Built-up areas retrieved successfully for the BHK type',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid BHK type ID or BHK type not found',
-  })
-  async getBuiltUpAreasByBhkType(
-    @Param('bhkTypeId') bhkTypeId: string,
-    @Query('societyId') societyId?: string,
-  ): Promise<any[]> {
-    return await this.propertyService.getBuiltUpAreasByBhkType(
-      bhkTypeId,
-      societyId,
     );
   }
 
