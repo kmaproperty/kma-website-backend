@@ -13,6 +13,7 @@ import { MasterBhkType } from '../../property/entities/master-bhk-type.entity';
 import { MasterBuiltUpArea } from '../../property/entities/master-built-up-area.entity';
 import { UnitConfiguration } from '../../property/entities/unit-configuration.entity';
 import { Property } from '../../property/entities/property.entity';
+import { ContactUs } from '../../contact-us/entities/contact-us.entity';
 
 @Injectable()
 export class ConfigService implements TypeOrmOptionsFactory {
@@ -90,6 +91,7 @@ export class ConfigService implements TypeOrmOptionsFactory {
         MasterBuiltUpArea,
         UnitConfiguration,
         Property,
+        ContactUs,
       ],
       autoLoadEntities: true,
       ...(useSSL && {
@@ -97,9 +99,10 @@ export class ConfigService implements TypeOrmOptionsFactory {
           rejectUnauthorized: false,
         },
       }),
-      // migrationsTableName: 'migration',
-      // migrations: ['src/migration/*.ts'],
-      // migrationsRun: false,
+      // Enable migrations
+      migrationsTableName: 'migrations',
+      migrations: ['dist/migration/*.js'],
+      migrationsRun: false,
     };
   }
   /**
