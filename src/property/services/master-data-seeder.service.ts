@@ -7,7 +7,6 @@ import { MasterPropertyType } from '../entities/master-property-type.entity';
 import { MasterBhkType } from '../entities/master-bhk-type.entity';
 import { MasterBuiltUpArea } from '../entities/master-built-up-area.entity';
 import { MasterCity } from '../entities/master-city.entity';
-import { MasterLocality } from '../entities/master-locality.entity';
 import { MasterSociety } from '../entities/master-society.entity';
 import { Property } from '../entities/property.entity';
 
@@ -28,8 +27,6 @@ export class MasterDataSeederService {
     private readonly builtUpAreaRepository: Repository<MasterBuiltUpArea>,
     @InjectRepository(MasterCity)
     private readonly cityRepository: Repository<MasterCity>,
-    @InjectRepository(MasterLocality)
-    private readonly localityRepository: Repository<MasterLocality>,
     @InjectRepository(MasterSociety)
     private readonly societyRepository: Repository<MasterSociety>,
     @InjectRepository(Property)
@@ -50,21 +47,14 @@ export class MasterDataSeederService {
       this.logger.log(`Deleted ${propertiesCount} properties`);
     }
 
-    // 2. Societies (depends on localities and cities)
+    // 2. Societies (depends on cities)
     const societiesCount = await this.societyRepository.count();
     if (societiesCount > 0) {
       await this.societyRepository.delete({});
       this.logger.log(`Deleted ${societiesCount} societies`);
     }
 
-    // 3. Localities (depends on cities)
-    const localitiesCount = await this.localityRepository.count();
-    if (localitiesCount > 0) {
-      await this.localityRepository.delete({});
-      this.logger.log(`Deleted ${localitiesCount} localities`);
-    }
-
-    // 4. Built-up Areas (depends on BHK types)
+    // 3. Built-up Areas (depends on BHK types)
     const builtUpAreasCount = await this.builtUpAreaRepository.count();
     if (builtUpAreasCount > 0) {
       await this.builtUpAreaRepository.delete({});
@@ -121,8 +111,7 @@ export class MasterDataSeederService {
     await this.seedBhkTypes(); // Moved after property types since BHK types depend on them
     await this.seedBuiltUpAreas(); // After BHK types since built-up areas depend on them
     await this.seedCities();
-    await this.seedLocalities();
-    await this.seedSocieties();
+    await this.seedSocieties(); // Societies now include localityName
 
     this.logger.log('All master data seeded successfully');
   }
@@ -148,7 +137,6 @@ export class MasterDataSeederService {
         bhkTypes: await this.bhkTypeRepository.count(),
         builtUpAreas: await this.builtUpAreaRepository.count(),
         cities: await this.cityRepository.count(),
-        localities: await this.localityRepository.count(),
         societies: await this.societyRepository.count(),
       };
 
@@ -683,98 +671,7 @@ export class MasterDataSeederService {
     this.logger.log(`✓ Created ${created} cities`);
   }
 
-  private async seedLocalities(): Promise<void> {
-    this.logger.log('Seeding localities...');
-    const gurgaon = await this.cityRepository.findOne({
-      where: { code: 'gurgaon' },
-    });
-    const delhi = await this.cityRepository.findOne({
-      where: { code: 'delhi' },
-    });
-    const noida = await this.cityRepository.findOne({
-      where: { code: 'noida' },
-    });
-
-    if (!gurgaon || !delhi || !noida) {
-      this.logger.log('⚠ Skipping locality seeding - cities not found');
-      return;
-    }
-
-    const localities = [
-      // Gurgaon localities
-      {
-        name: 'DLF Phase 1',
-        sector: 'Sector 26',
-        cityId: gurgaon.id,
-        latitude: 28.4749,
-        longitude: 77.0937,
-      },
-      {
-        name: 'DLF Phase 2',
-        sector: 'Sector 25',
-        cityId: gurgaon.id,
-        latitude: 28.484,
-        longitude: 77.0883,
-      },
-      {
-        name: 'Golf Course Road',
-        cityId: gurgaon.id,
-        latitude: 28.4511,
-        longitude: 77.0677,
-      },
-      {
-        name: 'Sohna Road',
-        cityId: gurgaon.id,
-        latitude: 28.4089,
-        longitude: 77.0824,
-      },
-
-      // Delhi localities
-      {
-        name: 'Connaught Place',
-        cityId: delhi.id,
-        latitude: 28.6315,
-        longitude: 77.2167,
-      },
-      {
-        name: 'Dwarka',
-        sector: 'Sector 10',
-        cityId: delhi.id,
-        latitude: 28.5921,
-        longitude: 77.046,
-      },
-
-      // Noida localities
-      {
-        name: 'Sector 62',
-        sector: 'Sector 62',
-        cityId: noida.id,
-        latitude: 28.626,
-        longitude: 77.3705,
-      },
-      {
-        name: 'Sector 18',
-        sector: 'Sector 18',
-        cityId: noida.id,
-        latitude: 28.5687,
-        longitude: 77.3243,
-      },
-    ];
-
-    let created = 0;
-    for (const localityData of localities) {
-      const existing = await this.localityRepository.findOne({
-        where: { name: localityData.name, cityId: localityData.cityId },
-      });
-
-      if (!existing) {
-        const locality = this.localityRepository.create(localityData);
-        await this.localityRepository.save(locality);
-        created++;
-      }
-    }
-    this.logger.log(`✓ Created ${created} localities`);
-  }
+  // Locality seeding removed - localities are now stored as localityName in societies
 
   private async seedSocieties(): Promise<void> {
     this.logger.log('Seeding societies...');
@@ -786,26 +683,11 @@ export class MasterDataSeederService {
       return;
     }
 
-    const dlfPhase1 = await this.localityRepository.findOne({
-      where: { name: 'DLF Phase 1', cityId: gurgaon.id },
-    });
-    const dlfPhase2 = await this.localityRepository.findOne({
-      where: { name: 'DLF Phase 2', cityId: gurgaon.id },
-    });
-    const golfCourseRoad = await this.localityRepository.findOne({
-      where: { name: 'Golf Course Road', cityId: gurgaon.id },
-    });
-
-    if (!dlfPhase1 || !dlfPhase2 || !golfCourseRoad) {
-      this.logger.log('⚠ Skipping society seeding - localities not found');
-      return;
-    }
-
     const societies = [
       {
         name: 'DLF Park Place',
         cityId: gurgaon.id,
-        localityId: dlfPhase1.id,
+        localityName: 'DLF Phase 1',
         address: 'Sector 26, DLF Phase 1, Gurgaon',
         pincode: '122002',
         isVerified: true,
@@ -813,7 +695,7 @@ export class MasterDataSeederService {
       {
         name: 'DLF Aralias',
         cityId: gurgaon.id,
-        localityId: golfCourseRoad.id,
+        localityName: 'Golf Course Road',
         address: 'Golf Course Road, Gurgaon',
         pincode: '122002',
         isVerified: true,
@@ -821,7 +703,7 @@ export class MasterDataSeederService {
       {
         name: 'DLF Magnolias',
         cityId: gurgaon.id,
-        localityId: golfCourseRoad.id,
+        localityName: 'Golf Course Road',
         address: 'Golf Course Road, Gurgaon',
         pincode: '122002',
         isVerified: true,
@@ -829,7 +711,7 @@ export class MasterDataSeederService {
       {
         name: 'Belaire',
         cityId: gurgaon.id,
-        localityId: dlfPhase2.id,
+        localityName: 'DLF Phase 2',
         address: 'Sector 25, DLF Phase 2, Gurgaon',
         pincode: '122002',
         isVerified: true,

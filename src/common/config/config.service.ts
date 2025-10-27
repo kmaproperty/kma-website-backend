@@ -7,7 +7,6 @@ import { ChannelPartnerCode } from '../../user/entities/channel-partner-code.ent
 import { MasterPropertyListingType } from '../../property/entities/master-property-listing-type.entity';
 import { MasterPropertyCategoryNew } from '../../property/entities/master-property-category-new.entity';
 import { MasterCity } from '../../property/entities/master-city.entity';
-import { MasterLocality } from '../../property/entities/master-locality.entity';
 import { MasterSociety } from '../../property/entities/master-society.entity';
 import { MasterPropertyType } from '../../property/entities/master-property-type.entity';
 import { MasterBhkType } from '../../property/entities/master-bhk-type.entity';
@@ -85,7 +84,6 @@ export class ConfigService implements TypeOrmOptionsFactory {
         MasterPropertyListingType,
         MasterPropertyCategoryNew,
         MasterCity,
-        MasterLocality,
         MasterSociety,
         MasterPropertyType,
         MasterBhkType,

@@ -1,7 +1,6 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/database/base.entity';
 import { MasterCity } from './master-city.entity';
-import { MasterLocality } from './master-locality.entity';
 
 @Entity('master_societies')
 export class MasterSociety extends BaseEntity {
@@ -15,12 +14,8 @@ export class MasterSociety extends BaseEntity {
   @JoinColumn({ name: 'cityId' })
   city: MasterCity;
 
-  @Column({ type: 'uuid' })
-  localityId: string;
-
-  @ManyToOne(() => MasterLocality)
-  @JoinColumn({ name: 'localityId' })
-  locality: MasterLocality;
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  localityName: string;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   address: string;

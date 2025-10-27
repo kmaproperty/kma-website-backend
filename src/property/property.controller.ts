@@ -6,6 +6,7 @@ import {
   UseGuards,
   Param,
   Body,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,9 +18,29 @@ import {
 import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { CreatePropertyDto } from './dto/create-property.dto';
+import { 
+  MasterDataResponseDto, 
+  ReseedMasterDataResponseDto, 
+  CityResponseDto, 
+  SocietyResponseDto, 
+  LocalityResponseDto, 
+  BhkTypeResponseDto, 
+  PropertyResponseDto,
+  ListingTypeResponseDto,
+  CategoryResponseDto,
+  LocationResponseDto 
+} from './dto/property-response.dto';
+import { 
+  MasterDataQueryDto, 
+  CitySearchQueryDto, 
+  SocietySearchQueryDto, 
+  LocalitySearchQueryDto, 
+  BhkTypesQueryDto,
+  LocationSearchQueryDto 
+} from './dto/property-query.dto';
 
-@ApiTags('Properties')
-@Controller('properties')
+@ApiTags('Property')
+@Controller('property')
 // @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class PropertyController {
@@ -45,18 +66,18 @@ export class PropertyController {
     status: 200,
     description:
       'Filtered property types retrieved successfully based on listing type and category',
+    type: MasterDataResponseDto,
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid listing type or category',
   })
   async getFilteredMasterData(
-    @Query('property-listing-type') listingType: string,
-    @Query('property-category') category: string,
-  ): Promise<any> {
+    @Query() query: MasterDataQueryDto,
+  ): Promise<MasterDataResponseDto> {
     return await this.propertyService.getFilteredMasterData(
-      listingType,
-      category,
+      query['property-listing-type'],
+      query['property-category'],
     );
   }
 
@@ -69,13 +90,44 @@ export class PropertyController {
   @ApiResponse({
     status: 200,
     description: 'Master data reseeded successfully with counts and duration',
+    type: ReseedMasterDataResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Error during reseeding process',
   })
-  async reseedMasterData(): Promise<any> {
+  async reseedMasterData(): Promise<ReseedMasterDataResponseDto> {
     return await this.propertyService.reseedMasterData();
+  }
+
+  @Get('listing-types')
+  @ApiOperation({
+    summary: 'Get all property listing types',
+    description:
+      'Returns all available property listing types (e.g., Sale, Rent)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Listing types retrieved successfully',
+    type: [ListingTypeResponseDto],
+  })
+  async getListingTypes(): Promise<ListingTypeResponseDto[]> {
+    return await this.propertyService.getAllListingTypes();
+  }
+
+  @Get('categories')
+  @ApiOperation({
+    summary: 'Get all property categories',
+    description:
+      'Returns all available property categories (e.g., Residential, Commercial)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Categories retrieved successfully',
+    type: [CategoryResponseDto],
+  })
+  async getCategories(): Promise<CategoryResponseDto[]> {
+    return await this.propertyService.getAllCategories();
   }
 
   @Get('cities/search')
@@ -100,26 +152,26 @@ export class PropertyController {
     status: 200,
     description:
       'Cities found successfully. Results include source (database or google)',
+    type: [CityResponseDto],
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid search query (must be at least 2 characters)',
   })
   async searchCities(
-    @Query('q') query: string,
-    @Query('limit') limit?: number,
-  ): Promise<any[]> {
+    @Query() query: CitySearchQueryDto,
+  ): Promise<CityResponseDto[]> {
     return await this.propertyService.searchCities(
-      query,
-      limit ? parseInt(limit.toString(), 10) : 10,
+      query.q,
+      query.limit,
     );
   }
 
-  @Get('societies/search')
+  @Get('locations/search')
   @ApiOperation({
-    summary: 'Search societies with autocomplete',
+    summary: 'Search locations (societies with locality names)',
     description:
-      'Search for societies by name. First searches local database, then falls back to Google Places API if needed. Can be filtered by city.',
+      'Search for societies by name or by locality name. First searches local database, then falls back to Google Places API if needed. Can be filtered by city.',
   })
   @ApiQuery({
     name: 'q',
@@ -130,14 +182,14 @@ export class PropertyController {
   @ApiQuery({
     name: 'cityId',
     required: false,
-    description: 'City ID to filter societies within a specific city',
+    description: 'City ID to filter results within a specific city',
     example: 'uuid-of-city',
   })
   @ApiQuery({
     name: 'cityName',
     required: false,
     description:
-      'City name to filter societies within a specific city (alternative to cityId)',
+      'City name to filter results within a specific city (alternative to cityId)',
     example: 'Gurgaon',
   })
   @ApiQuery({
@@ -149,164 +201,71 @@ export class PropertyController {
   @ApiResponse({
     status: 200,
     description:
-      'Societies found successfully. Results include source (database or google)',
+      'Locations found successfully. Results include society name and locality name. Results include source (database or google)',
+    type: [LocationResponseDto],
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid search query (must be at least 2 characters)',
   })
-  async searchSocieties(
-    @Query('q') query: string,
-    @Query('cityId') cityId?: string,
-    @Query('cityName') cityName?: string,
-    @Query('limit') limit?: number,
-  ): Promise<any[]> {
-    return await this.propertyService.searchSocieties(
-      query,
-      cityId,
-      cityName,
-      limit ? parseInt(limit.toString(), 10) : 10,
+  async searchLocations(
+    @Query() query: LocationSearchQueryDto,
+  ): Promise<LocationResponseDto[]> {
+    return await this.propertyService.searchLocations(
+      query.q,
+      query.cityId,
+      query.cityName,
+      query.limit,
     );
   }
 
-  @Get('localities/search')
+  @Get('bhk-types-and-areas')
   @ApiOperation({
-    summary: 'Search localities with autocomplete',
+    summary: 'Get BHK types and built-up areas',
     description:
-      'Search for localities by name. First searches local database, then falls back to Google Places API if needed. Can be filtered by city and society.',
-  })
-  @ApiQuery({
-    name: 'q',
-    required: true,
-    description: 'Search query (minimum 2 characters)',
-    example: 'Sector 15',
-  })
-  @ApiQuery({
-    name: 'cityId',
-    required: false,
-    description: 'City ID to filter localities within a specific city',
-    example: 'uuid-of-city',
-  })
-  @ApiQuery({
-    name: 'cityName',
-    required: false,
-    description:
-      'City name to filter localities within a specific city (alternative to cityId)',
-    example: 'Gurgaon',
+      'Returns BHK types and their corresponding built-up areas. If societyId is not provided, returns default BHK options (1,2,3,4,5) with default built-up areas. If societyId is provided, can optionally filter by propertyTypeId. If no data found for the society, returns empty array. If data found, returns only the BHK types and built-up areas that exist in DB.',
   })
   @ApiQuery({
     name: 'societyId',
     required: false,
-    description: 'Society ID to filter localities within a specific society',
+    description: 'Society ID to filter BHK types and built-up areas for a specific society (optional)',
     example: 'uuid-of-society',
-  })
-  @ApiQuery({
-    name: 'societyName',
-    required: false,
-    description:
-      'Society name to filter localities within a specific society (alternative to societyId)',
-    example: 'Green Park Society',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Maximum number of results (default: 10)',
-    example: 10,
-  })
-  @ApiResponse({
-    status: 200,
-    description:
-      'Localities found successfully. Results include source (database or google)',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid search query (must be at least 2 characters)',
-  })
-  async searchLocalities(
-    @Query('q') query: string,
-    @Query('cityId') cityId?: string,
-    @Query('cityName') cityName?: string,
-    @Query('societyId') societyId?: string,
-    @Query('societyName') societyName?: string,
-    @Query('limit') limit?: number,
-  ): Promise<any[]> {
-    return await this.propertyService.searchLocalities(
-      query,
-      cityId,
-      cityName,
-      societyId,
-      societyName,
-      limit ? parseInt(limit.toString(), 10) : 10,
-    );
-  }
-
-  @Get('bhk-types-and-areas/society/:societyId')
-  @ApiOperation({
-    summary: 'Get BHK types and built-up areas for a specific society',
-    description:
-      'Returns BHK types and their corresponding built-up areas available for a specific society. If no data found for the society, returns default BHK options (1,2,3,4,5) with default built-up areas. If data found, returns only the BHK types and built-up areas that exist in DB for that society.',
   })
   @ApiQuery({
     name: 'propertyTypeId',
     required: false,
-    description: 'Optional property type ID to filter BHK types',
+    description: 'Property type ID to filter BHK types when societyId is provided (optional)',
     example: 'uuid-of-property-type',
   })
   @ApiResponse({
     status: 200,
-    description: 'BHK types and built-up areas retrieved successfully for the society',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          code: { type: 'string' },
-          sortOrder: { type: 'number' },
-          propertyTypeId: { type: 'string' },
-          societyId: { type: 'string' },
-          builtUpAreas: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                superBuiltUpArea: { type: 'number' },
-                carpetArea: { type: 'number' },
-                noOfBathrooms: { type: 'number' },
-                bhkTypeId: { type: 'string' },
-                societyId: { type: 'string' },
-              },
-            },
-          },
-        },
-      },
-    },
+    description: 'BHK types and built-up areas retrieved successfully',
+    type: [BhkTypeResponseDto],
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid society ID or society not found',
   })
-  async getBhkTypesAndBuiltUpAreasBySociety(
-    @Param('societyId') societyId: string,
+  async getBhkTypesAndBuiltUpAreas(
+    @Query('societyId') societyId?: string,
     @Query('propertyTypeId') propertyTypeId?: string,
-  ): Promise<any> {
+  ): Promise<BhkTypeResponseDto[]> {
     return await this.propertyService.getBhkTypesAndBuiltUpAreasBySociety(
       societyId,
       propertyTypeId,
     );
   }
 
-  @Post()
+  @Post('/step-1')
   @ApiOperation({
-    summary: 'Create a new property',
+    summary: 'Step 1: Create a new property',
     description:
-      'Creates a new property with automatic master data creation if needed. Can accept either IDs or names for city, society, locality, BHK type, and built-up area. If names are provided, new entries will be created in master tables.',
+      'Creates a new property with automatic master data creation if needed. Can accept either IDs or names for city, society, BHK type, and built-up area. Locality information should be provided via society.localityName field (no separate locality object needed). If names are provided, new entries will be created in master tables.',
   })
   @ApiResponse({
     status: 201,
     description: 'Property created successfully',
+    type: PropertyResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -314,7 +273,7 @@ export class PropertyController {
   })
   async createProperty(
     @Body() createPropertyDto: CreatePropertyDto,
-  ): Promise<any> {
+  ): Promise<PropertyResponseDto> {
     return await this.propertyService.createProperty(createPropertyDto);
   }
 }

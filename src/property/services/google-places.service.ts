@@ -13,6 +13,7 @@ export interface GooglePlaceCity {
 
 export interface GooglePlaceSociety {
   name: string;
+  localityName?: string | null;
   city?: string;
   state?: string;
   country?: string;
@@ -695,12 +696,16 @@ export class GooglePlacesService {
       const result = response.data.result;
       const addressComponents = result.address_components || [];
 
-      // Extract city, state and country from address components
+      // Extract city, state, country, and locality from address components
       let city = '';
       let state = '';
       let country = '';
+      let localityName = '';
 
       for (const component of addressComponents) {
+        // Debug log to see what types are available
+        this.logger.debug(`Address component types: ${component.types.join(', ')}`);
+        
         if (
           component.types.includes('locality') ||
           component.types.includes('administrative_area_level_2')
@@ -713,10 +718,48 @@ export class GooglePlacesService {
         if (component.types.includes('country')) {
           country = component.long_name;
         }
+        
+        // Extract sublocality, neighborhood, or area for locality name
+        // Check for various possible types
+        if (
+          component.types.includes('sublocality') ||
+          component.types.includes('sublocality_level_1') ||
+          component.types.includes('sublocality_level_2') ||
+          component.types.includes('neighborhood') ||
+          component.types.includes('premise') ||
+          component.types.includes('route')
+        ) {
+          // Prefer sublocality over route for localityName
+          if (!localityName || component.types.includes('sublocality') || component.types.includes('sublocality_level_1') || component.types.includes('sublocality_level_2')) {
+            localityName = component.long_name;
+          }
+        }
+      }
+
+      // If localityName is still empty, try to extract from formatted address
+      // Look for common locality patterns like "Sector XX", "Phase X", etc.
+      if (!localityName && result.formatted_address) {
+        const addr = result.formatted_address;
+        // Try to match patterns like "Sector 24", "Phase 3", "Block X", etc.
+        const localityPatterns = [
+          /(Sector\s+\d+)/i,
+          /(Phase\s+\d+)/i,
+          /(Block\s+[A-Z0-9]+)/i,
+          /(Ward\s+\d+)/i,
+        ];
+        
+        for (const pattern of localityPatterns) {
+          const match = addr.match(pattern);
+          if (match) {
+            localityName = match[1];
+            break;
+          }
+        }
       }
 
       return {
         name: result.name,
+        localityName: localityName || null,
         city,
         state,
         country,

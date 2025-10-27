@@ -29,13 +29,6 @@ export class SocietyRepository {
     });
   }
 
-  async findByLocalityId(localityId: string): Promise<MasterSociety[]> {
-    return await this.societyRepository.find({
-      where: { localityId },
-      order: { name: 'ASC' },
-    });
-  }
-
   async searchByNameAndCity(
     query: string,
     cityId: string,
@@ -60,6 +53,47 @@ export class SocietyRepository {
       order: { name: 'ASC' },
       take: limit,
     });
+  }
+
+  async searchByLocalityName(
+    localityQuery: string,
+    cityId?: string,
+    limit: number = 10,
+  ): Promise<MasterSociety[]> {
+    const whereClause: any = {
+      localityName: ILike(`%${localityQuery}%`),
+    };
+    
+    if (cityId) {
+      whereClause.cityId = cityId;
+    }
+
+    return await this.societyRepository.find({
+      where: whereClause,
+      order: { name: 'ASC' },
+      take: limit,
+    });
+  }
+
+  async searchByNameOrLocality(
+    query: string,
+    cityId?: string,
+    limit: number = 10,
+  ): Promise<MasterSociety[]> {
+    const queryBuilder = this.societyRepository
+      .createQueryBuilder('society')
+      .where('(society.name ILIKE :query OR society.localityName ILIKE :query)', {
+        query: `%${query}%`,
+      });
+
+    if (cityId) {
+      queryBuilder.andWhere('society.cityId = :cityId', { cityId });
+    }
+
+    return await queryBuilder
+      .orderBy('society.name', 'ASC')
+      .limit(limit)
+      .getMany();
   }
 
   async createSociety(
