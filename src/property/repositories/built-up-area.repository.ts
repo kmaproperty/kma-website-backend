@@ -16,6 +16,12 @@ export class BuiltUpAreaRepository extends Repository<MasterBuiltUpArea> {
     });
   }
 
+  async findById(id: string): Promise<MasterBuiltUpArea | null> {
+    return this.findOne({
+      where: { id },
+    });
+  }
+
   async findByBhkTypeId(bhkTypeId: string): Promise<MasterBuiltUpArea[]> {
     return this.find({
       where: { bhkTypeId },
@@ -62,8 +68,29 @@ export class BuiltUpAreaRepository extends Repository<MasterBuiltUpArea> {
     return await this.delete({});
   }
 
-  async bulkCreate(builtUpAreas: Partial<MasterBuiltUpArea>[]): Promise<MasterBuiltUpArea[]> {
+  async bulkCreate(
+    builtUpAreas: Partial<MasterBuiltUpArea>[],
+  ): Promise<MasterBuiltUpArea[]> {
     const entities = this.create(builtUpAreas);
     return this.save(entities);
+  }
+
+  async findByBhkTypeIdAndSocietyId(
+    bhkTypeId: string,
+    societyId: string,
+  ): Promise<MasterBuiltUpArea[]> {
+    return this.find({
+      where: { bhkTypeId, societyId },
+      order: {
+        superBuiltUpArea: 'ASC',
+      },
+    });
+  }
+
+  async createBuiltUpArea(
+    builtUpAreaData: Partial<MasterBuiltUpArea>,
+  ): Promise<MasterBuiltUpArea> {
+    const builtUpArea = this.create(builtUpAreaData);
+    return this.save(builtUpArea);
   }
 }

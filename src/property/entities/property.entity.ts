@@ -4,7 +4,6 @@ import { MasterPropertyListingType } from './master-property-listing-type.entity
 import { MasterPropertyCategoryNew } from './master-property-category-new.entity';
 import { MasterCity } from './master-city.entity';
 import { MasterSociety } from './master-society.entity';
-import { MasterLocality } from './master-locality.entity';
 import { MasterPropertyType } from './master-property-type.entity';
 import { MasterBhkType } from './master-bhk-type.entity';
 
@@ -34,21 +33,13 @@ export class Property extends BaseEntity {
   @JoinColumn({ name: 'cityId' })
   city: MasterCity;
 
-  // Society/Building/Apartment Name
+  // Society/Building/Apartment Name (includes locality name)
   @Column({ type: 'uuid' })
   societyId: string;
 
   @ManyToOne(() => MasterSociety)
   @JoinColumn({ name: 'societyId' })
   society: MasterSociety;
-
-  // Locality/Sector
-  @Column({ type: 'uuid' })
-  localityId: string;
-
-  @ManyToOne(() => MasterLocality)
-  @JoinColumn({ name: 'localityId' })
-  locality: MasterLocality;
 
   // Property Type (Flat/Apartment, Villa, etc.)
   @Column({ type: 'uuid' })
@@ -91,10 +82,10 @@ export class Property extends BaseEntity {
   userId: string;
 
   // Property status
-  @Column({ 
+  @Column({
     type: 'enum',
     enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
-    default: 'draft'
+    default: 'draft',
   })
   status: string;
 }

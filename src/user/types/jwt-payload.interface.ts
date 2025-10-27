@@ -18,4 +18,3 @@ export interface AccessTokenPayload extends JwtPayload {
 export interface RefreshTokenPayload extends JwtPayload {
   type: 'refresh_token';
 }
-

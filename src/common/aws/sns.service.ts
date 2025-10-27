@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SNS, config } from 'aws-sdk';
 import { LoggerService } from 'src/logger/logger.service';
 import { ErrorHandlerService } from 'src/common/errorHandler/error-handler.service';

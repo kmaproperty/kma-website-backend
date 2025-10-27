@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { MasterSociety } from '../entities/master-society.entity';
 
 @Injectable()
@@ -29,10 +29,84 @@ export class SocietyRepository {
     });
   }
 
-  async findByLocalityId(localityId: string): Promise<MasterSociety[]> {
+  async searchByNameAndCity(
+    query: string,
+    cityId: string,
+    limit: number = 10,
+  ): Promise<MasterSociety[]> {
     return await this.societyRepository.find({
-      where: { localityId },
+      where: {
+        name: ILike(`%${query}%`),
+        cityId: cityId,
+      },
       order: { name: 'ASC' },
+      take: limit,
     });
+  }
+
+  async searchByName(
+    query: string,
+    limit: number = 10,
+  ): Promise<MasterSociety[]> {
+    return await this.societyRepository.find({
+      where: { name: ILike(`%${query}%`) },
+      order: { name: 'ASC' },
+      take: limit,
+    });
+  }
+
+  async searchByLocalityName(
+    localityQuery: string,
+    cityId?: string,
+    limit: number = 10,
+  ): Promise<MasterSociety[]> {
+    const whereClause: any = {
+      localityName: ILike(`%${localityQuery}%`),
+    };
+    
+    if (cityId) {
+      whereClause.cityId = cityId;
+    }
+
+    return await this.societyRepository.find({
+      where: whereClause,
+      order: { name: 'ASC' },
+      take: limit,
+    });
+  }
+
+  async searchByNameOrLocality(
+    query: string,
+    cityId?: string,
+    limit: number = 10,
+  ): Promise<MasterSociety[]> {
+    const queryBuilder = this.societyRepository
+      .createQueryBuilder('society')
+      .where('(society.name ILIKE :query OR society.localityName ILIKE :query)', {
+        query: `%${query}%`,
+      });
+
+    if (cityId) {
+      queryBuilder.andWhere('society.cityId = :cityId', { cityId });
+    }
+
+    return await queryBuilder
+      .orderBy('society.name', 'ASC')
+      .limit(limit)
+      .getMany();
+  }
+
+  async createSociety(
+    societyData: Partial<MasterSociety>,
+  ): Promise<MasterSociety> {
+    const society = this.societyRepository.create(societyData);
+    return await this.societyRepository.save(society);
+  }
+
+  async updateSociety(
+    id: string,
+    updateData: Partial<MasterSociety>,
+  ): Promise<void> {
+    await this.societyRepository.update(id, updateData);
   }
 }

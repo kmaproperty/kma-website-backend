@@ -5,7 +5,12 @@ import { MasterSociety } from './master-society.entity';
 
 @Entity('master_built_up_areas')
 export class MasterBuiltUpArea extends BaseEntity {
-  @Column({ type: 'decimal', precision: 10, scale: 2, name: 'super_built_up_area' })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    name: 'super_built_up_area',
+  })
   superBuiltUpArea: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, name: 'carpet_area' })

@@ -2,10 +2,7 @@ import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ContactUsService } from './contact-us.service';
 import { ApiResponseDto, ApiResponse as ApiResponseType } from '../common/dto';
-import {
-  CreateContactUsDto,
-  CreateContactUsResponseDto,
-} from './dto';
+import { CreateContactUsDto, CreateContactUsResponseDto } from './dto';
 
 @ApiTags('Contact Us')
 @Controller('contact-us')
@@ -39,6 +36,9 @@ export class ContactUsController {
     const takeNum = parseInt(take, 10) || 10;
 
     const result = await this.contactUsService.getAllContacts(skipNum, takeNum);
-    return ApiResponseDto.success(result, 'Contact forms retrieved successfully');
+    return ApiResponseDto.success(
+      result,
+      'Contact forms retrieved successfully',
+    );
   }
 }

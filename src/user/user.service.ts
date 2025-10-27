@@ -65,7 +65,9 @@ export class UserService {
       user.role,
       'access_token',
     );
-    return this.jwtService.sign(payload, { expiresIn: this.ACCESS_TOKEN_EXPIRY });
+    return this.jwtService.sign(payload, {
+      expiresIn: this.ACCESS_TOKEN_EXPIRY,
+    });
   }
 
   /**
@@ -78,13 +80,18 @@ export class UserService {
       user.role,
       'refresh_token',
     );
-    return this.jwtService.sign(payload, { expiresIn: this.REFRESH_TOKEN_EXPIRY });
+    return this.jwtService.sign(payload, {
+      expiresIn: this.REFRESH_TOKEN_EXPIRY,
+    });
   }
 
   /**
    * Generate both access and refresh tokens for a user
    */
-  private generateTokens(user: User): { accessToken: string; refreshToken: string } {
+  private generateTokens(user: User): {
+    accessToken: string;
+    refreshToken: string;
+  } {
     return {
       accessToken: this.generateAccessToken(user),
       refreshToken: this.generateRefreshToken(user),
@@ -294,7 +301,12 @@ export class UserService {
    */
   async createOwner(
     createOwnerDto: CreateOwnerDto,
-    tokenData: { sub: string; phone: string; role: UserRole; type: 'access_token' | 'refresh_token' },
+    tokenData: {
+      sub: string;
+      phone: string;
+      role: UserRole;
+      type: 'access_token' | 'refresh_token';
+    },
   ): Promise<CreateOwnerResponseDto> {
     const { name, email, phone, intent, city } = createOwnerDto;
 
@@ -306,7 +318,9 @@ export class UserService {
     // Find user by phone
     const existingUser = await this.userRepository.findByPhone(phone);
     if (!existingUser) {
-      throw new BadRequestException(USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP);
+      throw new BadRequestException(
+        USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP,
+      );
     }
 
     if (tokenData.role !== UserRole.OWNER) {
@@ -362,7 +376,12 @@ export class UserService {
    */
   async createChannelPartner(
     createChannelPartnerDto: CreateChannelPartnerDto,
-    tokenData: { sub: string; phone: string; role: UserRole; type: 'access_token' | 'refresh_token' },
+    tokenData: {
+      sub: string;
+      phone: string;
+      role: UserRole;
+      type: 'access_token' | 'refresh_token';
+    },
   ): Promise<CreateChannelPartnerResponseDto> {
     const {
       name,
@@ -384,7 +403,9 @@ export class UserService {
     // Find user by phone
     const existingUser = await this.userRepository.findByPhone(phone);
     if (!existingUser) {
-      throw new BadRequestException(USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP);
+      throw new BadRequestException(
+        USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP,
+      );
     }
 
     if (tokenData.role !== UserRole.CHANNEL_PARTNER) {
@@ -407,7 +428,9 @@ export class UserService {
     if (email) {
       const existingUserByEmail = await this.userRepository.findByEmail(email);
       if (existingUserByEmail && existingUserByEmail.id !== existingUser.id) {
-        throw new BadRequestException(USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED);
+        throw new BadRequestException(
+          USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+        );
       }
     }
 
@@ -501,7 +524,8 @@ export class UserService {
 
     try {
       // Verify refresh token with proper typing
-      const decodedToken = this.jwtService.verify<RefreshTokenPayload>(refreshToken);
+      const decodedToken =
+        this.jwtService.verify<RefreshTokenPayload>(refreshToken);
 
       if (decodedToken.type !== 'refresh_token') {
         throw new BadRequestException(USER_MESSAGES.AUTH.INVALID_TOKEN_TYPE);
@@ -519,7 +543,8 @@ export class UserService {
       }
 
       // Generate new tokens
-      const { accessToken: newAccessToken, refreshToken: newRefreshToken } = this.generateTokens(user);
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+        this.generateTokens(user);
 
       // Update user with new tokens
       await this.updateUserTokens(user.id, newAccessToken, newRefreshToken);

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { MasterLocality } from '../entities/master-locality.entity';
 
 @Injectable()
@@ -27,5 +27,54 @@ export class LocalityRepository {
       where: { cityId },
       order: { name: 'ASC' },
     });
+  }
+
+  async searchByNameAndCity(
+    query: string,
+    cityId: string,
+    limit: number = 10,
+  ): Promise<MasterLocality[]> {
+    return await this.localityRepository.find({
+      where: {
+        name: ILike(`%${query}%`),
+        cityId: cityId,
+      },
+      order: { name: 'ASC' },
+      take: limit,
+    });
+  }
+
+  async searchByNameAndCityAndSociety(
+    query: string,
+    cityId: string,
+    societyId: string,
+    limit: number = 10,
+  ): Promise<MasterLocality[]> {
+    return await this.localityRepository.find({
+      where: {
+        name: ILike(`%${query}%`),
+        cityId: cityId,
+      },
+      order: { name: 'ASC' },
+      take: limit,
+    });
+  }
+
+  async searchByName(
+    query: string,
+    limit: number = 10,
+  ): Promise<MasterLocality[]> {
+    return await this.localityRepository.find({
+      where: { name: ILike(`%${query}%`) },
+      order: { name: 'ASC' },
+      take: limit,
+    });
+  }
+
+  async createLocality(
+    localityData: Partial<MasterLocality>,
+  ): Promise<MasterLocality> {
+    const locality = this.localityRepository.create(localityData);
+    return await this.localityRepository.save(locality);
   }
 }

@@ -41,15 +41,13 @@ export class RolesGuard implements CanActivate {
       }
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStatus = (error as any).status || HttpStatus.UNAUTHORIZED;
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const errorStatus = error.status || HttpStatus.UNAUTHORIZED;
+
       this.logger.error(`Role guard failed: ${errorMessage}`);
-      
-      throw new HttpException(
-        errorMessage,
-        errorStatus,
-      );
+
+      throw new HttpException(errorMessage, errorStatus);
     }
   }
 }

@@ -35,7 +35,9 @@ export class BhkTypeRepository {
     });
   }
 
-  async findByPropertyTypeIds(propertyTypeIds: string[]): Promise<MasterBhkType[]> {
+  async findByPropertyTypeIds(
+    propertyTypeIds: string[],
+  ): Promise<MasterBhkType[]> {
     return await this.bhkTypeRepository.find({
       where: { propertyTypeId: In(propertyTypeIds) },
       order: { sortOrder: 'ASC' },
@@ -59,8 +61,20 @@ export class BhkTypeRepository {
     });
   }
 
-  async createBhkType(bhkTypeData: Partial<MasterBhkType>): Promise<MasterBhkType> {
+  async createBhkType(
+    bhkTypeData: Partial<MasterBhkType>,
+  ): Promise<MasterBhkType> {
     const bhkType = this.bhkTypeRepository.create(bhkTypeData);
     return await this.bhkTypeRepository.save(bhkType);
+  }
+
+  async findBySocietyIdAndPropertyTypeId(
+    societyId: string,
+    propertyTypeId: string,
+  ): Promise<MasterBhkType[]> {
+    return await this.bhkTypeRepository.find({
+      where: { societyId, propertyTypeId },
+      order: { sortOrder: 'ASC' },
+    });
   }
 }

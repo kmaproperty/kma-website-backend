@@ -41,7 +41,9 @@ export class S3Service {
     );
 
     if (!this.bucketName) {
-      throw new InternalServerErrorException('AWS_BUCKET environment variable is required');
+      throw new InternalServerErrorException(
+        'AWS_BUCKET environment variable is required',
+      );
     }
 
     this.s3Client = new S3Client({
@@ -113,8 +115,12 @@ export class S3Service {
         url,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`S3 upload error: ${errorMessage}`, error instanceof Error ? error.stack : '');
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `S3 upload error: ${errorMessage}`,
+        error instanceof Error ? error.stack : '',
+      );
       throw new InternalServerErrorException(
         `Failed to upload file: ${errorMessage}`,
       );
@@ -131,8 +137,12 @@ export class S3Service {
       await this.s3Client.send(deleteCommand);
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`S3 delete error: ${errorMessage}`, error instanceof Error ? error.stack : '');
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `S3 delete error: ${errorMessage}`,
+        error instanceof Error ? error.stack : '',
+      );
       return false;
     }
   }
