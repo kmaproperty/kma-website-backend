@@ -37,6 +37,33 @@ import {
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Post('signup/send-otp')
+  @ApiOperation({ summary: 'Send OTP for signup (phone may be new)' })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+    type: SendOtpResponseDto,
+  })
+  async signupSendOtp(
+    @Body() sendOtpDto: SendOtpDto,
+  ): Promise<SendOtpResponseDto> {
+    // Use existing flow for signup
+    return await this.userService.sendOtp(sendOtpDto);
+  }
+
+  @Post('login/send-otp')
+  @ApiOperation({ summary: 'Send OTP for login (phone must exist)' })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+    type: SendOtpResponseDto,
+  })
+  async loginSendOtp(
+    @Body() sendOtpDto: SendOtpDto,
+  ): Promise<SendOtpResponseDto> {
+    return await this.userService.sendOtpForLogin(sendOtpDto);
+  }
+
   @Post('send-otp')
   @ApiOperation({ summary: 'Send OTP to phone number' })
   @ApiResponse({
