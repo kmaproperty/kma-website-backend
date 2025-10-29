@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { IsNull } from 'typeorm';
+import { PropertyCompletionStep } from './enum/property-completion-step.enum';
 import { PropertyListingTypeRepository } from './repositories/property-listing-type.repository';
 import { PropertyCategoryNewRepository } from './repositories/property-category-new.repository';
 import { PropertyTypeRepository } from './repositories/property-type.repository';
@@ -276,6 +278,8 @@ export class PropertyService {
           superBuiltUpArea: area.superBuiltUpArea,
           carpetArea: area.carpetArea,
           noOfBathrooms: area.noOfBathrooms,
+          noOfBedrooms: area.noOfBedrooms ?? null,
+          balconies: area.balconies ?? null,
           bhkTypeId: area.bhkTypeId,
           societyId: area.societyId,
         }));
@@ -308,6 +312,7 @@ export class PropertyService {
       propertyTypeId,
       bhk,
       ageOfProperty,
+      facing,
       status = 'draft',
       city,
       society,
@@ -421,11 +426,35 @@ export class PropertyService {
 
     // Helper function to get or create built-up area
     const getOrCreateBuiltUpArea = async (bhkInfo: any, bhkTypeId: string, societyId: string) => {
+      // Build where clause with proper null handling
+      const whereClause: any = {
+        superBuiltUpArea: bhkInfo.buildUpAreaSqFt,
+        carpetArea: bhkInfo.carpetAreaSqFt,
+        noOfBathrooms: bhkInfo.noOfBathrooms,
+        bhkTypeId: bhkTypeId,
+        societyId: societyId,
+      };
+
+      // Handle nullable fields - use IsNull() if undefined/null, otherwise use the value
+      whereClause.noOfBedrooms = bhkInfo.noOfBedrooms == null ? IsNull() : bhkInfo.noOfBedrooms;
+      whereClause.balconies = bhkInfo.balconies == null ? IsNull() : bhkInfo.balconies;
+
+      // Check if built-up area already exists with these exact parameters
+      const existingBuiltUpArea = await this.builtUpAreaRepository.findOne({
+        where: whereClause,
+      });
+
+      if (existingBuiltUpArea) {
+        return existingBuiltUpArea.id;
+      }
+
       // Create new built-up area based on BHK info
       const newBuiltUpArea = await this.builtUpAreaRepository.createBuiltUpArea({
         superBuiltUpArea: bhkInfo.buildUpAreaSqFt,
         carpetArea: bhkInfo.carpetAreaSqFt,
         noOfBathrooms: bhkInfo.noOfBathrooms,
+        noOfBedrooms: bhkInfo.noOfBedrooms ?? null,
+        balconies: bhkInfo.balconies ?? null,
         bhkTypeId: bhkTypeId,
         societyId: societyId,
       });
@@ -459,7 +488,7 @@ export class PropertyService {
           throw new BadRequestException('You can only update your own properties');
         }
 
-        // Update the property
+        // Update the property and mark step 1 as completed
         await this.propertyRepository.updateProperty(propertyId, {
           listingTypeId,
           categoryId,
@@ -468,13 +497,15 @@ export class PropertyService {
           propertyTypeId,
           bhkTypeId,
           ageOfProperty,
+          facing: facing || null,
           status,
+          completionStep: PropertyCompletionStep.STEP_1,
         });
 
         // Get the updated property
         property = await this.propertyRepository.findById(propertyId);
       } else {
-        // Create new property
+        // Create new property and mark step 1 as completed
         property = await this.propertyRepository.createProperty({
           listingTypeId,
           categoryId,
@@ -483,14 +514,17 @@ export class PropertyService {
           propertyTypeId,
           bhkTypeId,
           ageOfProperty,
+          facing: facing || null,
           userId,
           status,
+          completionStep: PropertyCompletionStep.STEP_1,
         });
       }
 
       return {
         id: property.id,
-        status: property.status
+        status: property.status,
+        completionStep: property.completionStep ?? PropertyCompletionStep.STEP_1,
       };
     } catch (error) {
       throw new BadRequestException(
@@ -597,5 +631,100 @@ export class PropertyService {
     }, [] as any[]);
 
     return uniqueResults.slice(0, limit);
+  }
+
+  /**
+   * Get property step 1 details by property ID
+   */
+  async getPropertyStep1Details(propertyId: string, userId: string): Promise<any> {
+    // Get property with all relations
+    const property = await this.propertyRepository.findByIdWithRelations(propertyId);
+    
+    if (!property) {
+      throw new BadRequestException(`Property with ID ${propertyId} not found`);
+    }
+
+    // Check if user owns this property
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only view your own properties');
+    }
+
+    // Fetch related objects separately if not loaded through relations
+    let listingType = property.listingType;
+    if (!listingType && property.listingTypeId) {
+      const fetchedListingType = await this.propertyListingTypeRepository.findById(property.listingTypeId);
+      if (fetchedListingType) {
+        listingType = fetchedListingType;
+      }
+    }
+
+    let category = property.category;
+    if (!category && property.categoryId) {
+      const fetchedCategory = await this.propertyCategoryRepository.findById(property.categoryId);
+      if (fetchedCategory) {
+        category = fetchedCategory;
+      }
+    }
+
+    // Get built-up area for this BHK type and society
+    const builtUpAreas = await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
+      property.bhkTypeId,
+      property.societyId,
+    );
+
+    // Get the first matching built-up area (or use the first one if multiple exist)
+    const builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
+
+    // Format the response similar to CreatePropertyStep1Dto
+    return {
+      propertyId: property.id,
+      listingType: listingType ? {
+        id: listingType.id,
+        name: listingType.name,
+        code: listingType.code,
+      } : null,
+      category: category ? {
+        id: category.id,
+        name: category.name,
+        code: category.code,
+      } : null,
+      propertyType: property.propertyType ? {
+        id: property.propertyType.id,
+        name: property.propertyType.name,
+        code: property.propertyType.code,
+      } : null,
+      bhk: {
+        id: property.bhkType?.id,
+        name: property.bhkType?.name || '',
+        buildUpAreaSqFt: builtUpArea?.superBuiltUpArea || 0,
+        carpetAreaSqFt: builtUpArea?.carpetArea || 0,
+        noOfBathrooms: builtUpArea?.noOfBathrooms || 0,
+        noOfBedrooms: builtUpArea?.noOfBedrooms ?? null,
+        balconies: builtUpArea?.balconies ?? null,
+      },
+      ageOfProperty: property.ageOfProperty,
+      facing: property.facing || null,
+      status: property.status,
+      city: property.city ? {
+        id: property.city.id,
+        name: property.city.name,
+        code: property.city.code,
+        state: property.city.state,
+        latitude: property.city.latitude,
+        longitude: property.city.longitude,
+      } : null,
+      society: property.society ? {
+        id: property.society.id,
+        name: property.society.name,
+        localityName: property.society.localityName,
+        address: property.society.address,
+        pincode: property.society.pincode,
+        latitude: property.society.latitude,
+        longitude: property.society.longitude,
+      } : null,
+      createdAt: property.createdAt,
+      updatedAt: property.updatedAt,
+      completionStep: property.completionStep || 0,
+    };
   }
 }

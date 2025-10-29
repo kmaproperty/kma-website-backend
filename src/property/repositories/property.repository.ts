@@ -22,6 +22,20 @@ export class PropertyRepository {
     });
   }
 
+  async findByIdWithRelations(id: string): Promise<Property | null> {
+    return await this.propertyRepository.findOne({
+      where: { id },
+      relations: [
+        'listingType',
+        'category',
+        'city',
+        'society',
+        'propertyType',
+        'bhkType',
+      ],
+    });
+  }
+
   async findByUserId(userId: string): Promise<Property[]> {
     return await this.propertyRepository.find({
       where: { userId },

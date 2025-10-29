@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { MasterPropertyListingType } from '../entities/master-property-listing-type.entity';
 import { MasterPropertyCategoryNew } from '../entities/master-property-category-new.entity';
 import { MasterPropertyType } from '../entities/master-property-type.entity';
@@ -414,6 +414,8 @@ export class MasterDataSeederService {
               superBuiltUpArea: config.superBuiltUpArea,
               carpetArea: config.carpetArea,
               noOfBathrooms: config.noOfBathrooms,
+              noOfBedrooms: IsNull(),
+              balconies: IsNull(),
             },
           });
 
@@ -424,6 +426,8 @@ export class MasterDataSeederService {
               superBuiltUpArea: config.superBuiltUpArea,
               carpetArea: config.carpetArea,
               noOfBathrooms: config.noOfBathrooms,
+              noOfBedrooms: null,
+              balconies: null,
             });
             await this.builtUpAreaRepository.save(builtUpArea);
             created++;
