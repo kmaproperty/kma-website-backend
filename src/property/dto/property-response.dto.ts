@@ -301,6 +301,20 @@ export class BuiltUpAreaResponseDto {
   @ApiProperty({ description: 'Number of bathrooms', example: 2 })
   noOfBathrooms: number;
 
+  @ApiProperty({
+    description: 'Number of bedrooms',
+    example: 2,
+    required: false,
+  })
+  noOfBedrooms?: number | null;
+
+  @ApiProperty({
+    description: 'Number of balconies',
+    example: 2,
+    required: false,
+  })
+  balconies?: number | null;
+
   @ApiProperty({ description: 'BHK type ID', example: 'uuid-string' })
   bhkTypeId: string;
 
@@ -451,6 +465,15 @@ export class PropertyResponseDto {
     example: '2024-01-15T10:30:00Z',
   })
   updatedAt: Date;
+
+  @ApiProperty({
+    description:
+      'Completion step (0=not started, 1-4=in progress, 5=completed)',
+    example: 1,
+    minimum: 0,
+    maximum: 5,
+  })
+  completionStep: number;
 }
 
 // Minimal property response for step updates

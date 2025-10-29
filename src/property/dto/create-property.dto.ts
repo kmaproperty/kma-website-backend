@@ -216,16 +216,30 @@ export class BhkInfo {
   noOfBathrooms: number;
 
   @ApiProperty({ 
-    description: 'Number of balconies', 
+    description: 'Number of bedrooms', 
     example: 2,
-    required: true,
+    required: false,
     minimum: 0,
     maximum: 10
   })
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(10)
-  noOfBalconies: number;
+  noOfBedrooms?: number;
+
+  @ApiProperty({ 
+    description: 'Number of balconies', 
+    example: 2,
+    required: false,
+    minimum: 0,
+    maximum: 10
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  balconies?: number;
 }
 
 export class BuiltUpAreaInfo {
@@ -268,6 +282,32 @@ export class BuiltUpAreaInfo {
   @Min(1)
   @Max(10)
   noOfBathrooms?: number;
+
+  @ApiProperty({ 
+    description: 'Number of bedrooms', 
+    example: 2,
+    required: false,
+    minimum: 0,
+    maximum: 10
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  noOfBedrooms?: number;
+
+  @ApiProperty({ 
+    description: 'Number of balconies', 
+    example: 2,
+    required: false,
+    minimum: 0,
+    maximum: 10
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  balconies?: number;
 }
 
 export class CreatePropertyStep1Dto {
@@ -329,7 +369,14 @@ export class CreatePropertyStep1Dto {
   @Max(100)
   ageOfProperty: number;
 
-
+  @ApiProperty({ 
+    description: 'Property facing direction (e.g., North, South, East, West, North-East, etc.)', 
+    example: 'North',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  facing?: string;
 
   @ApiProperty({ 
     description: 'Property status', 

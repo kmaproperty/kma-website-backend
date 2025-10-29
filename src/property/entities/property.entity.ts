@@ -65,7 +65,7 @@ export class Property extends BaseEntity {
   @Column({ type: 'uuid' })
   userId: string;
 
-  // Property status
+  // Property status (lifecycle: draft, active, inactive, sold, rented)
   @Column({
     type: 'enum',
     enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
@@ -160,4 +160,23 @@ export class Property extends BaseEntity {
 
   @Column({ type: 'boolean', nullable: true, default: false })
   isBrokerageNegotiable: boolean | null;
+  // Completion step tracks progress through posting workflow (1-5)
+  // Step 1: Basic details, Step 2: Additional details, Step 3: Media, Step 4: Review, Step 5: Completed
+  @Column({
+    type: 'int',
+    name: 'completion_step',
+    default: 0,
+    comment:
+      'Current completion step (0=not started, 1-4=in progress, 5=completed)',
+  })
+  completionStep: number;
+
+  // Property facing direction (optional)
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    name: 'facing',
+  })
+  facing: string | null;
 }

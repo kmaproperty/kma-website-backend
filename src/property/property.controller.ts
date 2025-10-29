@@ -313,4 +313,28 @@ export class PropertyController {
     }
     return await this.propertyService.updatePropertyStep2(body, req.user.id);
   }
+
+  @Get('/step-1/:propertyId')
+  @ApiOperation({
+    summary: 'Get property step 1 details',
+    description:
+      'Retrieves the saved property step 1 details by property ID. Only the property owner can view their property details.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property step 1 details retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property not found or you can only view your own properties',
+  })
+  async getPropertyStep1Details(
+    @Param('propertyId') propertyId: string,
+    @Req() req: Request,
+  ): Promise<any> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.getPropertyStep1Details(propertyId, req.user.id);
+  }
 }
