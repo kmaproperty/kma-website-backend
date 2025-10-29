@@ -20,25 +20,27 @@ import {
 import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { CreatePropertyStep1Dto } from './dto/create-property.dto';
-import { 
-  MasterDataResponseDto, 
-  ReseedMasterDataResponseDto, 
-  CityResponseDto, 
-  SocietyResponseDto, 
-  LocalityResponseDto, 
-  BhkTypeResponseDto, 
+import { CreatePropertyStep2Dto } from './dto/create-property-step2.dto';
+import {
+  MasterDataResponseDto,
+  ReseedMasterDataResponseDto,
+  CityResponseDto,
+  SocietyResponseDto,
+  LocalityResponseDto,
+  BhkTypeResponseDto,
   PropertyResponseDto,
+  PropertyStatusResponseDto,
   ListingTypeResponseDto,
   CategoryResponseDto,
-  LocationResponseDto 
+  LocationResponseDto,
 } from './dto/property-response.dto';
-import { 
-  MasterDataQueryDto, 
-  CitySearchQueryDto, 
-  SocietySearchQueryDto, 
-  LocalitySearchQueryDto, 
+import {
+  MasterDataQueryDto,
+  CitySearchQueryDto,
+  SocietySearchQueryDto,
+  LocalitySearchQueryDto,
   BhkTypesQueryDto,
-  LocationSearchQueryDto 
+  LocationSearchQueryDto,
 } from './dto/property-query.dto';
 
 @ApiTags('Property')
@@ -163,10 +165,7 @@ export class PropertyController {
   async searchCities(
     @Query() query: CitySearchQueryDto,
   ): Promise<CityResponseDto[]> {
-    return await this.propertyService.searchCities(
-      query.q,
-      query.limit,
-    );
+    return await this.propertyService.searchCities(query.q, query.limit);
   }
 
   @Get('locations/search')
@@ -230,13 +229,15 @@ export class PropertyController {
   @ApiQuery({
     name: 'societyId',
     required: false,
-    description: 'Society ID to filter BHK types and built-up areas for a specific society (optional)',
+    description:
+      'Society ID to filter BHK types and built-up areas for a specific society (optional)',
     example: 'uuid-of-society',
   })
   @ApiQuery({
     name: 'propertyTypeId',
     required: false,
-    description: 'Property type ID to filter BHK types when societyId is provided (optional)',
+    description:
+      'Property type ID to filter BHK types when societyId is provided (optional)',
     example: 'uuid-of-property-type',
   })
   @ApiResponse({
@@ -271,7 +272,8 @@ export class PropertyController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid property data, missing required fields, or property not found',
+    description:
+      'Invalid property data, missing required fields, or property not found',
   })
   @ApiResponse({
     status: 403,
@@ -284,6 +286,31 @@ export class PropertyController {
     if (!req.user?.id) {
       throw new BadRequestException('User not authenticated');
     }
-    return await this.propertyService.createProperty(createPropertyDto, req.user.id);
+    return await this.propertyService.createProperty(
+      createPropertyDto,
+      req.user.id,
+    );
+  }
+
+  @Post('/step-2')
+  @ApiOperation({
+    summary: 'Step 2: Update property with unit and rent details',
+    description:
+      'Updates floor, total floors, unit identifiers, area, tenant type, rent availability and date, rent amount, maintenance, security deposit, lock-in period, brokerage and negotiable flag with validations.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property updated',
+    type: PropertyStatusResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  async updatePropertyStep2(
+    @Body() body: CreatePropertyStep2Dto,
+    @Req() req: Request,
+  ): Promise<PropertyStatusResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.updatePropertyStep2(body, req.user.id);
   }
 }

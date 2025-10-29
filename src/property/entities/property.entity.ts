@@ -72,4 +72,92 @@ export class Property extends BaseEntity {
     default: 'draft',
   })
   status: string;
+
+  // Step 2 fields
+  @Column({ type: 'int', nullable: true })
+  floorNumber: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  totalFloors: number | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  flatNumber: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  towerBlock: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  propertyAreaAcre: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['family', 'bachelors', 'company'],
+    nullable: true,
+  })
+  tenantType: 'family' | 'bachelors' | 'company' | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['open_for_both', 'men_only', 'women_only'],
+    nullable: true,
+  })
+  companyOccupancy: 'open_for_both' | 'men_only' | 'women_only' | null;
+
+  @Column({ type: 'enum', enum: ['immediately', 'later'], nullable: true })
+  rentAvailability: 'immediately' | 'later' | null;
+
+  @Column({ type: 'date', nullable: true })
+  availableFromDate: Date | null;
+
+  @Column({ type: 'int', nullable: true })
+  monthlyRent: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['include_in_rent', 'separate'],
+    nullable: true,
+  })
+  maintenanceType: 'include_in_rent' | 'separate' | null;
+
+  @Column({ type: 'int', nullable: true })
+  maintenanceChargeAmount: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['none', '1_month', '2_month', '6_month', 'custom'],
+    nullable: true,
+  })
+  securityDepositType:
+    | 'none'
+    | '1_month'
+    | '2_month'
+    | '6_month'
+    | 'custom'
+    | null;
+
+  @Column({ type: 'int', nullable: true })
+  securityDepositAmount: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['none', '1_month', '2_month', '6_month', 'custom'],
+    nullable: true,
+  })
+  lockInType: 'none' | '1_month' | '2_month' | '6_month' | 'custom' | null;
+
+  @Column({ type: 'int', nullable: true })
+  lockInMonths: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['none', '15_days', '30_days', 'custom'],
+    nullable: true,
+  })
+  brokerageType: 'none' | '15_days' | '30_days' | 'custom' | null;
+
+  @Column({ type: 'int', nullable: true })
+  brokerageAmount: number | null;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  isBrokerageNegotiable: boolean | null;
 }

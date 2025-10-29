@@ -46,22 +46,46 @@ export class CityResponseDto {
   @ApiProperty({ description: 'City code', example: 'gurgaon' })
   code: string;
 
-  @ApiProperty({ description: 'State name', example: 'Haryana', required: false })
+  @ApiProperty({
+    description: 'State name',
+    example: 'Haryana',
+    required: false,
+  })
   state?: string;
 
-  @ApiProperty({ description: 'Latitude coordinate', example: 28.4595, required: false })
+  @ApiProperty({
+    description: 'Latitude coordinate',
+    example: 28.4595,
+    required: false,
+  })
   latitude?: number;
 
-  @ApiProperty({ description: 'Longitude coordinate', example: 77.0266, required: false })
+  @ApiProperty({
+    description: 'Longitude coordinate',
+    example: 77.0266,
+    required: false,
+  })
   longitude?: number;
 
-  @ApiProperty({ description: 'Data source', example: 'database', enum: ['database', 'google'] })
+  @ApiProperty({
+    description: 'Data source',
+    example: 'database',
+    enum: ['database', 'google'],
+  })
   source: string;
 
-  @ApiProperty({ description: 'Country name (for Google results)', example: 'India', required: false })
+  @ApiProperty({
+    description: 'Country name (for Google results)',
+    example: 'India',
+    required: false,
+  })
   country?: string;
 
-  @ApiProperty({ description: 'Google Place ID (for Google results)', example: 'ChIJ...', required: false })
+  @ApiProperty({
+    description: 'Google Place ID (for Google results)',
+    example: 'ChIJ...',
+    required: false,
+  })
   placeId?: string;
 }
 
@@ -72,40 +96,84 @@ export class SocietyResponseDto {
   @ApiProperty({ description: 'Society name', example: 'Green Park Society' })
   name: string;
 
-  @ApiProperty({ description: 'City ID', example: 'uuid-string', required: false })
+  @ApiProperty({
+    description: 'City ID',
+    example: 'uuid-string',
+    required: false,
+  })
   cityId?: string;
 
-  @ApiProperty({ description: 'Locality ID', example: 'uuid-string', required: false })
+  @ApiProperty({
+    description: 'Locality ID',
+    example: 'uuid-string',
+    required: false,
+  })
   localityId?: string;
 
-  @ApiProperty({ description: 'Society address', example: 'Sector 15, Gurgaon', required: false })
+  @ApiProperty({
+    description: 'Society address',
+    example: 'Sector 15, Gurgaon',
+    required: false,
+  })
   address?: string;
 
-  @ApiProperty({ description: 'Latitude coordinate', example: 28.4595, required: false })
+  @ApiProperty({
+    description: 'Latitude coordinate',
+    example: 28.4595,
+    required: false,
+  })
   latitude?: number;
 
-  @ApiProperty({ description: 'Longitude coordinate', example: 77.0266, required: false })
+  @ApiProperty({
+    description: 'Longitude coordinate',
+    example: 77.0266,
+    required: false,
+  })
   longitude?: number;
 
   @ApiProperty({ description: 'Pincode', example: '122001', required: false })
   pincode?: string;
 
-  @ApiProperty({ description: 'Verification status', example: true, required: false })
+  @ApiProperty({
+    description: 'Verification status',
+    example: true,
+    required: false,
+  })
   isVerified?: boolean;
 
-  @ApiProperty({ description: 'Data source', example: 'database', enum: ['database', 'google'] })
+  @ApiProperty({
+    description: 'Data source',
+    example: 'database',
+    enum: ['database', 'google'],
+  })
   source: string;
 
-  @ApiProperty({ description: 'City name (for Google results)', example: 'Gurgaon', required: false })
+  @ApiProperty({
+    description: 'City name (for Google results)',
+    example: 'Gurgaon',
+    required: false,
+  })
   city?: string;
 
-  @ApiProperty({ description: 'State name (for Google results)', example: 'Haryana', required: false })
+  @ApiProperty({
+    description: 'State name (for Google results)',
+    example: 'Haryana',
+    required: false,
+  })
   state?: string;
 
-  @ApiProperty({ description: 'Country name (for Google results)', example: 'India', required: false })
+  @ApiProperty({
+    description: 'Country name (for Google results)',
+    example: 'India',
+    required: false,
+  })
   country?: string;
 
-  @ApiProperty({ description: 'Google Place ID (for Google results)', example: 'ChIJ...', required: false })
+  @ApiProperty({
+    description: 'Google Place ID (for Google results)',
+    example: 'ChIJ...',
+    required: false,
+  })
   placeId?: string;
 }
 
@@ -116,34 +184,74 @@ export class LocalityResponseDto {
   @ApiProperty({ description: 'Locality name', example: 'Sector 15' })
   name: string;
 
-  @ApiProperty({ description: 'Sector name', example: 'Sector 15', required: false })
+  @ApiProperty({
+    description: 'Sector name',
+    example: 'Sector 15',
+    required: false,
+  })
   sector?: string;
 
-  @ApiProperty({ description: 'City ID', example: 'uuid-string', required: false })
+  @ApiProperty({
+    description: 'City ID',
+    example: 'uuid-string',
+    required: false,
+  })
   cityId?: string;
 
-  @ApiProperty({ description: 'Latitude coordinate', example: 28.4595, required: false })
+  @ApiProperty({
+    description: 'Latitude coordinate',
+    example: 28.4595,
+    required: false,
+  })
   latitude?: number;
 
-  @ApiProperty({ description: 'Longitude coordinate', example: 77.0266, required: false })
+  @ApiProperty({
+    description: 'Longitude coordinate',
+    example: 77.0266,
+    required: false,
+  })
   longitude?: number;
 
-  @ApiProperty({ description: 'Data source', example: 'database', enum: ['database', 'google'] })
+  @ApiProperty({
+    description: 'Data source',
+    example: 'database',
+    enum: ['database', 'google'],
+  })
   source: string;
 
-  @ApiProperty({ description: 'City name (for Google results)', example: 'Gurgaon', required: false })
+  @ApiProperty({
+    description: 'City name (for Google results)',
+    example: 'Gurgaon',
+    required: false,
+  })
   city?: string;
 
-  @ApiProperty({ description: 'State name (for Google results)', example: 'Haryana', required: false })
+  @ApiProperty({
+    description: 'State name (for Google results)',
+    example: 'Haryana',
+    required: false,
+  })
   state?: string;
 
-  @ApiProperty({ description: 'Country name (for Google results)', example: 'India', required: false })
+  @ApiProperty({
+    description: 'Country name (for Google results)',
+    example: 'India',
+    required: false,
+  })
   country?: string;
 
-  @ApiProperty({ description: 'Google Place ID (for Google results)', example: 'ChIJ...', required: false })
+  @ApiProperty({
+    description: 'Google Place ID (for Google results)',
+    example: 'ChIJ...',
+    required: false,
+  })
   placeId?: string;
 
-  @ApiProperty({ description: 'Address (for Google results)', example: 'Sector 15, Gurgaon, Haryana, India', required: false })
+  @ApiProperty({
+    description: 'Address (for Google results)',
+    example: 'Sector 15, Gurgaon, Haryana, India',
+    required: false,
+  })
   address?: string;
 }
 
@@ -152,16 +260,31 @@ export class LocationResponseDto {
   @ApiProperty({ description: 'Result ID', example: 'uuid-string' })
   id: string;
 
-  @ApiProperty({ description: 'Society/location name', example: 'Green Park Society' })
+  @ApiProperty({
+    description: 'Society/location name',
+    example: 'Green Park Society',
+  })
   name: string;
 
-  @ApiProperty({ description: 'Locality name', example: 'Sector 15', required: false })
+  @ApiProperty({
+    description: 'Locality name',
+    example: 'Sector 15',
+    required: false,
+  })
   localityName?: string | null;
 
-  @ApiProperty({ description: 'Address', example: 'Sector 15, Gurgaon', required: false })
+  @ApiProperty({
+    description: 'Address',
+    example: 'Sector 15, Gurgaon',
+    required: false,
+  })
   address?: string;
 
-  @ApiProperty({ description: 'Data source', example: 'database', enum: ['database', 'google'] })
+  @ApiProperty({
+    description: 'Data source',
+    example: 'database',
+    enum: ['database', 'google'],
+  })
   source: string;
 }
 
@@ -198,34 +321,45 @@ export class BhkTypeResponseDto {
   @ApiProperty({ description: 'Sort order', example: 2 })
   sortOrder: number;
 
-  @ApiProperty({ description: 'Property type ID', example: 'uuid-string', required: false })
+  @ApiProperty({
+    description: 'Property type ID',
+    example: 'uuid-string',
+    required: false,
+  })
   propertyTypeId?: string;
 
-  @ApiProperty({ description: 'Society ID', example: 'uuid-string', required: false })
+  @ApiProperty({
+    description: 'Society ID',
+    example: 'uuid-string',
+    required: false,
+  })
   societyId?: string;
 
-  @ApiProperty({ 
-    description: 'Built-up areas for this BHK type', 
+  @ApiProperty({
+    description: 'Built-up areas for this BHK type',
     type: [BuiltUpAreaResponseDto],
-    required: false 
+    required: false,
   })
   builtUpAreas?: BuiltUpAreaResponseDto[];
 }
 
 // Master data response DTOs
 export class MasterDataResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Filtered property types based on listing type and category',
-    type: [PropertyTypeResponseDto]
+    type: [PropertyTypeResponseDto],
   })
   propertyTypes: PropertyTypeResponseDto[];
 }
 
 export class ReseedMasterDataResponseDto {
-  @ApiProperty({ description: 'Success message', example: 'Master data reseeded successfully' })
+  @ApiProperty({
+    description: 'Success message',
+    example: 'Master data reseeded successfully',
+  })
   message: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Reseed operation details',
     example: {
       duration: '2.5s',
@@ -237,9 +371,9 @@ export class ReseedMasterDataResponseDto {
         localities: 500,
         societies: 200,
         bhkTypes: 100,
-        builtUpAreas: 300
-      }
-    }
+        builtUpAreas: 300,
+      },
+    },
   })
   details: any;
 }
@@ -270,7 +404,11 @@ export class PropertyResponseDto {
   @ApiProperty({ description: 'BHK type ID', example: 'uuid-string' })
   bhkTypeId: string;
 
-  @ApiProperty({ description: 'Custom BHK description', example: '2.5 BHK', required: false })
+  @ApiProperty({
+    description: 'Custom BHK description',
+    example: '2.5 BHK',
+    required: false,
+  })
   customBhk?: string;
 
   @ApiProperty({ description: 'Number of bathrooms', example: 2 })
@@ -279,25 +417,51 @@ export class PropertyResponseDto {
   @ApiProperty({ description: 'Built-up area in sq ft', example: 1200 })
   builtUpAreaSqFt: number;
 
-  @ApiProperty({ description: 'Carpet area in sq ft', example: 1000, required: false })
+  @ApiProperty({
+    description: 'Carpet area in sq ft',
+    example: 1000,
+    required: false,
+  })
   carpetAreaSqFt?: number;
 
   @ApiProperty({ description: 'Age of property in years', example: 5 })
   ageOfProperty: number;
 
-  @ApiProperty({ description: 'User ID who created the property', example: 'uuid-string' })
+  @ApiProperty({
+    description: 'User ID who created the property',
+    example: 'uuid-string',
+  })
   userId: string;
 
-  @ApiProperty({ 
-    description: 'Property status', 
+  @ApiProperty({
+    description: 'Property status',
     example: 'draft',
-    enum: ['draft', 'active', 'inactive', 'sold', 'rented']
+    enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
   })
   status: string;
 
-  @ApiProperty({ description: 'Creation timestamp', example: '2024-01-15T10:30:00Z' })
+  @ApiProperty({
+    description: 'Creation timestamp',
+    example: '2024-01-15T10:30:00Z',
+  })
   createdAt: Date;
 
-  @ApiProperty({ description: 'Last update timestamp', example: '2024-01-15T10:30:00Z' })
+  @ApiProperty({
+    description: 'Last update timestamp',
+    example: '2024-01-15T10:30:00Z',
+  })
   updatedAt: Date;
+}
+
+// Minimal property response for step updates
+export class PropertyStatusResponseDto {
+  @ApiProperty({ description: 'Property ID', example: 'uuid-string' })
+  id: string;
+
+  @ApiProperty({
+    description: 'Property status',
+    example: 'draft',
+    enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
+  })
+  status: string;
 }

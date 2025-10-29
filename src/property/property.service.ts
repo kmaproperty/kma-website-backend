@@ -9,6 +9,15 @@ import { SocietyRepository } from './repositories/society.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
+import {
+  CreatePropertyStep2Dto,
+  MaintenanceType,
+  RentAvailability,
+  SecurityDepositType,
+  LockInType,
+  BrokerageType,
+  TenantType,
+} from './dto/create-property-step2.dto';
 
 @Injectable()
 export class PropertyService {
@@ -142,8 +151,6 @@ export class PropertyService {
     return uniqueCities.slice(0, limit);
   }
 
-
-
   /**
    * Get BHK types and their built-up areas for a specific society
    * If no data found for the society, returns default BHK options (1,2,3,4,5) with default built-up areas
@@ -207,9 +214,11 @@ export class PropertyService {
       ];
 
       // Return nested structure with BHK types and their built-up areas mapped
-      return defaultBhkTypes.map(bhkType => ({
+      return defaultBhkTypes.map((bhkType) => ({
         ...bhkType,
-        builtUpAreas: defaultBuiltUpAreas.filter(area => area.bhkTypeId === bhkType.id)
+        builtUpAreas: defaultBuiltUpAreas.filter(
+          (area) => area.bhkTypeId === bhkType.id,
+        ),
       }));
     }
 
@@ -240,45 +249,49 @@ export class PropertyService {
     // Get built-up areas for each BHK type
     const bhkTypesWithBuiltUpAreas = await Promise.all(
       bhkTypes.map(async (bhkType) => {
-        const builtUpAreas = await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
-          bhkType.id,
-          societyId,
-        );
+        const builtUpAreas =
+          await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
+            bhkType.id,
+            societyId,
+          );
 
         // If no built-up areas found for this BHK type, return default options
-        const areas = builtUpAreas.length === 0 ? [
-          {
-            id: `default-${bhkType.id}-1`,
-            superBuiltUpArea: 1000,
-            carpetArea: 800,
-            noOfBathrooms: 1,
-            bhkTypeId: bhkType.id,
-            societyId: societyId,
-          },
-          {
-            id: `default-${bhkType.id}-2`,
-            superBuiltUpArea: 1200,
-            carpetArea: 1000,
-            noOfBathrooms: 2,
-            bhkTypeId: bhkType.id,
-            societyId: societyId,
-          },
-          {
-            id: `default-${bhkType.id}-3`,
-            superBuiltUpArea: 1500,
-            carpetArea: 1200,
-            noOfBathrooms: 2,
-            bhkTypeId: bhkType.id,
-            societyId: societyId,
-          },
-        ] : builtUpAreas.map((area) => ({
-          id: area.id,
-          superBuiltUpArea: area.superBuiltUpArea,
-          carpetArea: area.carpetArea,
-          noOfBathrooms: area.noOfBathrooms,
-          bhkTypeId: area.bhkTypeId,
-          societyId: area.societyId,
-        }));
+        const areas =
+          builtUpAreas.length === 0
+            ? [
+                {
+                  id: `default-${bhkType.id}-1`,
+                  superBuiltUpArea: 1000,
+                  carpetArea: 800,
+                  noOfBathrooms: 1,
+                  bhkTypeId: bhkType.id,
+                  societyId: societyId,
+                },
+                {
+                  id: `default-${bhkType.id}-2`,
+                  superBuiltUpArea: 1200,
+                  carpetArea: 1000,
+                  noOfBathrooms: 2,
+                  bhkTypeId: bhkType.id,
+                  societyId: societyId,
+                },
+                {
+                  id: `default-${bhkType.id}-3`,
+                  superBuiltUpArea: 1500,
+                  carpetArea: 1200,
+                  noOfBathrooms: 2,
+                  bhkTypeId: bhkType.id,
+                  societyId: societyId,
+                },
+              ]
+            : builtUpAreas.map((area) => ({
+                id: area.id,
+                superBuiltUpArea: area.superBuiltUpArea,
+                carpetArea: area.carpetArea,
+                noOfBathrooms: area.noOfBathrooms,
+                bhkTypeId: area.bhkTypeId,
+                societyId: area.societyId,
+              }));
 
         return {
           id: bhkType.id,
@@ -398,7 +411,8 @@ export class PropertyService {
         return existingBhk.id;
       } else if (bhkInfo.name) {
         // Check if BHK type exists by name for the society
-        const existingBhkTypes = await this.bhkTypeRepository.findBySocietyId(societyId);
+        const existingBhkTypes =
+          await this.bhkTypeRepository.findBySocietyId(societyId);
         const matchingBhkType = existingBhkTypes.find(
           (bt) => bt.name.toLowerCase() === bhkInfo.name.toLowerCase(),
         );
@@ -420,15 +434,21 @@ export class PropertyService {
     };
 
     // Helper function to get or create built-up area
-    const getOrCreateBuiltUpArea = async (bhkInfo: any, bhkTypeId: string, societyId: string) => {
+    const getOrCreateBuiltUpArea = async (
+      bhkInfo: any,
+      bhkTypeId: string,
+      societyId: string,
+    ) => {
       // Create new built-up area based on BHK info
-      const newBuiltUpArea = await this.builtUpAreaRepository.createBuiltUpArea({
-        superBuiltUpArea: bhkInfo.buildUpAreaSqFt,
-        carpetArea: bhkInfo.carpetAreaSqFt,
-        noOfBathrooms: bhkInfo.noOfBathrooms,
-        bhkTypeId: bhkTypeId,
-        societyId: societyId,
-      });
+      const newBuiltUpArea = await this.builtUpAreaRepository.createBuiltUpArea(
+        {
+          superBuiltUpArea: bhkInfo.buildUpAreaSqFt,
+          carpetArea: bhkInfo.carpetAreaSqFt,
+          noOfBathrooms: bhkInfo.noOfBathrooms,
+          bhkTypeId: bhkTypeId,
+          societyId: societyId,
+        },
+      );
       return newBuiltUpArea.id;
     };
 
@@ -449,14 +469,19 @@ export class PropertyService {
 
       if (propertyId) {
         // Update existing property
-        const existingProperty = await this.propertyRepository.findById(propertyId);
+        const existingProperty =
+          await this.propertyRepository.findById(propertyId);
         if (!existingProperty) {
-          throw new BadRequestException(`Property with ID ${propertyId} not found`);
+          throw new BadRequestException(
+            `Property with ID ${propertyId} not found`,
+          );
         }
 
         // Check if user owns this property
         if (existingProperty.userId !== userId) {
-          throw new BadRequestException('You can only update your own properties');
+          throw new BadRequestException(
+            'You can only update your own properties',
+          );
         }
 
         // Update the property
@@ -490,13 +515,147 @@ export class PropertyService {
 
       return {
         id: property.id,
-        status: property.status
+        status: property.status,
       };
     } catch (error) {
       throw new BadRequestException(
         `Failed to create property: ${error.message}`,
       );
     }
+  }
+
+  async updatePropertyStep2(
+    dto: CreatePropertyStep2Dto,
+    userId: string,
+  ): Promise<{ id: string; status: string }> {
+    const property = await this.propertyRepository.findById(dto.propertyId);
+    if (!property) {
+      throw new BadRequestException(
+        `Property with ID ${dto.propertyId} not found`,
+      );
+    }
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only update your own properties');
+    }
+
+    // Floor validations
+    if (dto.floorNumber == null) {
+      throw new BadRequestException('Please enter the floor number');
+    }
+    if (dto.totalFloors == null) {
+      throw new BadRequestException('Please enter valid total floors');
+    }
+    if (dto.floorNumber > dto.totalFloors) {
+      throw new BadRequestException(
+        'Selected floor exceeds total floors of this building',
+      );
+    }
+
+    // Rent availability validation
+    if (dto.rentAvailability === RentAvailability.LATER) {
+      if (!dto.availableFromDate) {
+        throw new BadRequestException('Hint: Enter Available Date');
+      }
+      const sel = new Date(dto.availableFromDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (isNaN(sel.getTime()) || sel < today) {
+        throw new BadRequestException('Available date cannot be in the past');
+      }
+    }
+
+    // Maintenance charge validation
+    if (dto.maintenanceType === MaintenanceType.SEPARATE) {
+      if (
+        dto.maintenanceChargeAmount == null ||
+        dto.maintenanceChargeAmount <= 0
+      ) {
+        throw new BadRequestException('Please enter the maintenance charges');
+      }
+    }
+
+    // Security deposit validation
+    if (dto.securityDepositType === SecurityDepositType.CUSTOM) {
+      if (dto.monthlyRent == null) {
+        throw new BadRequestException(
+          'Please enter rent before specifying deposit',
+        );
+      }
+      if (dto.securityDepositAmount == null || dto.securityDepositAmount < 0) {
+        throw new BadRequestException('Please enter the security deposit');
+      }
+      if (dto.securityDepositAmount > dto.monthlyRent * 12) {
+        throw new BadRequestException(
+          'Deposit seems high as per market standards',
+        );
+      }
+    }
+
+    // Lock-in validation
+    if (dto.lockInType === LockInType.CUSTOM) {
+      if (dto.lockInMonths == null || dto.lockInMonths < 1) {
+        throw new BadRequestException('Please Select Lock in Period');
+      }
+    }
+
+    // Brokerage validation
+    if (dto.brokerageType === BrokerageType.CUSTOM) {
+      if (dto.monthlyRent == null) {
+        throw new BadRequestException(
+          'Please enter rent before specifying brokerage',
+        );
+      }
+      if (dto.brokerageAmount == null || dto.brokerageAmount < 0) {
+        throw new BadRequestException('Please enter brokerage amount');
+      }
+      if (dto.brokerageAmount > dto.monthlyRent) {
+        throw new BadRequestException(
+          'Brokerage seems high as per market standards',
+        );
+      }
+    }
+
+    // Company occupancy requirement
+    if (dto.tenantType === TenantType.COMPANY && !dto.companyOccupancy) {
+      throw new BadRequestException('Please select company occupancy');
+    }
+
+    await this.propertyRepository.updateProperty(dto.propertyId, {
+      floorNumber: dto.floorNumber,
+      totalFloors: dto.totalFloors,
+      flatNumber: dto.flatNumber ?? null,
+      towerBlock: dto.towerBlock ?? null,
+      propertyAreaAcre: dto.propertyAreaAcre ?? null,
+      tenantType: dto.tenantType ?? (null as any),
+      companyOccupancy: dto.companyOccupancy ?? (null as any),
+      rentAvailability: dto.rentAvailability as any,
+      availableFromDate: dto.availableFromDate
+        ? new Date(dto.availableFromDate)
+        : null,
+      monthlyRent: dto.monthlyRent,
+      maintenanceType: dto.maintenanceType as any,
+      maintenanceChargeAmount:
+        dto.maintenanceType === MaintenanceType.SEPARATE
+          ? dto.maintenanceChargeAmount!
+          : null,
+      securityDepositType: dto.securityDepositType as any,
+      securityDepositAmount:
+        dto.securityDepositType === SecurityDepositType.CUSTOM
+          ? dto.securityDepositAmount!
+          : null,
+      lockInType: dto.lockInType as any,
+      lockInMonths:
+        dto.lockInType === LockInType.CUSTOM ? dto.lockInMonths! : null,
+      brokerageType: dto.brokerageType as any,
+      brokerageAmount:
+        dto.brokerageType === BrokerageType.CUSTOM
+          ? dto.brokerageAmount!
+          : null,
+      isBrokerageNegotiable: dto.isBrokerageNegotiable ?? false,
+    });
+
+    const updated = await this.propertyRepository.findById(dto.propertyId);
+    return { id: updated!.id, status: updated!.status };
   }
 
   /**
@@ -546,13 +705,15 @@ export class PropertyService {
     );
 
     // Format results consistently
-    const formattedResults = localResults.map((society) => ({
-      id: society.id,
-      name: society.name,
-      localityName: society.localityName,
-      address: society.address,
-      source: 'database',
-    })).slice(0, limit); // Limit the results
+    const formattedResults = localResults
+      .map((society) => ({
+        id: society.id,
+        name: society.name,
+        localityName: society.localityName,
+        address: society.address,
+        source: 'database',
+      }))
+      .slice(0, limit); // Limit the results
 
     // If we have enough results, return them
     if (formattedResults.length >= 5) {
