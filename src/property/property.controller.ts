@@ -30,6 +30,7 @@ import {
   BhkTypeResponseDto,
   PropertyResponseDto,
   PropertyStatusResponseDto,
+  PropertyStep2ResponseDto,
   ListingTypeResponseDto,
   CategoryResponseDto,
   LocationResponseDto,
@@ -300,7 +301,7 @@ export class PropertyController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Property updated',
+    description: 'Property updated with step 2 completion',
     type: PropertyStatusResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Validation error' })
@@ -336,5 +337,30 @@ export class PropertyController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.propertyService.getPropertyStep1Details(propertyId, req.user.id);
+  }
+
+  @Get('/step-2/:propertyId')
+  @ApiOperation({
+    summary: 'Get property step 2 details',
+    description:
+      'Retrieves the saved property step 2 details by property ID. Only the property owner can view their property details.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property step 2 details retrieved successfully',
+    type: PropertyStep2ResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property not found or you can only view your own properties',
+  })
+  async getPropertyStep2Details(
+    @Param('propertyId') propertyId: string,
+    @Req() req: Request,
+  ): Promise<PropertyStep2ResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.getPropertyStep2Details(propertyId, req.user.id);
   }
 }

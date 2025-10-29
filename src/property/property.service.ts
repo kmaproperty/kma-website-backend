@@ -564,7 +564,7 @@ export class PropertyService {
   async updatePropertyStep2(
     dto: CreatePropertyStep2Dto,
     userId: string,
-  ): Promise<{ id: string; status: string }> {
+  ): Promise<{ id: string; status: string; completionStep: number }> {
     const property = await this.propertyRepository.findById(dto.propertyId);
     if (!property) {
       throw new BadRequestException(
@@ -689,10 +689,15 @@ export class PropertyService {
           ? dto.brokerageAmount!
           : null,
       isBrokerageNegotiable: dto.isBrokerageNegotiable ?? false,
+      completionStep: PropertyCompletionStep.STEP_2,
     });
 
     const updated = await this.propertyRepository.findById(dto.propertyId);
-    return { id: updated!.id, status: updated!.status };
+    return { 
+      id: updated!.id, 
+      status: updated!.status, 
+      completionStep: updated!.completionStep || PropertyCompletionStep.STEP_2 
+    };
   }
 
   /**
@@ -909,6 +914,67 @@ export class PropertyService {
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
       completionStep: property.completionStep || 0,
+    };
+  }
+
+  /**
+   * Get property step 2 details by property ID
+   */
+  async getPropertyStep2Details(
+    propertyId: string,
+    userId: string,
+  ): Promise<any> {
+    // Get property with all relations
+    const property =
+      await this.propertyRepository.findByIdWithRelations(propertyId);
+
+    if (!property) {
+      throw new BadRequestException(`Property with ID ${propertyId} not found`);
+    }
+
+    // Check if user owns this property
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only view your own properties');
+    }
+
+    // Format the response with step 2 fields
+    return {
+      propertyId: property.id,
+      floorNumber: property.floorNumber,
+      totalFloors: property.totalFloors,
+      flatNumber: property.flatNumber,
+      towerBlock: property.towerBlock,
+      propertyAreaAcre: property.propertyAreaAcre,
+      tenantType: property.tenantType,
+      companyOccupancy: property.companyOccupancy,
+      rentAvailability: property.rentAvailability,
+      availableFromDate: property.availableFromDate
+        ? (() => {
+            try {
+              const date = property.availableFromDate instanceof Date 
+                ? property.availableFromDate 
+                : new Date(property.availableFromDate);
+              return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+            } catch {
+              return null;
+            }
+          })()
+        : null,
+      monthlyRent: property.monthlyRent,
+      maintenanceType: property.maintenanceType,
+      maintenanceChargeAmount: property.maintenanceChargeAmount,
+      securityDepositType: property.securityDepositType,
+      securityDepositAmount: property.securityDepositAmount,
+      lockInType: property.lockInType,
+      lockInMonths: property.lockInMonths,
+      brokerageType: property.brokerageType,
+      brokerageAmount: property.brokerageAmount,
+      isBrokerageNegotiable: property.isBrokerageNegotiable,
+      facing: property.facing,
+      status: property.status,
+      completionStep: property.completionStep || 0,
+      createdAt: property.createdAt,
+      updatedAt: property.updatedAt,
     };
   }
 }

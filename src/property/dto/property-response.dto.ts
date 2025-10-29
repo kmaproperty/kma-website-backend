@@ -487,4 +487,192 @@ export class PropertyStatusResponseDto {
     enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
   })
   status: string;
+
+  @ApiProperty({
+    description: 'Completion step',
+    example: 2,
+    minimum: 0,
+    maximum: 5,
+  })
+  completionStep: number;
+}
+
+// Property Step 2 Response DTO
+export class PropertyStep2ResponseDto {
+  @ApiProperty({ description: 'Property ID', example: 'uuid-string' })
+  propertyId: string;
+
+  @ApiProperty({
+    description: 'Floor number of the unit',
+    example: 5,
+    required: false,
+  })
+  floorNumber?: number | null;
+
+  @ApiProperty({
+    description: 'Total floors in the building',
+    example: 10,
+    required: false,
+  })
+  totalFloors?: number | null;
+
+  @ApiProperty({
+    description: 'Flat/Unit number',
+    example: 'A-501',
+    required: false,
+  })
+  flatNumber?: string | null;
+
+  @ApiProperty({
+    description: 'Tower/Block number or name',
+    example: 'Tower A',
+    required: false,
+  })
+  towerBlock?: string | null;
+
+  @ApiProperty({
+    description: 'Property area (in Acres)',
+    example: 0.5,
+    required: false,
+  })
+  propertyAreaAcre?: number | null;
+
+  @ApiProperty({
+    description: 'Tenant type preference',
+    example: 'family',
+    enum: ['family', 'bachelors', 'company'],
+    required: false,
+  })
+  tenantType?: 'family' | 'bachelors' | 'company' | null;
+
+  @ApiProperty({
+    description: 'Company occupancy type',
+    example: 'open_for_both',
+    enum: ['open_for_both', 'men_only', 'women_only'],
+    required: false,
+  })
+  companyOccupancy?: 'open_for_both' | 'men_only' | 'women_only' | null;
+
+  @ApiProperty({
+    description: 'Rent availability',
+    example: 'immediately',
+    enum: ['immediately', 'later'],
+    required: false,
+  })
+  rentAvailability?: 'immediately' | 'later' | null;
+
+  @ApiProperty({
+    description: 'Available from date (when rentAvailability is later)',
+    example: '2025-12-31',
+    required: false,
+  })
+  availableFromDate?: string | null;
+
+  @ApiProperty({
+    description: 'Monthly rent amount',
+    example: 25000,
+    required: false,
+  })
+  monthlyRent?: number | null;
+
+  @ApiProperty({
+    description: 'Maintenance type',
+    example: 'include_in_rent',
+    enum: ['include_in_rent', 'separate'],
+    required: false,
+  })
+  maintenanceType?: 'include_in_rent' | 'separate' | null;
+
+  @ApiProperty({
+    description: 'Maintenance charge amount (when maintenanceType is separate)',
+    example: 2000,
+    required: false,
+  })
+  maintenanceChargeAmount?: number | null;
+
+  @ApiProperty({
+    description: 'Security deposit type',
+    example: '2_month',
+    enum: ['none', '1_month', '2_month', '6_month', 'custom'],
+    required: false,
+  })
+  securityDepositType?: 'none' | '1_month' | '2_month' | '6_month' | 'custom' | null;
+
+  @ApiProperty({
+    description: 'Security deposit amount (when securityDepositType is custom)',
+    example: 50000,
+    required: false,
+  })
+  securityDepositAmount?: number | null;
+
+  @ApiProperty({
+    description: 'Lock-in period type',
+    example: '1_month',
+    enum: ['none', '1_month', '2_month', '6_month', 'custom'],
+    required: false,
+  })
+  lockInType?: 'none' | '1_month' | '2_month' | '6_month' | 'custom' | null;
+
+  @ApiProperty({
+    description: 'Lock-in period in months (when lockInType is custom)',
+    example: 12,
+    required: false,
+  })
+  lockInMonths?: number | null;
+
+  @ApiProperty({
+    description: 'Brokerage type',
+    example: '15_days',
+    enum: ['none', '15_days', '30_days', 'custom'],
+    required: false,
+  })
+  brokerageType?: 'none' | '15_days' | '30_days' | 'custom' | null;
+
+  @ApiProperty({
+    description: 'Brokerage amount (when brokerageType is custom)',
+    example: 25000,
+    required: false,
+  })
+  brokerageAmount?: number | null;
+
+  @ApiProperty({
+    description: 'Is brokerage negotiable',
+    example: true,
+    required: false,
+  })
+  isBrokerageNegotiable?: boolean | null;
+
+  @ApiProperty({
+    description: 'Property facing direction',
+    example: 'North',
+    required: false,
+  })
+  facing?: string | null;
+
+  @ApiProperty({
+    description: 'Property status',
+    example: 'draft',
+    enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
+  })
+  status: string;
+
+  @ApiProperty({
+    description: 'Completion step',
+    example: 2,
+    minimum: 0,
+    maximum: 5,
+  })
+  completionStep: number;
+
+  @ApiProperty({
+    description: 'Creation timestamp',
+    example: '2024-01-15T10:30:00Z',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    description: 'Last update timestamp',
+    example: '2024-01-15T10:30:00Z',
+  })
+  updatedAt: Date;
 }
