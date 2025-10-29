@@ -19,6 +19,12 @@ export class MasterBuiltUpArea extends BaseEntity {
   @Column({ type: 'int', name: 'no_of_bathrooms' })
   noOfBathrooms: number;
 
+  @Column({ type: 'int', name: 'no_of_bedrooms', nullable: true })
+  noOfBedrooms: number | null;
+
+  @Column({ type: 'int', name: 'balconies', nullable: true })
+  balconies: number | null;
+
   @Column({ type: 'uuid', name: 'bhk_type_id' })
   bhkTypeId: string;
 
