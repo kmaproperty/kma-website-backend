@@ -11,6 +11,15 @@ import { SocietyRepository } from './repositories/society.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
+import {
+  CreatePropertyStep2Dto,
+  MaintenanceType,
+  RentAvailability,
+  SecurityDepositType,
+  LockInType,
+  BrokerageType,
+  TenantType,
+} from './dto/create-property-step2.dto';
 
 @Injectable()
 export class PropertyService {
@@ -144,8 +153,6 @@ export class PropertyService {
     return uniqueCities.slice(0, limit);
   }
 
-
-
   /**
    * Get BHK types and their built-up areas for a specific society
    * If no data found for the society, returns default BHK options (1,2,3,4,5) with default built-up areas
@@ -209,9 +216,11 @@ export class PropertyService {
       ];
 
       // Return nested structure with BHK types and their built-up areas mapped
-      return defaultBhkTypes.map(bhkType => ({
+      return defaultBhkTypes.map((bhkType) => ({
         ...bhkType,
-        builtUpAreas: defaultBuiltUpAreas.filter(area => area.bhkTypeId === bhkType.id)
+        builtUpAreas: defaultBuiltUpAreas.filter(
+          (area) => area.bhkTypeId === bhkType.id,
+        ),
       }));
     }
 
@@ -242,47 +251,51 @@ export class PropertyService {
     // Get built-up areas for each BHK type
     const bhkTypesWithBuiltUpAreas = await Promise.all(
       bhkTypes.map(async (bhkType) => {
-        const builtUpAreas = await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
-          bhkType.id,
-          societyId,
-        );
+        const builtUpAreas =
+          await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
+            bhkType.id,
+            societyId,
+          );
 
         // If no built-up areas found for this BHK type, return default options
-        const areas = builtUpAreas.length === 0 ? [
-          {
-            id: `default-${bhkType.id}-1`,
-            superBuiltUpArea: 1000,
-            carpetArea: 800,
-            noOfBathrooms: 1,
-            bhkTypeId: bhkType.id,
-            societyId: societyId,
-          },
-          {
-            id: `default-${bhkType.id}-2`,
-            superBuiltUpArea: 1200,
-            carpetArea: 1000,
-            noOfBathrooms: 2,
-            bhkTypeId: bhkType.id,
-            societyId: societyId,
-          },
-          {
-            id: `default-${bhkType.id}-3`,
-            superBuiltUpArea: 1500,
-            carpetArea: 1200,
-            noOfBathrooms: 2,
-            bhkTypeId: bhkType.id,
-            societyId: societyId,
-          },
-        ] : builtUpAreas.map((area) => ({
-          id: area.id,
-          superBuiltUpArea: area.superBuiltUpArea,
-          carpetArea: area.carpetArea,
-          noOfBathrooms: area.noOfBathrooms,
-          noOfBedrooms: area.noOfBedrooms ?? null,
-          balconies: area.balconies ?? null,
-          bhkTypeId: area.bhkTypeId,
-          societyId: area.societyId,
-        }));
+        const areas =
+          builtUpAreas.length === 0
+            ? [
+                {
+                  id: `default-${bhkType.id}-1`,
+                  superBuiltUpArea: 1000,
+                  carpetArea: 800,
+                  noOfBathrooms: 1,
+                  bhkTypeId: bhkType.id,
+                  societyId: societyId,
+                },
+                {
+                  id: `default-${bhkType.id}-2`,
+                  superBuiltUpArea: 1200,
+                  carpetArea: 1000,
+                  noOfBathrooms: 2,
+                  bhkTypeId: bhkType.id,
+                  societyId: societyId,
+                },
+                {
+                  id: `default-${bhkType.id}-3`,
+                  superBuiltUpArea: 1500,
+                  carpetArea: 1200,
+                  noOfBathrooms: 2,
+                  bhkTypeId: bhkType.id,
+                  societyId: societyId,
+                },
+              ]
+            : builtUpAreas.map((area) => ({
+                id: area.id,
+                superBuiltUpArea: area.superBuiltUpArea,
+                carpetArea: area.carpetArea,
+                noOfBathrooms: area.noOfBathrooms,
+                noOfBedrooms: area.noOfBedrooms ?? null,
+                balconies: area.balconies ?? null,
+                bhkTypeId: area.bhkTypeId,
+                societyId: area.societyId,
+              }));
 
         return {
           id: bhkType.id,
@@ -403,7 +416,8 @@ export class PropertyService {
         return existingBhk.id;
       } else if (bhkInfo.name) {
         // Check if BHK type exists by name for the society
-        const existingBhkTypes = await this.bhkTypeRepository.findBySocietyId(societyId);
+        const existingBhkTypes =
+          await this.bhkTypeRepository.findBySocietyId(societyId);
         const matchingBhkType = existingBhkTypes.find(
           (bt) => bt.name.toLowerCase() === bhkInfo.name.toLowerCase(),
         );
@@ -425,7 +439,11 @@ export class PropertyService {
     };
 
     // Helper function to get or create built-up area
-    const getOrCreateBuiltUpArea = async (bhkInfo: any, bhkTypeId: string, societyId: string) => {
+    const getOrCreateBuiltUpArea = async (
+      bhkInfo: any,
+      bhkTypeId: string,
+      societyId: string,
+    ) => {
       // Build where clause with proper null handling
       const whereClause: any = {
         superBuiltUpArea: bhkInfo.buildUpAreaSqFt,
@@ -436,8 +454,10 @@ export class PropertyService {
       };
 
       // Handle nullable fields - use IsNull() if undefined/null, otherwise use the value
-      whereClause.noOfBedrooms = bhkInfo.noOfBedrooms == null ? IsNull() : bhkInfo.noOfBedrooms;
-      whereClause.balconies = bhkInfo.balconies == null ? IsNull() : bhkInfo.balconies;
+      whereClause.noOfBedrooms =
+        bhkInfo.noOfBedrooms == null ? IsNull() : bhkInfo.noOfBedrooms;
+      whereClause.balconies =
+        bhkInfo.balconies == null ? IsNull() : bhkInfo.balconies;
 
       // Check if built-up area already exists with these exact parameters
       const existingBuiltUpArea = await this.builtUpAreaRepository.findOne({
@@ -449,15 +469,17 @@ export class PropertyService {
       }
 
       // Create new built-up area based on BHK info
-      const newBuiltUpArea = await this.builtUpAreaRepository.createBuiltUpArea({
-        superBuiltUpArea: bhkInfo.buildUpAreaSqFt,
-        carpetArea: bhkInfo.carpetAreaSqFt,
-        noOfBathrooms: bhkInfo.noOfBathrooms,
-        noOfBedrooms: bhkInfo.noOfBedrooms ?? null,
-        balconies: bhkInfo.balconies ?? null,
-        bhkTypeId: bhkTypeId,
-        societyId: societyId,
-      });
+      const newBuiltUpArea = await this.builtUpAreaRepository.createBuiltUpArea(
+        {
+          superBuiltUpArea: bhkInfo.buildUpAreaSqFt,
+          carpetArea: bhkInfo.carpetAreaSqFt,
+          noOfBathrooms: bhkInfo.noOfBathrooms,
+          noOfBedrooms: bhkInfo.noOfBedrooms ?? null,
+          balconies: bhkInfo.balconies ?? null,
+          bhkTypeId: bhkTypeId,
+          societyId: societyId,
+        },
+      );
       return newBuiltUpArea.id;
     };
 
@@ -478,14 +500,19 @@ export class PropertyService {
 
       if (propertyId) {
         // Update existing property
-        const existingProperty = await this.propertyRepository.findById(propertyId);
+        const existingProperty =
+          await this.propertyRepository.findById(propertyId);
         if (!existingProperty) {
-          throw new BadRequestException(`Property with ID ${propertyId} not found`);
+          throw new BadRequestException(
+            `Property with ID ${propertyId} not found`,
+          );
         }
 
         // Check if user owns this property
         if (existingProperty.userId !== userId) {
-          throw new BadRequestException('You can only update your own properties');
+          throw new BadRequestException(
+            'You can only update your own properties',
+          );
         }
 
         // Update the property and mark step 1 as completed
@@ -524,13 +551,153 @@ export class PropertyService {
       return {
         id: property.id,
         status: property.status,
-        completionStep: property.completionStep ?? PropertyCompletionStep.STEP_1,
+        completionStep:
+          property.completionStep ?? PropertyCompletionStep.STEP_1,
       };
     } catch (error) {
       throw new BadRequestException(
         `Failed to create property: ${error.message}`,
       );
     }
+  }
+
+  async updatePropertyStep2(
+    dto: CreatePropertyStep2Dto,
+    userId: string,
+  ): Promise<{ id: string; status: string; completionStep: number }> {
+    const property = await this.propertyRepository.findById(dto.propertyId);
+    if (!property) {
+      throw new BadRequestException(
+        `Property with ID ${dto.propertyId} not found`,
+      );
+    }
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only update your own properties');
+    }
+
+    // Floor validations
+    if (dto.floorNumber == null) {
+      throw new BadRequestException('Please enter the floor number');
+    }
+    if (dto.totalFloors == null) {
+      throw new BadRequestException('Please enter valid total floors');
+    }
+    if (dto.floorNumber > dto.totalFloors) {
+      throw new BadRequestException(
+        'Selected floor exceeds total floors of this building',
+      );
+    }
+
+    // Rent availability validation
+    if (dto.rentAvailability === RentAvailability.LATER) {
+      if (!dto.availableFromDate) {
+        throw new BadRequestException('Hint: Enter Available Date');
+      }
+      const sel = new Date(dto.availableFromDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (isNaN(sel.getTime()) || sel < today) {
+        throw new BadRequestException('Available date cannot be in the past');
+      }
+    }
+
+    // Maintenance charge validation
+    if (dto.maintenanceType === MaintenanceType.SEPARATE) {
+      if (
+        dto.maintenanceChargeAmount == null ||
+        dto.maintenanceChargeAmount <= 0
+      ) {
+        throw new BadRequestException('Please enter the maintenance charges');
+      }
+    }
+
+    // Security deposit validation
+    if (dto.securityDepositType === SecurityDepositType.CUSTOM) {
+      if (dto.monthlyRent == null) {
+        throw new BadRequestException(
+          'Please enter rent before specifying deposit',
+        );
+      }
+      if (dto.securityDepositAmount == null || dto.securityDepositAmount < 0) {
+        throw new BadRequestException('Please enter the security deposit');
+      }
+      if (dto.securityDepositAmount > dto.monthlyRent * 12) {
+        throw new BadRequestException(
+          'Deposit seems high as per market standards',
+        );
+      }
+    }
+
+    // Lock-in validation
+    if (dto.lockInType === LockInType.CUSTOM) {
+      if (dto.lockInMonths == null || dto.lockInMonths < 1) {
+        throw new BadRequestException('Please Select Lock in Period');
+      }
+    }
+
+    // Brokerage validation
+    if (dto.brokerageType === BrokerageType.CUSTOM) {
+      if (dto.monthlyRent == null) {
+        throw new BadRequestException(
+          'Please enter rent before specifying brokerage',
+        );
+      }
+      if (dto.brokerageAmount == null || dto.brokerageAmount < 0) {
+        throw new BadRequestException('Please enter brokerage amount');
+      }
+      if (dto.brokerageAmount > dto.monthlyRent) {
+        throw new BadRequestException(
+          'Brokerage seems high as per market standards',
+        );
+      }
+    }
+
+    // Company occupancy requirement
+    if (dto.tenantType === TenantType.COMPANY && !dto.companyOccupancy) {
+      throw new BadRequestException('Please select company occupancy');
+    }
+
+    await this.propertyRepository.updateProperty(dto.propertyId, {
+      floorNumber: dto.floorNumber,
+      totalFloors: dto.totalFloors,
+      flatNumber: dto.flatNumber ?? null,
+      towerBlock: dto.towerBlock ?? null,
+      propertyAreaAcre: dto.propertyAreaAcre ?? null,
+      tenantType: dto.tenantType ?? (null as any),
+      companyOccupancy: dto.companyOccupancy ?? (null as any),
+      rentAvailability: dto.rentAvailability as any,
+      availableFromDate: dto.availableFromDate
+        ? new Date(dto.availableFromDate)
+        : null,
+      monthlyRent: dto.monthlyRent,
+      maintenanceType: dto.maintenanceType as any,
+      maintenanceChargeAmount:
+        dto.maintenanceType === MaintenanceType.SEPARATE
+          ? dto.maintenanceChargeAmount!
+          : null,
+      securityDepositType: dto.securityDepositType as any,
+      securityDepositAmount:
+        dto.securityDepositType === SecurityDepositType.CUSTOM
+          ? dto.securityDepositAmount!
+          : null,
+      lockInType: dto.lockInType as any,
+      lockInMonths:
+        dto.lockInType === LockInType.CUSTOM ? dto.lockInMonths! : null,
+      brokerageType: dto.brokerageType as any,
+      brokerageAmount:
+        dto.brokerageType === BrokerageType.CUSTOM
+          ? dto.brokerageAmount!
+          : null,
+      isBrokerageNegotiable: dto.isBrokerageNegotiable ?? false,
+      completionStep: PropertyCompletionStep.STEP_2,
+    });
+
+    const updated = await this.propertyRepository.findById(dto.propertyId);
+    return { 
+      id: updated!.id, 
+      status: updated!.status, 
+      completionStep: updated!.completionStep || PropertyCompletionStep.STEP_2 
+    };
   }
 
   /**
@@ -580,13 +747,15 @@ export class PropertyService {
     );
 
     // Format results consistently
-    const formattedResults = localResults.map((society) => ({
-      id: society.id,
-      name: society.name,
-      localityName: society.localityName,
-      address: society.address,
-      source: 'database',
-    })).slice(0, limit); // Limit the results
+    const formattedResults = localResults
+      .map((society) => ({
+        id: society.id,
+        name: society.name,
+        localityName: society.localityName,
+        address: society.address,
+        source: 'database',
+      }))
+      .slice(0, limit); // Limit the results
 
     // If we have enough results, return them
     if (formattedResults.length >= 5) {
@@ -636,10 +805,14 @@ export class PropertyService {
   /**
    * Get property step 1 details by property ID
    */
-  async getPropertyStep1Details(propertyId: string, userId: string): Promise<any> {
+  async getPropertyStep1Details(
+    propertyId: string,
+    userId: string,
+  ): Promise<any> {
     // Get property with all relations
-    const property = await this.propertyRepository.findByIdWithRelations(propertyId);
-    
+    const property =
+      await this.propertyRepository.findByIdWithRelations(propertyId);
+
     if (!property) {
       throw new BadRequestException(`Property with ID ${propertyId} not found`);
     }
@@ -652,7 +825,10 @@ export class PropertyService {
     // Fetch related objects separately if not loaded through relations
     let listingType = property.listingType;
     if (!listingType && property.listingTypeId) {
-      const fetchedListingType = await this.propertyListingTypeRepository.findById(property.listingTypeId);
+      const fetchedListingType =
+        await this.propertyListingTypeRepository.findById(
+          property.listingTypeId,
+        );
       if (fetchedListingType) {
         listingType = fetchedListingType;
       }
@@ -660,17 +836,20 @@ export class PropertyService {
 
     let category = property.category;
     if (!category && property.categoryId) {
-      const fetchedCategory = await this.propertyCategoryRepository.findById(property.categoryId);
+      const fetchedCategory = await this.propertyCategoryRepository.findById(
+        property.categoryId,
+      );
       if (fetchedCategory) {
         category = fetchedCategory;
       }
     }
 
     // Get built-up area for this BHK type and society
-    const builtUpAreas = await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
-      property.bhkTypeId,
-      property.societyId,
-    );
+    const builtUpAreas =
+      await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
+        property.bhkTypeId,
+        property.societyId,
+      );
 
     // Get the first matching built-up area (or use the first one if multiple exist)
     const builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
@@ -678,21 +857,27 @@ export class PropertyService {
     // Format the response similar to CreatePropertyStep1Dto
     return {
       propertyId: property.id,
-      listingType: listingType ? {
-        id: listingType.id,
-        name: listingType.name,
-        code: listingType.code,
-      } : null,
-      category: category ? {
-        id: category.id,
-        name: category.name,
-        code: category.code,
-      } : null,
-      propertyType: property.propertyType ? {
-        id: property.propertyType.id,
-        name: property.propertyType.name,
-        code: property.propertyType.code,
-      } : null,
+      listingType: listingType
+        ? {
+            id: listingType.id,
+            name: listingType.name,
+            code: listingType.code,
+          }
+        : null,
+      category: category
+        ? {
+            id: category.id,
+            name: category.name,
+            code: category.code,
+          }
+        : null,
+      propertyType: property.propertyType
+        ? {
+            id: property.propertyType.id,
+            name: property.propertyType.name,
+            code: property.propertyType.code,
+          }
+        : null,
       bhk: {
         id: property.bhkType?.id,
         name: property.bhkType?.name || '',
@@ -705,26 +890,91 @@ export class PropertyService {
       ageOfProperty: property.ageOfProperty,
       facing: property.facing || null,
       status: property.status,
-      city: property.city ? {
-        id: property.city.id,
-        name: property.city.name,
-        code: property.city.code,
-        state: property.city.state,
-        latitude: property.city.latitude,
-        longitude: property.city.longitude,
-      } : null,
-      society: property.society ? {
-        id: property.society.id,
-        name: property.society.name,
-        localityName: property.society.localityName,
-        address: property.society.address,
-        pincode: property.society.pincode,
-        latitude: property.society.latitude,
-        longitude: property.society.longitude,
-      } : null,
+      city: property.city
+        ? {
+            id: property.city.id,
+            name: property.city.name,
+            code: property.city.code,
+            state: property.city.state,
+            latitude: property.city.latitude,
+            longitude: property.city.longitude,
+          }
+        : null,
+      society: property.society
+        ? {
+            id: property.society.id,
+            name: property.society.name,
+            localityName: property.society.localityName,
+            address: property.society.address,
+            pincode: property.society.pincode,
+            latitude: property.society.latitude,
+            longitude: property.society.longitude,
+          }
+        : null,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
       completionStep: property.completionStep || 0,
+    };
+  }
+
+  /**
+   * Get property step 2 details by property ID
+   */
+  async getPropertyStep2Details(
+    propertyId: string,
+    userId: string,
+  ): Promise<any> {
+    // Get property with all relations
+    const property =
+      await this.propertyRepository.findByIdWithRelations(propertyId);
+
+    if (!property) {
+      throw new BadRequestException(`Property with ID ${propertyId} not found`);
+    }
+
+    // Check if user owns this property
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only view your own properties');
+    }
+
+    // Format the response with step 2 fields
+    return {
+      propertyId: property.id,
+      floorNumber: property.floorNumber,
+      totalFloors: property.totalFloors,
+      flatNumber: property.flatNumber,
+      towerBlock: property.towerBlock,
+      propertyAreaAcre: property.propertyAreaAcre,
+      tenantType: property.tenantType,
+      companyOccupancy: property.companyOccupancy,
+      rentAvailability: property.rentAvailability,
+      availableFromDate: property.availableFromDate
+        ? (() => {
+            try {
+              const date = property.availableFromDate instanceof Date 
+                ? property.availableFromDate 
+                : new Date(property.availableFromDate);
+              return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+            } catch {
+              return null;
+            }
+          })()
+        : null,
+      monthlyRent: property.monthlyRent,
+      maintenanceType: property.maintenanceType,
+      maintenanceChargeAmount: property.maintenanceChargeAmount,
+      securityDepositType: property.securityDepositType,
+      securityDepositAmount: property.securityDepositAmount,
+      lockInType: property.lockInType,
+      lockInMonths: property.lockInMonths,
+      brokerageType: property.brokerageType,
+      brokerageAmount: property.brokerageAmount,
+      isBrokerageNegotiable: property.isBrokerageNegotiable,
+      facing: property.facing,
+      status: property.status,
+      completionStep: property.completionStep || 0,
+      createdAt: property.createdAt,
+      updatedAt: property.updatedAt,
     };
   }
 }

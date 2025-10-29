@@ -73,13 +73,101 @@ export class Property extends BaseEntity {
   })
   status: string;
 
+  // Step 2 fields
+  @Column({ type: 'int', nullable: true })
+  floorNumber: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  totalFloors: number | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  flatNumber: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  towerBlock: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  propertyAreaAcre: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['family', 'bachelors', 'company'],
+    nullable: true,
+  })
+  tenantType: 'family' | 'bachelors' | 'company' | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['open_for_both', 'men_only', 'women_only'],
+    nullable: true,
+  })
+  companyOccupancy: 'open_for_both' | 'men_only' | 'women_only' | null;
+
+  @Column({ type: 'enum', enum: ['immediately', 'later'], nullable: true })
+  rentAvailability: 'immediately' | 'later' | null;
+
+  @Column({ type: 'date', nullable: true })
+  availableFromDate: Date | null;
+
+  @Column({ type: 'int', nullable: true })
+  monthlyRent: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['include_in_rent', 'separate'],
+    nullable: true,
+  })
+  maintenanceType: 'include_in_rent' | 'separate' | null;
+
+  @Column({ type: 'int', nullable: true })
+  maintenanceChargeAmount: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['none', '1_month', '2_month', '6_month', 'custom'],
+    nullable: true,
+  })
+  securityDepositType:
+    | 'none'
+    | '1_month'
+    | '2_month'
+    | '6_month'
+    | 'custom'
+    | null;
+
+  @Column({ type: 'int', nullable: true })
+  securityDepositAmount: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['none', '1_month', '2_month', '6_month', 'custom'],
+    nullable: true,
+  })
+  lockInType: 'none' | '1_month' | '2_month' | '6_month' | 'custom' | null;
+
+  @Column({ type: 'int', nullable: true })
+  lockInMonths: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['none', '15_days', '30_days', 'custom'],
+    nullable: true,
+  })
+  brokerageType: 'none' | '15_days' | '30_days' | 'custom' | null;
+
+  @Column({ type: 'int', nullable: true })
+  brokerageAmount: number | null;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  isBrokerageNegotiable: boolean | null;
   // Completion step tracks progress through posting workflow (1-5)
   // Step 1: Basic details, Step 2: Additional details, Step 3: Media, Step 4: Review, Step 5: Completed
   @Column({
     type: 'int',
     name: 'completion_step',
     default: 0,
-    comment: 'Current completion step (0=not started, 1-4=in progress, 5=completed)',
+    comment:
+      'Current completion step (0=not started, 1-4=in progress, 5=completed)',
   })
   completionStep: number;
 
