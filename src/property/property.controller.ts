@@ -312,7 +312,7 @@ export class PropertyController {
   @ApiOperation({
     summary: 'Step 1: Create or update a property',
     description:
-      'Creates a new property or updates an existing property. Only listingTypeId, propertyId, and categoryId are required; all other fields are optional. If propertyId exists, updates the existing property; otherwise creates a new one. Can accept either IDs or names for city, society, BHK type, and built-up area. Locality information should be provided via society.localityName field. If names are provided, new entries will be created in master tables.',
+      'Creates a new property or updates an existing property. Only listingTypeId and categoryId are required; propertyId and all other fields are optional. If propertyId is provided and exists, updates the existing property; otherwise creates a new one. Can accept either IDs or names for city, society, BHK type, and built-up area. Locality information should be provided via society.localityName field. If names are provided, new entries will be created in master tables.',
   })
   @ApiResponse({
     status: 201,

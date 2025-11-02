@@ -365,14 +365,14 @@ export class BuiltUpAreaInfo {
 
 export class CreatePropertyStep1Dto {
   @ApiProperty({ 
-    description: 'Property ID (required for updates)', 
+    description: 'Property ID (optional - required for updates, omit for new property creation)', 
     example: 'uuid-string',
-    required: true
+    required: false
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @IsUUID()
-  propertyId: string;
+  propertyId?: string;
 
   @ApiProperty({ 
     description: 'Property listing type ID (Sale/Rent)', 
