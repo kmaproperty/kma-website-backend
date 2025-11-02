@@ -32,6 +32,7 @@ export interface GooglePlaceLocality {
   longitude?: number;
   placeId?: string;
   address?: string;
+  type?: string; // 'locality', 'sublocality', 'neighbourhood'
 }
 
 @Injectable()
@@ -565,6 +566,45 @@ export class GooglePlacesService {
   }
 
   /**
+   * Get place coordinates from Place Details API
+   */
+  private async getPlaceCoordinates(placeId: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const detailsUrl = `${this.baseUrl}/details/json`;
+      const response = await axios.get(detailsUrl, {
+        params: {
+          place_id: placeId,
+          fields: 'geometry',
+          key: this.apiKey,
+        },
+      });
+
+      if (response.data.status === 'OK' && response.data.result?.geometry?.location) {
+        const location = response.data.result.geometry.location;
+        return {
+          lat: location.lat,
+          lng: location.lng,
+        };
+      }
+
+      return null;
+    } catch (error: any) {
+      // Handle errors gracefully - don't log as this might happen frequently
+      if (error.response?.status === 404 || error.response?.status === 400) {
+        return null;
+      }
+      
+      if (error.response?.status >= 500) {
+        this.logger.error(
+          `Error getting place coordinates for "${placeId}": ${error.response?.status} ${error.response?.statusText || error.message}`,
+        );
+      }
+      
+      return null;
+    }
+  }
+
+  /**
    * Get city coordinates for location bias
    */
   private async getCityCoordinates(cityName: string): Promise<{ lat: number; lng: number } | null> {
@@ -585,13 +625,315 @@ export class GooglePlacesService {
         };
       }
 
+      // City not found or no results - this is expected in some cases
       return null;
-    } catch (error) {
-      this.logger.error(
-        `Error getting city coordinates: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+    } catch (error: any) {
+      // Handle 404 and other expected errors gracefully
+      if (error.response?.status === 404 || error.response?.status === 400) {
+        // City not found - this is expected, don't log as error
+        return null;
+      }
+      
+      // Only log unexpected errors
+      if (error.response?.status >= 500) {
+        this.logger.error(
+          `Error getting city coordinates for "${cityName}": ${error.response?.status} ${error.response?.statusText || error.message}`,
+        );
+      } else {
+        // Log warnings for client errors (4xx) that aren't 404/400
+        this.logger.warn(
+          `Could not get city coordinates for "${cityName}": ${error.response?.status || 'Unknown error'}`,
+        );
+      }
+      
       return null;
     }
+  }
+
+  /**
+   * Search for localities using Google Places Autocomplete API within a city
+   */
+  async searchLocalitiesAutocomplete(
+    query: string,
+    cityName: string,
+    limit: number = 10,
+  ): Promise<any[]> {
+    if (!this.apiKey) {
+      this.logger.warn(
+        'Google Maps API key not configured - skipping Google API search',
+      );
+      return [];
+    }
+
+    if (!cityName || !query || query.trim().length < 2) {
+      return [];
+    }
+
+    try {
+      const startTime = Date.now();
+      
+      // Get city coordinates for location bias
+      const cityCoords = await this.getCityCoordinates(cityName);
+      if (!cityCoords) {
+        this.logger.warn(`Could not get coordinates for city: ${cityName}`);
+        // Try searching without location bias as fallback
+        this.logger.warn(`Attempting search without location bias for: ${query} in ${cityName}`);
+      }
+
+      // Use Place Autocomplete API
+      const autocompleteUrl = `${this.baseUrl}/autocomplete/json`;
+      const params: any = {
+        input: query.trim(),
+        types: 'geocode',
+        components: 'country:in',
+        key: this.apiKey,
+      };
+
+      // Add location bias if we have city coordinates
+      if (cityCoords) {
+        // Increase radius to 30km for better results
+        params.locationbias = `circle:30000@${cityCoords.lat},${cityCoords.lng}`;
+      } else {
+        // If no coordinates, try adding city to query
+        params.input = `${query.trim()}, ${cityName}, India`;
+      }
+
+      this.logger.debug(`Searching localities with params:`, {
+        input: params.input,
+        cityName,
+        locationbias: params.locationbias || 'none',
+        hasCityCoords: !!cityCoords,
+      });
+
+      const response = await axios.get(autocompleteUrl, { params });
+
+      this.logger.debug(`Google Places API response:`, {
+        status: response.data.status,
+        predictionsCount: response.data.predictions?.length || 0,
+      });
+
+      // Log first few predictions for debugging
+      if (response.data.predictions && response.data.predictions.length > 0) {
+        this.logger.debug(`First 3 predictions:`, 
+          response.data.predictions.slice(0, 3).map((p: any) => ({
+            description: p.description,
+            types: p.types,
+          }))
+        );
+      }
+
+      if (
+        response.data.status !== 'OK' &&
+        response.data.status !== 'ZERO_RESULTS'
+      ) {
+        this.logger.error(`Google Places API error: ${response.data.status}`);
+        return [];
+      }
+
+      if (
+        !response.data.predictions ||
+        response.data.predictions.length === 0
+      ) {
+        this.logger.debug('No predictions returned from Google Places API');
+        return [];
+      }
+
+      const took = Date.now() - startTime;
+
+      // Process predictions - location bias already ensures results are near the city
+      const localities: any[] = [];
+      const cityNameLower = cityName.toLowerCase().trim();
+
+      // Track duplicates using place_id and locality name (case-insensitive)
+      const seenPlaceIds = new Set<string>();
+      const seenLocalityNames = new Set<string>();
+
+      // Process all predictions and include those that might be in the city
+      // Location bias already prioritizes results within the city area
+      let processedCount = 0;
+      let skippedCount = 0;
+      let duplicateCount = 0;
+      
+      // Process more predictions to account for filtering - aim for at least the limit
+      const predictionsToProcess = Math.min(
+        response.data.predictions.length,
+        Math.max(limit * 10, 50) // Process at least 50 or limit*10, whichever is smaller
+      );
+      
+      for (const prediction of response.data.predictions.slice(0, predictionsToProcess)) {
+        processedCount++;
+        const description = prediction.description || '';
+        const descriptionLower = description.toLowerCase();
+        
+        // Extract locality name (first part before comma)
+        const parts = description.split(',').map((p: string) => p.trim());
+        const localityName = parts[0];
+        const localityNameLower = localityName.toLowerCase();
+        
+        // Skip if locality name is the same as city name (might be a city-level result)
+        if (localityNameLower === cityNameLower) {
+          skippedCount++;
+          this.logger.debug(`Skipping city-level result: ${localityName}`);
+          continue;
+        }
+
+        // Check for duplicates by place_id
+        if (prediction.place_id && seenPlaceIds.has(prediction.place_id)) {
+          duplicateCount++;
+          this.logger.debug(`Skipping duplicate by place_id: ${description}`);
+          continue;
+        }
+
+        // Check for duplicates by locality name (case-insensitive)
+        const localityKey = `${localityNameLower},${cityNameLower}`;
+        if (seenLocalityNames.has(localityKey)) {
+          duplicateCount++;
+          this.logger.debug(`Skipping duplicate by name: ${localityName}, ${cityName}`);
+          continue;
+        }
+
+        // Check if result is likely in the city (either in description or through location bias)
+        // Be more lenient - if location bias is set, trust it completely
+        // If location bias is set, include all results (location bias handles proximity)
+        if (!cityCoords) {
+          // Only filter by city name if we don't have location bias
+          const hasCityInDescription = descriptionLower.includes(cityNameLower) || 
+                                       descriptionLower.includes('gurgaon') || 
+                                       descriptionLower.includes('gurugram');
+          
+          if (!hasCityInDescription) {
+            skippedCount++;
+            this.logger.debug(`Skipping result (no city match): ${description}`);
+            continue;
+          }
+        }
+        // If cityCoords exists, trust location bias - include all non-city-level results
+
+        // Mark as seen
+        if (prediction.place_id) {
+          seenPlaceIds.add(prediction.place_id);
+        }
+        seenLocalityNames.add(localityKey);
+
+        // Generate short UUID from place_id
+        const uuid = prediction.place_id?.substring(0, 21).replace(/[^a-z0-9]/gi, '') || 
+                     Math.random().toString(36).substring(2, 21);
+
+        // Generate numeric ID
+        const id = this.generateNumericId(uuid);
+
+        // Fetch coordinates from Place Details API
+        let latitude: number | undefined;
+        let longitude: number | undefined;
+        let lon_lat: [number, number] | undefined;
+
+        if (prediction.place_id) {
+          try {
+            const coordinates = await this.getPlaceCoordinates(prediction.place_id);
+            if (coordinates) {
+              latitude = coordinates.lat;
+              longitude = coordinates.lng;
+              lon_lat = [longitude, latitude];
+            }
+          } catch (error) {
+            this.logger.debug(`Could not fetch coordinates for ${prediction.place_id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        }
+
+        localities.push({
+          id,
+          name: `${localityName}, ${cityName}`,
+          uuid,
+          super_type: 'polygon',
+          type: this.determineLocalityType(prediction.types || []),
+          city_id: null,
+          bounding_box_uuids: [],
+          lon_lat,
+          latitude,
+          longitude,
+          is_valid: true,
+          took,
+          full_name: description,
+          displayName: `${localityName}, ${cityName}`,
+          source: 'google',
+          place_id: prediction.place_id,
+        });
+
+        // Stop when we have enough unique results
+        if (localities.length >= limit) {
+          break;
+        }
+      }
+
+      // Return exactly up to the limit
+      const finalResults = localities.slice(0, limit);
+      
+      this.logger.debug(`Processing complete: ${processedCount} processed, ${skippedCount} skipped, ${duplicateCount} duplicates, ${localities.length} found, returning ${finalResults.length}`);
+      return finalResults;
+    } catch (error) {
+      this.logger.error(
+        `Error searching localities from Google Autocomplete: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Generate numeric ID from string (helper function)
+   */
+  private generateNumericId(id: string): number {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      const char = id.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash) % 1000000;
+  }
+
+  /**
+   * Determine locality type from prediction types
+   */
+  private determineLocalityType(types: string[]): string {
+    if (types.includes('neighborhood')) {
+      return 'neighbourhood';
+    }
+    if (types.some(t => t.includes('sublocality'))) {
+      return 'sublocality';
+    }
+    if (types.includes('locality')) {
+      return 'locality';
+    }
+    return 'locality'; // default
+  }
+
+  /**
+   * Get city name variations for matching
+   */
+  private getCityNameVariations(cityName: string): string[] {
+    const variations = [cityName];
+    const parts = cityName.trim().split(' ');
+    
+    // Add first word (for multi-word cities)
+    if (parts.length > 1) {
+      variations.push(parts[0]);
+    }
+    
+    // Add common variations
+    if (cityName.toLowerCase() === 'gurgaon') {
+      variations.push('Gurugram');
+    }
+    if (cityName.toLowerCase() === 'gurugram') {
+      variations.push('Gurgaon');
+    }
+    if (cityName.toLowerCase() === 'mumbai') {
+      variations.push('Bombay');
+    }
+    if (cityName.toLowerCase() === 'bombay') {
+      variations.push('Mumbai');
+    }
+    
+    return variations;
   }
 
   /**
@@ -610,26 +952,40 @@ export class GooglePlacesService {
     }
 
     try {
-      // Construct search query with context
-      let searchQuery = query;
-      if (societyName && cityName) {
-        searchQuery = `${query} near ${societyName}, ${cityName}, India`;
-      } else if (cityName) {
-        searchQuery = `${query} in ${cityName}, India`;
-      } else {
-        searchQuery = `${query} India`;
-      }
-
       // Use Place Autocomplete API for localities/neighborhoods
       const autocompleteUrl = `${this.baseUrl}/autocomplete/json`;
-      const response = await axios.get(autocompleteUrl, {
-        params: {
-          input: searchQuery,
-          types: '(neighborhood|sublocality)',
-          components: 'country:in', // Restrict to India
-          key: this.apiKey,
-        },
+      
+      // Get city coordinates for circular location bias if city is provided
+      const params: any = {
+        input: query.trim(),
+        types: 'geocode',
+        components: 'country:in', // Restrict to India
+        key: this.apiKey,
+      };
+      
+      // Add circular location bias if city coordinates are available
+      if (cityName) {
+        const cityCoords = await this.getCityCoordinates(cityName);
+        if (cityCoords) {
+          // Use circular location bias: circle:radius@lat,lng (15km = 15000m)
+          params.locationbias = `circle:15000@${cityCoords.lat},${cityCoords.lng}`;
+          this.logger.debug(
+            `Using location bias for city ${cityName}: ${params.locationbias}`,
+          );
+        } else {
+          this.logger.warn(`Could not get coordinates for city: ${cityName}`);
+        }
+      }
+      
+      this.logger.debug(`Searching localities with params:`, {
+        input: params.input,
+        cityName,
+        hasLocationBias: !!params.locationbias,
       });
+      
+      const response = await axios.get(autocompleteUrl, { params });
+      
+      this.logger.debug(`Google Places API response status: ${response.data.status}, predictions: ${response.data.predictions?.length || 0}`);
 
       if (
         response.data.status !== 'OK' &&
@@ -646,25 +1002,67 @@ export class GooglePlacesService {
         return [];
       }
 
-      // Get details for each place to extract coordinates and structured info
+      // Get details for each prediction to validate and extract locality information
       const localities: GooglePlaceLocality[] = [];
+      
+      // Process up to 15 predictions to account for filtering
+      const predictionsToProcess = response.data.predictions.slice(0, 15);
 
-      for (const prediction of response.data.predictions.slice(0, 5)) {
+      for (const prediction of predictionsToProcess) {
         try {
           const placeDetails = await this.getLocalityDetails(
             prediction.place_id,
           );
+          // placeDetails will only be returned if it's a valid locality type
+          // This validation happens inside getLocalityDetails
           if (placeDetails) {
             localities.push(placeDetails);
+            this.logger.debug(
+              `Found valid locality: ${placeDetails.name}, type: ${placeDetails.type}`,
+            );
+            // Stop if we have enough valid localities
+            if (localities.length >= 10) {
+              break;
+            }
+          } else {
+            this.logger.debug(
+              `Place ${prediction.place_id} (${prediction.description}) is not a valid locality type`,
+            );
           }
         } catch (error) {
           this.logger.error(
-            `Error fetching locality details: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            `Error fetching locality details for ${prediction.place_id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
         }
       }
+      
+      this.logger.debug(`Found ${localities.length} valid localities after processing ${predictionsToProcess.length} predictions`);
 
-      return localities;
+      // Filter by city if cityName was provided (ensure results match the city)
+      let filteredLocalities = localities;
+      if (cityName) {
+        const cityNameLower = cityName.toLowerCase().trim();
+        const beforeFilter = filteredLocalities.length;
+        filteredLocalities = localities.filter((locality) => {
+          // Check if locality city matches the requested city (case-insensitive)
+          if (locality.city) {
+            return locality.city.toLowerCase().trim() === cityNameLower;
+          }
+          // If no city in locality, check if it's mentioned in the address
+          if (locality.address) {
+            return locality.address.toLowerCase().includes(cityNameLower);
+          }
+          return false;
+        });
+        this.logger.debug(
+          `Filtered by city ${cityName}: ${beforeFilter} -> ${filteredLocalities.length} localities`,
+        );
+      }
+
+      const finalResults = filteredLocalities.slice(0, 5);
+      this.logger.debug(`Returning ${finalResults.length} final localities`);
+      
+      return finalResults;
     } catch (error) {
       this.logger.error(
         `Error searching localities from Google: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -787,7 +1185,7 @@ export class GooglePlacesService {
       const response = await axios.get(detailsUrl, {
         params: {
           place_id: placeId,
-          fields: 'name,geometry,address_components,formatted_address',
+          fields: 'name,geometry,address_components,formatted_address,types',
           key: this.apiKey,
         },
       });
@@ -797,19 +1195,111 @@ export class GooglePlacesService {
       }
 
       const result = response.data.result;
+      
+      // Validate that this place is of type locality, sublocality, or neighborhood
+      // IMPORTANT: Exclude city-level localities (like Secunderabad) - only include neighborhoods/sublocalities within cities
+      const validTypes = ['sublocality', 'sublocality_level_1', 'sublocality_level_2', 'neighborhood'];
+      const cityLevelTypes = ['administrative_area_level_1', 'administrative_area_level_2', 'political'];
+      
+      let placeType: string | null = null;
+      let isCityLevel = false;
+      
+      if (result.types && Array.isArray(result.types)) {
+        // First check if this is a city-level result (exclude these)
+        if (result.types.some((type: string) => 
+          cityLevelTypes.some(cityType => type === cityType || type.includes('administrative_area'))
+        )) {
+          // If it has administrative_area types, it's likely a city itself
+          // Only exclude if it doesn't have sublocality/neighborhood types
+          const hasLocalityType = result.types.some((type: string) => 
+            validTypes.includes(type) || type === 'locality'
+          );
+          
+          if (!hasLocalityType) {
+            // This is a city, not a locality within a city - exclude it
+            isCityLevel = true;
+          }
+        }
+        
+        // Find the primary type (prefer sublocality/neighborhood over locality)
+        // Only use 'locality' if we have sublocality/neighborhood, otherwise it might be a city
+        for (const type of ['sublocality', 'sublocality_level_1', 'sublocality_level_2', 'neighborhood', 'locality']) {
+          if (result.types.includes(type)) {
+            // If it's 'locality' type, check if it's NOT a city-level result
+            if (type === 'locality') {
+              // Only accept 'locality' if it has sublocality/neighborhood context or doesn't have city-level indicators
+              const hasSublocality = result.types.some(t => t.includes('sublocality'));
+              const hasNeighborhood = result.types.includes('neighborhood');
+              
+              if (isCityLevel && !hasSublocality && !hasNeighborhood) {
+                // This is likely a city itself, skip it
+                continue;
+              }
+              
+              placeType = type;
+            } else if (type === 'sublocality_level_1' || type === 'sublocality_level_2') {
+              placeType = 'sublocality';
+            } else if (type === 'neighborhood') {
+              placeType = 'neighbourhood'; // Housing.com uses 'neighbourhood' spelling
+            } else {
+              placeType = type;
+            }
+            break;
+          }
+        }
+        
+        if (!placeType || isCityLevel) {
+          // Not a locality/sublocality/neighborhood, or it's a city - skip it
+          return null;
+        }
+      } else {
+        // No types available, skip it
+        return null;
+      }
+      
       const addressComponents = result.address_components || [];
+
+      // Additional check: Make sure this is NOT a city itself
+      // If address_components has 'locality' but no 'sublocality' or 'neighborhood', 
+      // and it has administrative_area_level_2, it might be a city
+      const hasParentCity = addressComponents.some((comp: any) => 
+        comp.types.includes('administrative_area_level_2') || 
+        (comp.types.includes('locality') && comp.types.length > 1)
+      );
+      
+      // Check if this result represents a city (has locality but might be the city itself)
+      const isLikelyCity = addressComponents.some((comp: any) => 
+        comp.types.includes('locality') && 
+        !comp.types.includes('sublocality') &&
+        !comp.types.includes('neighborhood') &&
+        comp.types.some((t: string) => t.includes('administrative'))
+      );
+      
+      if (isLikelyCity && !hasParentCity) {
+        // This is likely a city itself, not a locality within a city - exclude it
+        return null;
+      }
 
       // Extract city, state and country from address components
       let city = '';
       let state = '';
       let country = '';
+      let localityName = '';
 
       for (const component of addressComponents) {
-        if (
-          component.types.includes('locality') ||
-          component.types.includes('administrative_area_level_2')
-        ) {
+        // Get city from administrative_area_level_2 (parent city), not from locality (which might be the place itself)
+        if (component.types.includes('administrative_area_level_2')) {
           city = component.long_name;
+        } else if (
+          component.types.includes('locality') &&
+          !component.types.includes('sublocality') &&
+          !component.types.includes('neighborhood')
+        ) {
+          // Only use locality as city if it's not a sublocality/neighborhood
+          // This handles cases where the component is actually a parent city
+          if (!city) {
+            city = component.long_name;
+          }
         }
         if (component.types.includes('administrative_area_level_1')) {
           state = component.long_name;
@@ -817,10 +1307,55 @@ export class GooglePlacesService {
         if (component.types.includes('country')) {
           country = component.long_name;
         }
+        
+        // Extract sublocality, neighborhood, or area for locality name
+        // Check for various possible types that represent localities
+        if (
+          component.types.includes('sublocality') ||
+          component.types.includes('sublocality_level_1') ||
+          component.types.includes('sublocality_level_2') ||
+          component.types.includes('neighborhood') ||
+          component.types.includes('political')
+        ) {
+          // Prefer sublocality over other types for locality name
+          if (!localityName || 
+              component.types.includes('sublocality') || 
+              component.types.includes('sublocality_level_1') || 
+              component.types.includes('sublocality_level_2')) {
+            localityName = component.long_name;
+          }
+        }
       }
 
+      // If localityName is still empty, try to extract from formatted address
+      // Look for common locality patterns like "Sector XX", "Phase X", etc.
+      if (!localityName && result.formatted_address) {
+        const addr = result.formatted_address;
+        // Try to match patterns like "Sector 24", "Phase 3", "Block X", etc.
+        const localityPatterns = [
+          /(Sector\s+\d+)/i,
+          /(Phase\s+\d+)/i,
+          /(Block\s+[A-Z0-9]+)/i,
+          /(Ward\s+\d+)/i,
+          /(([A-Z][a-z]+\s+)?Nagar)/i,
+          /(([A-Z][a-z]+\s+)?Puram)/i,
+          /(([A-Z][a-z]+\s+)?Enclave)/i,
+        ];
+        
+        for (const pattern of localityPatterns) {
+          const match = addr.match(pattern);
+          if (match) {
+            localityName = match[1];
+            break;
+          }
+        }
+      }
+
+      // Use extracted locality name or fall back to place name
+      const finalLocalityName = localityName || result.name;
+
       return {
-        name: result.name,
+        name: finalLocalityName,
         city,
         state,
         country,
@@ -828,6 +1363,7 @@ export class GooglePlacesService {
         longitude: result.geometry?.location?.lng,
         placeId,
         address: result.formatted_address,
+        type: placeType, // 'locality', 'sublocality', or 'neighbourhood'
       };
     } catch (error) {
       this.logger.error(

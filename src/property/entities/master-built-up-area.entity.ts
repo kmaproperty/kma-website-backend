@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/database/base.entity';
 import { MasterBhkType } from './master-bhk-type.entity';
 import { MasterSociety } from './master-society.entity';
+import { MasterLocality } from './master-locality.entity';
 
 @Entity('master_built_up_areas')
 export class MasterBuiltUpArea extends BaseEntity {
@@ -28,14 +29,21 @@ export class MasterBuiltUpArea extends BaseEntity {
   @Column({ type: 'uuid', name: 'bhk_type_id' })
   bhkTypeId: string;
 
-  @Column({ type: 'uuid', name: 'society_id' })
-  societyId: string;
+  @Column({ type: 'uuid', name: 'society_id', nullable: true })
+  societyId: string | null;
+
+  @Column({ type: 'uuid', name: 'locality_id', nullable: true })
+  localityId: string | null;
 
   @ManyToOne(() => MasterBhkType, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'bhk_type_id' })
   bhkType: MasterBhkType;
 
-  @ManyToOne(() => MasterSociety, { onDelete: 'CASCADE' })
+  @ManyToOne(() => MasterSociety, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'society_id' })
-  society: MasterSociety;
+  society: MasterSociety | null;
+
+  @ManyToOne(() => MasterLocality, { nullable: true })
+  @JoinColumn({ name: 'locality_id' })
+  locality: MasterLocality | null;
 }

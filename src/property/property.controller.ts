@@ -221,6 +221,54 @@ export class PropertyController {
     );
   }
 
+  @Get('localities/search')
+  @ApiOperation({
+    summary: 'Search localities using Google Autocomplete API',
+    description:
+      'Search for localities within a specific city using Google Places Autocomplete API. Returns results in Housing.com format.',
+  })
+  @ApiQuery({
+    name: 'q',
+    required: true,
+    description: 'Search query (minimum 2 characters)',
+    example: 'Sector 15',
+  })
+  @ApiQuery({
+    name: 'cityName',
+    required: true,
+    description: 'City name to search localities within',
+    example: 'Gurgaon',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of results (default: 10)',
+    example: 10,
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Localities found successfully using Google Autocomplete API',
+    type: [LocalityResponseDto],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid search query or missing city name',
+  })
+  async searchLocalities(
+    @Query() query: LocalitySearchQueryDto,
+  ): Promise<LocalityResponseDto[]> {
+    if (!query.cityName) {
+      throw new BadRequestException('City name is required');
+    }
+    
+    return await this.propertyService.searchLocalitiesAutocomplete(
+      query.q,
+      query.cityName,
+      query.limit,
+    );
+  }
+
   @Get('bhk-types-and-areas')
   @ApiOperation({
     summary: 'Get BHK types and built-up areas',
@@ -264,7 +312,7 @@ export class PropertyController {
   @ApiOperation({
     summary: 'Step 1: Create or update a property',
     description:
-      'Creates a new property or updates an existing property with automatic master data creation if needed. If propertyId is provided, updates the existing property; otherwise creates a new one. Can accept either IDs or names for city, society, BHK type, and built-up area. Locality information should be provided via society.localityName field. If names are provided, new entries will be created in master tables.',
+      'Creates a new property or updates an existing property. Only listingTypeId, propertyId, and categoryId are required; all other fields are optional. If propertyId exists, updates the existing property; otherwise creates a new one. Can accept either IDs or names for city, society, BHK type, and built-up area. Locality information should be provided via society.localityName field. If names are provided, new entries will be created in master tables.',
   })
   @ApiResponse({
     status: 201,

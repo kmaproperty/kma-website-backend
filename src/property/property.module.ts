@@ -11,11 +11,13 @@ import { BhkTypeRepository } from './repositories/bhk-type.repository';
 import { BuiltUpAreaRepository } from './repositories/built-up-area.repository';
 import { CityRepository } from './repositories/city.repository';
 import { SocietyRepository } from './repositories/society.repository';
+import { LocalityRepository } from './repositories/locality.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { MasterPropertyListingType } from './entities/master-property-listing-type.entity';
 import { MasterPropertyCategoryNew } from './entities/master-property-category-new.entity';
 import { MasterCity } from './entities/master-city.entity';
 import { MasterSociety } from './entities/master-society.entity';
+import { MasterLocality } from './entities/master-locality.entity';
 import { MasterPropertyType } from './entities/master-property-type.entity';
 import { MasterBhkType } from './entities/master-bhk-type.entity';
 import { MasterBuiltUpArea } from './entities/master-built-up-area.entity';
@@ -32,6 +34,7 @@ import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
       MasterPropertyCategoryNew,
       MasterCity,
       MasterSociety,
+      MasterLocality,
       MasterPropertyType,
       MasterBhkType,
       MasterBuiltUpArea,
@@ -58,6 +61,7 @@ import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
     BuiltUpAreaRepository,
     CityRepository,
     SocietyRepository,
+    LocalityRepository,
     PropertyRepository,
     MasterDataSeederService,
     GooglePlacesService,

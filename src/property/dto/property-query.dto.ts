@@ -114,24 +114,6 @@ export class LocalitySearchQueryDto {
   cityName?: string;
 
   @ApiProperty({ 
-    description: 'Society ID to filter localities within a specific society', 
-    example: 'uuid-of-society',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  societyId?: string;
-
-  @ApiProperty({ 
-    description: 'Society name to filter localities within a specific society (alternative to societyId)', 
-    example: 'Green Park Society',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  societyName?: string;
-
-  @ApiProperty({ 
     description: 'Maximum number of results (default: 10)', 
     example: 10,
     required: false,

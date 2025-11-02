@@ -4,11 +4,11 @@ import { MasterPropertyListingType } from './master-property-listing-type.entity
 import { MasterPropertyCategoryNew } from './master-property-category-new.entity';
 import { MasterCity } from './master-city.entity';
 import { MasterSociety } from './master-society.entity';
+import { MasterLocality } from './master-locality.entity';
 import { MasterPropertyType } from './master-property-type.entity';
 import { MasterBhkType } from './master-bhk-type.entity';
 import { TransactionType } from '../enum/transaction-type.enum';
 import { ConstructionStatus } from '../enum/construction-status.enum';
-import { PossessionTime } from '../enum/possession-time.enum';
 
 @Entity('properties')
 export class Property extends BaseEntity {
@@ -43,6 +43,14 @@ export class Property extends BaseEntity {
   @ManyToOne(() => MasterSociety)
   @JoinColumn({ name: 'societyId' })
   society: MasterSociety;
+
+  // Locality
+  @Column({ type: 'uuid', nullable: true })
+  localityId: string | null;
+
+  @ManyToOne(() => MasterLocality, { nullable: true })
+  @JoinColumn({ name: 'localityId' })
+  locality: MasterLocality | null;
 
   // Property Type (Flat/Apartment, Villa, etc.)
   @Column({ type: 'uuid' })
@@ -201,11 +209,11 @@ export class Property extends BaseEntity {
 
   // Possession By (for Under Construction properties)
   @Column({
-    type: 'enum',
-    enum: PossessionTime,
+    type: 'varchar',
+    length: 100,
     nullable: true,
   })
-  possessionBy: PossessionTime | null;
+  possessionBy: string | null;
 
   // Possession Time (for Under Construction properties)
   @Column({

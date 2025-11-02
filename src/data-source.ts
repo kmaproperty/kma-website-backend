@@ -7,6 +7,7 @@ import { MasterPropertyListingType } from './property/entities/master-property-l
 import { MasterPropertyCategoryNew } from './property/entities/master-property-category-new.entity';
 import { MasterCity } from './property/entities/master-city.entity';
 import { MasterSociety } from './property/entities/master-society.entity';
+import { MasterLocality } from './property/entities/master-locality.entity';
 import { MasterPropertyType } from './property/entities/master-property-type.entity';
 import { MasterBhkType } from './property/entities/master-bhk-type.entity';
 import { MasterBuiltUpArea } from './property/entities/master-built-up-area.entity';
@@ -36,6 +37,7 @@ export const AppDataSource = new DataSource({
     MasterPropertyCategoryNew,
     MasterCity,
     MasterSociety,
+    MasterLocality,
     MasterPropertyType,
     MasterBhkType,
     MasterBuiltUpArea,

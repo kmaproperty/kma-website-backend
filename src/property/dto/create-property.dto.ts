@@ -15,7 +15,6 @@ import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { TransactionType } from '../enum/transaction-type.enum';
 import { ConstructionStatus } from '../enum/construction-status.enum';
-import { PossessionTime } from '../enum/possession-time.enum';
 
 export class CityInfo {
   @ApiProperty({ 
@@ -129,6 +128,53 @@ export class SocietyInfo {
   longitude?: number;
 }
 
+export class LocalityInfo {
+  @ApiProperty({ 
+    description: 'Locality ID (if locality already exists in database)', 
+    example: 'uuid-string',
+    required: false
+  })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
+  @ApiProperty({ 
+    description: 'Locality name (if creating new locality)', 
+    example: 'Sector 15',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({ 
+    description: 'Sector name', 
+    example: 'Sector 15',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  sector?: string;
+
+  @ApiProperty({ 
+    description: 'Latitude coordinate', 
+    example: 28.4595,
+    required: false
+  })
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @ApiProperty({ 
+    description: 'Longitude coordinate', 
+    example: 77.0266,
+    required: false
+  })
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
+}
+
 
 export class BhkTypeInfo {
   @ApiProperty({ 
@@ -181,43 +227,46 @@ export class BhkInfo {
   @ApiProperty({ 
     description: 'BHK name (e.g., "2 BHK", "3 BHK")', 
     example: '2 BHK',
-    required: true
+    required: false
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  name: string;
+  name?: string;
 
   @ApiProperty({ 
     description: 'Built-up area in square feet', 
     example: 1200,
-    required: true,
+    required: false,
     minimum: 1
   })
+  @IsOptional()
   @IsNumber()
   @Min(1)
-  buildUpAreaSqFt: number;
+  buildUpAreaSqFt?: number;
 
   @ApiProperty({ 
     description: 'Carpet area in square feet', 
     example: 1000,
-    required: true,
+    required: false,
     minimum: 1
   })
+  @IsOptional()
   @IsNumber()
   @Min(1)
-  carpetAreaSqFt: number;
+  carpetAreaSqFt?: number;
 
   @ApiProperty({ 
     description: 'Number of bathrooms', 
     example: 2,
-    required: true,
+    required: false,
     minimum: 1,
     maximum: 10
   })
+  @IsOptional()
   @IsNumber()
   @Min(1)
   @Max(10)
-  noOfBathrooms: number;
+  noOfBathrooms?: number;
 
   @ApiProperty({ 
     description: 'Number of bedrooms', 
@@ -316,14 +365,14 @@ export class BuiltUpAreaInfo {
 
 export class CreatePropertyStep1Dto {
   @ApiProperty({ 
-    description: 'Property ID (if updating existing property, leave empty for new property)', 
+    description: 'Property ID (required for updates)', 
     example: 'uuid-string',
-    required: false
+    required: true
   })
-  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @IsUUID()
-  propertyId?: string;
+  propertyId: string;
 
   @ApiProperty({ 
     description: 'Property listing type ID (Sale/Rent)', 
@@ -346,73 +395,71 @@ export class CreatePropertyStep1Dto {
   @ApiProperty({ 
     description: 'Property type ID (Apartment/Villa/etc)', 
     example: 'uuid-string',
-    required: true
+    required: false
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  propertyTypeId: string;
+  propertyTypeId?: string;
 
   @ApiProperty({ 
     description: 'BHK information with area and room details', 
     type: BhkInfo,
-    required: true
+    required: false
   })
+  @IsOptional()
   @ValidateNested()
   @Type(() => BhkInfo)
-  bhk: BhkInfo;
+  bhk?: BhkInfo;
 
   @ApiProperty({ 
     description: 'Transaction Type', 
     example: 'new_booking',
     enum: TransactionType,
-    required: true
+    required: false
   })
+  @IsOptional()
   @IsEnum(TransactionType)
-  @IsNotEmpty()
-  transactionType: TransactionType;
+  transactionType?: TransactionType;
 
   @ApiProperty({ 
     description: 'Construction Status', 
     example: 'ready_to_move',
     enum: ConstructionStatus,
-    required: true
+    required: false
   })
+  @IsOptional()
   @IsEnum(ConstructionStatus)
-  @IsNotEmpty()
-  constructionStatus: ConstructionStatus;
+  constructionStatus?: ConstructionStatus;
 
   @ApiProperty({ 
-    description: 'Age of property in years (required when construction status is Ready to Move)', 
+    description: 'Age of property in years', 
     example: 5,
     required: false,
     minimum: 0,
     maximum: 100
   })
-  @ValidateIf((o) => o.constructionStatus === ConstructionStatus.READY_TO_MOVE)
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
   ageOfProperty?: number;
 
   @ApiProperty({ 
-    description: 'Possession By (required when construction status is Under Construction)', 
-    example: 'q1_2025',
-    enum: PossessionTime,
-    required: false
-  })
-  @ValidateIf((o) => o.constructionStatus === ConstructionStatus.UNDER_CONSTRUCTION)
-  @IsEnum(PossessionTime)
-  @IsNotEmpty()
-  possessionBy?: PossessionTime;
-
-  @ApiProperty({ 
-    description: 'Possession Time (required when construction status is Under Construction)', 
+    description: 'Possession By', 
     example: 'Q1 2025',
     required: false
   })
-  @ValidateIf((o) => o.constructionStatus === ConstructionStatus.UNDER_CONSTRUCTION)
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
+  possessionBy?: string;
+
+  @ApiProperty({ 
+    description: 'Possession Time', 
+    example: 'Q1 2025',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
   possessionTime?: string;
 
   @ApiProperty({ 
@@ -438,21 +485,30 @@ export class CreatePropertyStep1Dto {
   @ApiProperty({ 
     description: 'City information (can be ID or name for new city creation)', 
     type: CityInfo,
-    required: true
+    required: false
   })
+  @IsOptional()
   @ValidateNested()
   @Type(() => CityInfo)
-  city: CityInfo;
+  city?: CityInfo;
 
   @ApiProperty({ 
     description: 'Society information (can be ID or name for new society creation)', 
     type: SocietyInfo,
-    required: true
+    required: false
   })
+  @IsOptional()
   @ValidateNested()
   @Type(() => SocietyInfo)
-  society: SocietyInfo;
+  society?: SocietyInfo;
 
-
-
+  @ApiProperty({ 
+    description: 'Locality information (can be ID or name for new locality creation)', 
+    type: LocalityInfo,
+    required: false
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LocalityInfo)
+  locality?: LocalityInfo;
 }

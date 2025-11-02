@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/database/base.entity';
 import { MasterPropertyType } from './master-property-type.entity';
 import { MasterSociety } from './master-society.entity';
+import { MasterLocality } from './master-locality.entity';
 
 @Entity('master_bhk_types')
 export class MasterBhkType extends BaseEntity {
@@ -17,14 +18,21 @@ export class MasterBhkType extends BaseEntity {
   @Column({ type: 'uuid' })
   propertyTypeId: string;
 
-  @Column({ type: 'uuid' })
-  societyId: string;
+  @Column({ type: 'uuid', nullable: true })
+  societyId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  localityId: string | null;
 
   @ManyToOne(() => MasterPropertyType)
   @JoinColumn({ name: 'propertyTypeId' })
   propertyType: MasterPropertyType;
 
-  @ManyToOne(() => MasterSociety, { onDelete: 'CASCADE' })
+  @ManyToOne(() => MasterSociety, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'societyId' })
-  society: MasterSociety;
+  society: MasterSociety | null;
+
+  @ManyToOne(() => MasterLocality, { nullable: true })
+  @JoinColumn({ name: 'localityId' })
+  locality: MasterLocality | null;
 }

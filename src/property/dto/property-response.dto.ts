@@ -178,81 +178,110 @@ export class SocietyResponseDto {
 }
 
 export class LocalityResponseDto {
-  @ApiProperty({ description: 'Locality ID', example: 'uuid-string' })
-  id: string;
+  @ApiProperty({ 
+    description: 'Locality ID (like Housing.com)', 
+    example: 3018,
+    type: Number,
+  })
+  id: number | string;
 
-  @ApiProperty({ description: 'Locality name', example: 'Sector 15' })
+  @ApiProperty({ 
+    description: 'Formatted locality name with city (like Housing.com)', 
+    example: 'Sector 89, Gurgaon',
+  })
   name: string;
 
-  @ApiProperty({
-    description: 'Sector name',
-    example: 'Sector 15',
-    required: false,
+  @ApiProperty({ 
+    description: 'UUID identifier (like Housing.com)', 
+    example: '2475ee745ec374a2d50e',
   })
-  sector?: string;
+  uuid: string;
 
-  @ApiProperty({
-    description: 'City ID',
-    example: 'uuid-string',
+  @ApiProperty({ 
+    description: 'Super type (always "polygon" for localities)', 
+    example: 'polygon',
+  })
+  super_type: string;
+
+  @ApiProperty({ 
+    description: 'Feature type', 
+    example: 'locality',
+    enum: ['locality', 'sublocality', 'neighbourhood'],
+  })
+  type: string;
+
+  @ApiProperty({ 
+    description: 'City ID (null for Google results)', 
+    example: null,
     required: false,
   })
-  cityId?: string;
+  city_id: string | null;
+
+  @ApiProperty({ 
+    description: 'Bounding box UUIDs (array of city/polygon UUIDs)', 
+    example: ['526acdc6c33455e9e4e9'],
+    type: [String],
+    required: false,
+  })
+  bounding_box_uuids?: string[];
+
+  @ApiProperty({ 
+    description: 'Longitude and Latitude as array [lon, lat] (like Housing.com)', 
+    example: [76.94570376016718, 28.418284308101104],
+    type: [Number],
+    required: false,
+  })
+  lon_lat?: [number, number];
 
   @ApiProperty({
     description: 'Latitude coordinate',
-    example: 28.4595,
+    example: 28.418284308101104,
     required: false,
   })
   latitude?: number;
 
   @ApiProperty({
     description: 'Longitude coordinate',
-    example: 77.0266,
+    example: 76.94570376016718,
     required: false,
   })
   longitude?: number;
+
+  @ApiProperty({ 
+    description: 'Is valid result', 
+    example: true,
+  })
+  is_valid: boolean;
+
+  @ApiProperty({ 
+    description: 'Time taken in milliseconds (like Housing.com)', 
+    example: 26,
+    type: Number,
+  })
+  took: number;
+
+  @ApiProperty({ 
+    description: 'Full name with complete address (like Housing.com)', 
+    example: 'Sector 89, New Gurgaon, Gurgaon, Gurgaon District, Haryana, India, 122001',
+    required: false,
+  })
+  full_name?: string;
+
+  // Keep legacy fields for backward compatibility (optional)
+  @ApiProperty({
+    description: 'Display name (backward compatibility)',
+    example: 'Sector 15, Gurgaon',
+    required: false,
+  })
+  displayName?: string;
 
   @ApiProperty({
     description: 'Data source',
     example: 'database',
     enum: ['database', 'google'],
-  })
-  source: string;
-
-  @ApiProperty({
-    description: 'City name (for Google results)',
-    example: 'Gurgaon',
     required: false,
   })
-  city?: string;
-
-  @ApiProperty({
-    description: 'State name (for Google results)',
-    example: 'Haryana',
-    required: false,
-  })
-  state?: string;
-
-  @ApiProperty({
-    description: 'Country name (for Google results)',
-    example: 'India',
-    required: false,
-  })
-  country?: string;
-
-  @ApiProperty({
-    description: 'Google Place ID (for Google results)',
-    example: 'ChIJ...',
-    required: false,
-  })
-  placeId?: string;
-
-  @ApiProperty({
-    description: 'Address (for Google results)',
-    example: 'Sector 15, Gurgaon, Haryana, India',
-    required: false,
-  })
-  address?: string;
+  source?: string;
 }
 
 // Unified Location Response DTO (for societies with locality name)
@@ -279,6 +308,20 @@ export class LocationResponseDto {
     required: false,
   })
   address?: string;
+
+  @ApiProperty({
+    description: 'Latitude coordinate',
+    example: 28.4595,
+    required: false,
+  })
+  latitude?: number;
+
+  @ApiProperty({
+    description: 'Longitude coordinate',
+    example: 77.0266,
+    required: false,
+  })
+  longitude?: number;
 
   @ApiProperty({
     description: 'Data source',

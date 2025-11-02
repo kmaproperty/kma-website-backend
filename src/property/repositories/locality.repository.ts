@@ -39,6 +39,7 @@ export class LocalityRepository {
         name: ILike(`%${query}%`),
         cityId: cityId,
       },
+      relations: ['city'],
       order: { name: 'ASC' },
       take: limit,
     });
@@ -66,6 +67,7 @@ export class LocalityRepository {
   ): Promise<MasterLocality[]> {
     return await this.localityRepository.find({
       where: { name: ILike(`%${query}%`) },
+      relations: ['city'],
       order: { name: 'ASC' },
       take: limit,
     });

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, Not } from 'typeorm';
 import { MasterPropertyListingType } from '../entities/master-property-listing-type.entity';
 import { MasterPropertyCategoryNew } from '../entities/master-property-category-new.entity';
 import { MasterPropertyType } from '../entities/master-property-type.entity';
@@ -43,56 +43,88 @@ export class MasterDataSeederService {
     // 1. Properties first (depends on everything)
     const propertiesCount = await this.propertyRepository.count();
     if (propertiesCount > 0) {
-      await this.propertyRepository.delete({});
+      await this.propertyRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
       this.logger.log(`Deleted ${propertiesCount} properties`);
     }
 
     // 2. Societies (depends on cities)
     const societiesCount = await this.societyRepository.count();
     if (societiesCount > 0) {
-      await this.societyRepository.delete({});
+      await this.societyRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
       this.logger.log(`Deleted ${societiesCount} societies`);
     }
 
     // 3. Built-up Areas (depends on BHK types)
     const builtUpAreasCount = await this.builtUpAreaRepository.count();
     if (builtUpAreasCount > 0) {
-      await this.builtUpAreaRepository.delete({});
+      await this.builtUpAreaRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
       this.logger.log(`Deleted ${builtUpAreasCount} built-up areas`);
     }
 
     // 5. BHK Types (depends on property types)
     const bhkTypesCount = await this.bhkTypeRepository.count();
     if (bhkTypesCount > 0) {
-      await this.bhkTypeRepository.delete({});
+      await this.bhkTypeRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
       this.logger.log(`Deleted ${bhkTypesCount} BHK types`);
     }
 
     // 6. Property Types (depends on listing types and categories)
     const propertyTypesCount = await this.propertyTypeRepository.count();
     if (propertyTypesCount > 0) {
-      await this.propertyTypeRepository.delete({});
+      await this.propertyTypeRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
       this.logger.log(`Deleted ${propertyTypesCount} property types`);
     }
 
     // 7. Cities (independent at this point)
     const citiesCount = await this.cityRepository.count();
     if (citiesCount > 0) {
-      await this.cityRepository.delete({});
+      await this.cityRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
       this.logger.log(`Deleted ${citiesCount} cities`);
     }
 
     // 8. Property Categories (independent)
     const categoriesCount = await this.propertyCategoryRepository.count();
     if (categoriesCount > 0) {
-      await this.propertyCategoryRepository.delete({});
+      await this.propertyCategoryRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
       this.logger.log(`Deleted ${categoriesCount} property categories`);
     }
 
     // 9. Property Listing Types (independent)
     const listingTypesCount = await this.propertyListingTypeRepository.count();
     if (listingTypesCount > 0) {
-      await this.propertyListingTypeRepository.delete({});
+      await this.propertyListingTypeRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
       this.logger.log(`Deleted ${listingTypesCount} property listing types`);
     }
 
@@ -407,16 +439,24 @@ export class MasterDataSeederService {
 
         for (const config of selectedConfigs) {
           // Check if this configuration already exists for this BHK type
+          const whereClause: any = {
+            bhkTypeId: bhkType.id,
+            superBuiltUpArea: config.superBuiltUpArea,
+            carpetArea: config.carpetArea,
+            noOfBathrooms: config.noOfBathrooms,
+            noOfBedrooms: IsNull(),
+            balconies: IsNull(),
+          };
+          
+          // Handle nullable societyId - use IsNull() if null, otherwise use the value
+          if (bhkType.societyId === null) {
+            whereClause.societyId = IsNull();
+          } else {
+            whereClause.societyId = bhkType.societyId;
+          }
+
           const existing = await this.builtUpAreaRepository.findOne({
-            where: {
-              societyId: bhkType.societyId,
-              bhkTypeId: bhkType.id,
-              superBuiltUpArea: config.superBuiltUpArea,
-              carpetArea: config.carpetArea,
-              noOfBathrooms: config.noOfBathrooms,
-              noOfBedrooms: IsNull(),
-              balconies: IsNull(),
-            },
+            where: whereClause,
           });
 
           if (!existing) {
@@ -573,6 +613,70 @@ export class MasterDataSeederService {
         name: 'Agricultural Land',
         code: 'res-sale-agri-land',
         categoryId: residentialCategory.id,
+        listingTypeId: saleType.id,
+      },
+
+      // Commercial Rent
+      {
+        name: 'Office',
+        code: 'com-rent-office',
+        categoryId: commercialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Retail Shop',
+        code: 'com-rent-retail-shop',
+        categoryId: commercialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Showroom',
+        code: 'com-rent-showroom',
+        categoryId: commercialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Warehouse',
+        code: 'com-rent-warehouse',
+        categoryId: commercialCategory.id,
+        listingTypeId: rentType.id,
+      },
+      {
+        name: 'Plot',
+        code: 'com-rent-plot',
+        categoryId: commercialCategory.id,
+        listingTypeId: rentType.id,
+      },
+
+      // Commercial Sale
+      {
+        name: 'Office',
+        code: 'com-sale-office',
+        categoryId: commercialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Retail Shop',
+        code: 'com-sale-retail-shop',
+        categoryId: commercialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Showroom',
+        code: 'com-sale-showroom',
+        categoryId: commercialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Warehouse',
+        code: 'com-sale-warehouse',
+        categoryId: commercialCategory.id,
+        listingTypeId: saleType.id,
+      },
+      {
+        name: 'Plot',
+        code: 'com-sale-plot',
+        categoryId: commercialCategory.id,
         listingTypeId: saleType.id,
       },
     ];
