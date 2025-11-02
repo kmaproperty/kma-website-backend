@@ -29,20 +29,20 @@ export class Property extends BaseEntity {
   category: MasterPropertyCategoryNew;
 
   // City
-  @Column({ type: 'uuid' })
-  cityId: string;
+  @Column({ type: 'uuid', nullable: true })
+  cityId: string | null;
 
-  @ManyToOne(() => MasterCity)
+  @ManyToOne(() => MasterCity, { nullable: true })
   @JoinColumn({ name: 'cityId' })
-  city: MasterCity;
+  city: MasterCity | null;
 
   // Society/Building/Apartment Name (includes locality name)
-  @Column({ type: 'uuid' })
-  societyId: string;
+  @Column({ type: 'uuid', nullable: true })
+  societyId: string | null;
 
-  @ManyToOne(() => MasterSociety)
+  @ManyToOne(() => MasterSociety, { nullable: true })
   @JoinColumn({ name: 'societyId' })
-  society: MasterSociety;
+  society: MasterSociety | null;
 
   // Locality
   @Column({ type: 'uuid', nullable: true })
@@ -53,24 +53,24 @@ export class Property extends BaseEntity {
   locality: MasterLocality | null;
 
   // Property Type (Flat/Apartment, Villa, etc.)
-  @Column({ type: 'uuid' })
-  propertyTypeId: string;
+  @Column({ type: 'uuid', nullable: true })
+  propertyTypeId: string | null;
 
-  @ManyToOne(() => MasterPropertyType)
+  @ManyToOne(() => MasterPropertyType, { nullable: true })
   @JoinColumn({ name: 'propertyTypeId' })
-  propertyType: MasterPropertyType;
+  propertyType: MasterPropertyType | null;
 
   // Rooms / BHK
-  @Column({ type: 'uuid' })
-  bhkTypeId: string;
+  @Column({ type: 'uuid', nullable: true })
+  bhkTypeId: string | null;
 
-  @ManyToOne(() => MasterBhkType)
+  @ManyToOne(() => MasterBhkType, { nullable: true })
   @JoinColumn({ name: 'bhkTypeId' })
-  bhkType: MasterBhkType;
+  bhkType: MasterBhkType | null;
 
   // Age of Property (in Years)
-  @Column({ type: 'int' })
-  ageOfProperty: number;
+  @Column({ type: 'int', nullable: true })
+  ageOfProperty: number | null;
 
   // User who created the listing
   @Column({ type: 'uuid' })
@@ -222,4 +222,32 @@ export class Property extends BaseEntity {
     nullable: true,
   })
   possessionTime: string | null;
+
+  // Plot Area (optional)
+  @Column({ type: 'int', nullable: true })
+  plotArea: number | null;
+
+  // Plot Area Unit (optional, e.g., "sq ft", "sq yd", "sq m", "acre")
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  plotAreaUnit: string | null;
+
+  // Plot Length (optional)
+  @Column({ type: 'int', nullable: true })
+  plotLength: number | null;
+
+  // Plot Width (optional)
+  @Column({ type: 'int', nullable: true })
+  plotWidth: number | null;
+
+  // Width of Facing Road (optional)
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  plotFacingRoadWidth: string | null;
 }

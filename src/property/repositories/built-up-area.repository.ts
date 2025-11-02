@@ -87,6 +87,18 @@ export class BuiltUpAreaRepository extends Repository<MasterBuiltUpArea> {
     });
   }
 
+  async findByBhkTypeIdAndLocalityId(
+    bhkTypeId: string,
+    localityId: string,
+  ): Promise<MasterBuiltUpArea[]> {
+    return this.find({
+      where: { bhkTypeId, localityId },
+      order: {
+        superBuiltUpArea: 'ASC',
+      },
+    });
+  }
+
   async createBuiltUpArea(
     builtUpAreaData: Partial<MasterBuiltUpArea>,
   ): Promise<MasterBuiltUpArea> {

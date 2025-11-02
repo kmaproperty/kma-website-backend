@@ -156,7 +156,7 @@ export class PropertyService {
   }
 
   /**
-   * Search localities using Google Autocomplete API within a city
+   * Search localities - first from database, then from Google Places API
    */
   async searchLocalitiesAutocomplete(
     query: string,
@@ -173,14 +173,109 @@ export class PropertyService {
       throw new BadRequestException('City name is required');
     }
 
-    // Use Google Places Autocomplete API
-    const localities = await this.googlePlacesService.searchLocalitiesAutocomplete(
-      query.trim(),
-      cityName.trim(),
-      limit,
-    );
+    const trimmedQuery = query.trim();
+    const trimmedCityName = cityName.trim();
 
-    return localities;
+    // First, search for the city by name to get cityId
+    const cities = await this.cityRepository.searchByName(
+      trimmedCityName,
+      1,
+    );
+    
+    let localLocalities: any[] = [];
+    
+    if (cities.length > 0) {
+      const cityId = cities[0].id;
+      // Search localities in local database by query and cityId
+      localLocalities = await this.localityRepository.searchByNameAndCity(
+        trimmedQuery,
+        cityId,
+        limit,
+      );
+    }
+
+    // If we have enough results from local DB, return them
+    if (localLocalities.length >= 5) {
+      return localLocalities.map((locality) => ({
+        id: locality.id,
+        name: locality.name,
+        sector: locality.sector,
+        cityId: locality.cityId,
+        city: locality.city
+          ? {
+              id: locality.city.id,
+              name: locality.city.name,
+              code: locality.city.code,
+            }
+          : null,
+        latitude: locality.latitude,
+        longitude: locality.longitude,
+        source: 'database',
+      }));
+    }
+
+    // If not enough results, search from Google Places API
+    const googleLocalities =
+      await this.googlePlacesService.searchLocalitiesAutocomplete(
+        trimmedQuery,
+        trimmedCityName,
+        limit,
+      );
+
+    // Combine results, prioritizing local database
+    const combinedResults = [
+      ...localLocalities.map((locality) => ({
+        id: locality.id,
+        name: locality.name,
+        sector: locality.sector,
+        cityId: locality.cityId,
+        city: locality.city
+          ? {
+              id: locality.city.id,
+              name: locality.city.name,
+              code: locality.city.code,
+            }
+          : null,
+        latitude: locality.latitude,
+        longitude: locality.longitude,
+        source: 'database',
+      })),
+      ...googleLocalities.map((locality) => {
+        // Extract sector from locality name if available (e.g., "Sector 15" -> "Sector 15")
+        const sectorMatch = locality.name?.match(/sector\s*\d+/i) || 
+                           locality.displayName?.match(/sector\s*\d+/i);
+        const sector = sectorMatch ? sectorMatch[0] : null;
+        
+        // Extract just the locality name without city (e.g., "Sector 15, Gurgaon" -> "Sector 15")
+        const localityNameOnly = locality.name?.split(',')[0]?.trim() || 
+                                 locality.displayName?.split(',')[0]?.trim() || 
+                                 locality.name || 
+                                 locality.displayName;
+
+        return {
+          name: localityNameOnly,
+          sector: sector || locality.sector || null,
+          city: locality.city || null,
+          latitude: locality.latitude,
+          longitude: locality.longitude,
+          placeId: locality.place_id || locality.placeId,
+          source: 'google',
+        };
+      }),
+    ];
+
+    // Remove duplicates based on locality name (case-insensitive)
+    const uniqueLocalities = combinedResults.reduce((acc, locality) => {
+      const existingLocality = acc.find(
+        (l) => l.name.toLowerCase() === locality.name.toLowerCase(),
+      );
+      if (!existingLocality) {
+        acc.push(locality);
+      }
+      return acc;
+    }, [] as any[]);
+
+    return uniqueLocalities.slice(0, limit);
   }
 
   /**
@@ -191,9 +286,10 @@ export class PropertyService {
   async getBhkTypesAndBuiltUpAreasBySociety(
     societyId?: string,
     propertyTypeId?: string,
+    localityId?: string,
   ): Promise<any> {
-    // If no societyId is provided, return default response
-    if (!societyId) {
+    // If neither localityId nor societyId is provided, return default response
+    if (!localityId && !societyId) {
       const defaultBhkTypes = [
         { id: 'default-1', name: '1 BHK', code: '1bhk', sortOrder: 1 },
         { id: 'default-2', name: '2 BHK', code: '2bhk', sortOrder: 2 },
@@ -254,26 +350,53 @@ export class PropertyService {
       }));
     }
 
-    // Check if society exists if societyId is provided
-    const society = await this.societyRepository.findById(societyId);
-    if (!society) {
-      throw new BadRequestException(`Society with ID ${societyId} not found`);
+    // Prioritize localityId over societyId
+    const useLocalityId = !!localityId;
+    const searchId = localityId || societyId;
+
+    if (useLocalityId) {
+      // Check if locality exists
+      const locality = await this.localityRepository.findById(localityId!);
+      if (!locality) {
+        throw new BadRequestException(`Locality with ID ${localityId} not found`);
+      }
+    } else {
+      // Check if society exists
+      const society = await this.societyRepository.findById(societyId!);
+      if (!society) {
+        throw new BadRequestException(`Society with ID ${societyId} not found`);
+      }
     }
 
     let bhkTypes: any[] = [];
 
-    if (propertyTypeId) {
-      // Get BHK types for specific society and property type
-      bhkTypes = await this.bhkTypeRepository.findBySocietyIdAndPropertyTypeId(
-        societyId,
-        propertyTypeId,
-      );
+    if (useLocalityId) {
+      // Search by localityId
+      if (propertyTypeId) {
+        // Get BHK types for specific locality and property type
+        bhkTypes = await this.bhkTypeRepository.findByLocalityIdAndPropertyTypeId(
+          localityId!,
+          propertyTypeId,
+        );
+      } else {
+        // Get all BHK types for the locality
+        bhkTypes = await this.bhkTypeRepository.findByLocalityId(localityId!);
+      }
     } else {
-      // Get all BHK types for the society
-      bhkTypes = await this.bhkTypeRepository.findBySocietyId(societyId);
+      // Search by societyId
+      if (propertyTypeId) {
+        // Get BHK types for specific society and property type
+        bhkTypes = await this.bhkTypeRepository.findBySocietyIdAndPropertyTypeId(
+          societyId!,
+          propertyTypeId,
+        );
+      } else {
+        // Get all BHK types for the society
+        bhkTypes = await this.bhkTypeRepository.findBySocietyId(societyId!);
+      }
     }
 
-    // If no BHK types found for this society, return empty array
+    // If no BHK types found, return empty array
     if (bhkTypes.length === 0) {
       return [];
     }
@@ -281,39 +404,55 @@ export class PropertyService {
     // Get built-up areas for each BHK type
     const bhkTypesWithBuiltUpAreas = await Promise.all(
       bhkTypes.map(async (bhkType) => {
-        const builtUpAreas =
-          await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
-            bhkType.id,
-            societyId,
-          );
+        let builtUpAreas: any[] = [];
+        
+        if (useLocalityId) {
+          // Search built-up areas by localityId
+          builtUpAreas =
+            await this.builtUpAreaRepository.findByBhkTypeIdAndLocalityId(
+              bhkType.id,
+              localityId!,
+            );
+        } else {
+          // Search built-up areas by societyId
+          builtUpAreas =
+            await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
+              bhkType.id,
+              societyId!,
+            );
+        }
 
         // If no built-up areas found for this BHK type, return default options
+        const defaultArea = {
+          id: `default-${bhkType.id}-1`,
+          superBuiltUpArea: 1000,
+          carpetArea: 800,
+          noOfBathrooms: 1,
+          bhkTypeId: bhkType.id,
+          societyId: useLocalityId ? null : societyId,
+          localityId: useLocalityId ? localityId : null,
+        };
+
         const areas =
           builtUpAreas.length === 0
             ? [
                 {
+                  ...defaultArea,
                   id: `default-${bhkType.id}-1`,
-                  superBuiltUpArea: 1000,
-                  carpetArea: 800,
-                  noOfBathrooms: 1,
-                  bhkTypeId: bhkType.id,
-                  societyId: societyId,
                 },
                 {
+                  ...defaultArea,
                   id: `default-${bhkType.id}-2`,
                   superBuiltUpArea: 1200,
                   carpetArea: 1000,
                   noOfBathrooms: 2,
-                  bhkTypeId: bhkType.id,
-                  societyId: societyId,
                 },
                 {
+                  ...defaultArea,
                   id: `default-${bhkType.id}-3`,
                   superBuiltUpArea: 1500,
                   carpetArea: 1200,
                   noOfBathrooms: 2,
-                  bhkTypeId: bhkType.id,
-                  societyId: societyId,
                 },
               ]
             : builtUpAreas.map((area) => ({
@@ -325,6 +464,7 @@ export class PropertyService {
                 balconies: area.balconies ?? null,
                 bhkTypeId: area.bhkTypeId,
                 societyId: area.societyId,
+                localityId: area.localityId,
               }));
 
         return {
@@ -334,6 +474,7 @@ export class PropertyService {
           sortOrder: bhkType.sortOrder,
           propertyTypeId: bhkType.propertyTypeId,
           societyId: bhkType.societyId,
+          localityId: bhkType.localityId,
           builtUpAreas: areas,
         };
       }),
@@ -364,6 +505,11 @@ export class PropertyService {
       city,
       society,
       locality,
+      plotArea,
+      plotAreaUnit,
+      plotLength,
+      plotWidth,
+      plotFacingRoadWidth,
     } = createPropertyDto;
 
     // Helper function to get or create city
@@ -537,9 +683,10 @@ export class PropertyService {
         return null;
       }
 
-      // Validate required fields for built-up area
+      // Skip built-up area creation if required fields are not provided
+      // These fields are optional in the DTO, so we should gracefully handle their absence
       if (bhkInfo.buildUpAreaSqFt === undefined || bhkInfo.carpetAreaSqFt === undefined || bhkInfo.noOfBathrooms === undefined) {
-        throw new BadRequestException('BHK buildUpAreaSqFt, carpetAreaSqFt, and noOfBathrooms are required when BHK info is provided');
+        return null;
       }
 
       // Build where clause with proper null handling
@@ -663,6 +810,21 @@ export class PropertyService {
         if (possessionTime !== undefined) {
           updateData.possessionTime = possessionTime;
         }
+        if (plotArea !== undefined) {
+          updateData.plotArea = plotArea;
+        }
+        if (plotAreaUnit !== undefined) {
+          updateData.plotAreaUnit = plotAreaUnit || null;
+        }
+        if (plotLength !== undefined) {
+          updateData.plotLength = plotLength;
+        }
+        if (plotWidth !== undefined) {
+          updateData.plotWidth = plotWidth;
+        }
+        if (plotFacingRoadWidth !== undefined) {
+          updateData.plotFacingRoadWidth = plotFacingRoadWidth || null;
+        }
 
         updateData.completionStep = PropertyCompletionStep.STEP_1;
 
@@ -713,6 +875,21 @@ export class PropertyService {
         }
         if (possessionTime !== undefined) {
           createData.possessionTime = possessionTime;
+        }
+        if (plotArea !== undefined) {
+          createData.plotArea = plotArea;
+        }
+        if (plotAreaUnit !== undefined) {
+          createData.plotAreaUnit = plotAreaUnit || null;
+        }
+        if (plotLength !== undefined) {
+          createData.plotLength = plotLength;
+        }
+        if (plotWidth !== undefined) {
+          createData.plotWidth = plotWidth;
+        }
+        if (plotFacingRoadWidth !== undefined) {
+          createData.plotFacingRoadWidth = plotFacingRoadWidth || null;
         }
 
         // Create new property
@@ -1019,15 +1196,33 @@ export class PropertyService {
       }
     }
 
-    // Get built-up area for this BHK type and society
-    const builtUpAreas =
-      await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
-        property.bhkTypeId,
-        property.societyId,
-      );
+    // Get built-up area for this BHK type - try societyId first, then localityId
+    let builtUpArea: any = null;
+    if (property.bhkTypeId) {
+      if (property.societyId) {
+        const builtUpAreas =
+          await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
+            property.bhkTypeId,
+            property.societyId,
+          );
+        // Get the first matching built-up area (or use the first one if multiple exist)
+        builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
+      } else if (property.localityId) {
+        const builtUpAreas =
+          await this.builtUpAreaRepository.findByBhkTypeIdAndLocalityId(
+            property.bhkTypeId,
+            property.localityId,
+          );
+        // Get the first matching built-up area (or use the first one if multiple exist)
+        builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
+      }
+    }
 
-    // Get the first matching built-up area (or use the first one if multiple exist)
-    const builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
+    // Fetch locality if localityId exists
+    let locality = property.locality;
+    if (!locality && property.localityId) {
+      locality = await this.localityRepository.findById(property.localityId);
+    }
 
     // Format the response similar to CreatePropertyStep1Dto
     return {
@@ -1086,6 +1281,24 @@ export class PropertyService {
             longitude: property.society.longitude,
           }
         : null,
+      locality: locality
+        ? {
+            id: locality.id,
+            name: locality.name,
+            sector: locality.sector,
+            latitude: locality.latitude,
+            longitude: locality.longitude,
+          }
+        : null,
+      transactionType: property.transactionType || null,
+      constructionStatus: property.constructionStatus || null,
+      possessionBy: property.possessionBy || null,
+      possessionTime: property.possessionTime || null,
+      plotArea: property.plotArea || null,
+      plotAreaUnit: property.plotAreaUnit || null,
+      plotLength: property.plotLength || null,
+      plotWidth: property.plotWidth || null,
+      plotFacingRoadWidth: property.plotFacingRoadWidth || null,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
       completionStep: property.completionStep || 0,

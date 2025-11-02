@@ -223,9 +223,9 @@ export class PropertyController {
 
   @Get('localities/search')
   @ApiOperation({
-    summary: 'Search localities using Google Autocomplete API',
+    summary: 'Search localities within a specific city',
     description:
-      'Search for localities within a specific city using Google Places Autocomplete API. Returns results in Housing.com format.',
+      'Search for localities within a specific city. First searches the local database (master_localities table), then falls back to Google Places Autocomplete API if needed. Returns combined unique results with source indication (database or google).',
   })
   @ApiQuery({
     name: 'q',
@@ -248,7 +248,7 @@ export class PropertyController {
   @ApiResponse({
     status: 200,
     description:
-      'Localities found successfully using Google Autocomplete API',
+      'Localities found successfully. Results include source (database or google)',
     type: [LocalityResponseDto],
   })
   @ApiResponse({
@@ -273,20 +273,27 @@ export class PropertyController {
   @ApiOperation({
     summary: 'Get BHK types and built-up areas',
     description:
-      'Returns BHK types and their corresponding built-up areas. If societyId is not provided, returns default BHK options (1,2,3,4,5) with default built-up areas. If societyId is provided, can optionally filter by propertyTypeId. If no data found for the society, returns empty array. If data found, returns only the BHK types and built-up areas that exist in DB.',
+      'Returns BHK types and their corresponding built-up areas. If neither localityId nor societyId is provided, returns default BHK options (1,2,3,4,5) with default built-up areas. If localityId is provided, searches by localityId (prioritized over societyId). If only societyId is provided, searches by societyId. Can optionally filter by propertyTypeId. If no data found, returns empty array. If data found, returns only the BHK types and built-up areas that exist in DB.',
+  })
+  @ApiQuery({
+    name: 'localityId',
+    required: false,
+    description:
+      'Locality ID to filter BHK types and built-up areas for a specific locality (optional, prioritized over societyId)',
+    example: 'uuid-of-locality',
   })
   @ApiQuery({
     name: 'societyId',
     required: false,
     description:
-      'Society ID to filter BHK types and built-up areas for a specific society (optional)',
+      'Society ID to filter BHK types and built-up areas for a specific society (optional, used if localityId is not provided)',
     example: 'uuid-of-society',
   })
   @ApiQuery({
     name: 'propertyTypeId',
     required: false,
     description:
-      'Property type ID to filter BHK types when societyId is provided (optional)',
+      'Property type ID to filter BHK types when localityId or societyId is provided (optional)',
     example: 'uuid-of-property-type',
   })
   @ApiResponse({
@@ -296,15 +303,17 @@ export class PropertyController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid society ID or society not found',
+    description: 'Invalid locality ID, society ID, or not found',
   })
   async getBhkTypesAndBuiltUpAreas(
+    @Query('localityId') localityId?: string,
     @Query('societyId') societyId?: string,
     @Query('propertyTypeId') propertyTypeId?: string,
   ): Promise<BhkTypeResponseDto[]> {
     return await this.propertyService.getBhkTypesAndBuiltUpAreasBySociety(
       societyId,
       propertyTypeId,
+      localityId,
     );
   }
 

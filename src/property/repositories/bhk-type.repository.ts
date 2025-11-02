@@ -77,4 +77,21 @@ export class BhkTypeRepository {
       order: { sortOrder: 'ASC' },
     });
   }
+
+  async findByLocalityId(localityId: string): Promise<MasterBhkType[]> {
+    return await this.bhkTypeRepository.find({
+      where: { localityId },
+      order: { sortOrder: 'ASC' },
+    });
+  }
+
+  async findByLocalityIdAndPropertyTypeId(
+    localityId: string,
+    propertyTypeId: string,
+  ): Promise<MasterBhkType[]> {
+    return await this.bhkTypeRepository.find({
+      where: { localityId, propertyTypeId },
+      order: { sortOrder: 'ASC' },
+    });
+  }
 }

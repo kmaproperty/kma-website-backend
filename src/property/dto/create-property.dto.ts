@@ -511,4 +511,61 @@ export class CreatePropertyStep1Dto {
   @ValidateNested()
   @Type(() => LocalityInfo)
   locality?: LocalityInfo;
+
+  @ApiProperty({ 
+    description: 'Plot Area (Saleable area should be between 10 and 100000)', 
+    example: 1200,
+    required: false,
+    minimum: 10,
+    maximum: 100000
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(10)
+  @Max(100000)
+  plotArea?: number;
+
+  @ApiProperty({ 
+    description: 'Plot Area Unit (e.g., "sq ft", "sq yd", "sq m", "acre")', 
+    example: 'sq ft',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  plotAreaUnit?: string;
+
+  @ApiProperty({ 
+    description: 'Plot Length (should be between 1 and 10000)', 
+    example: 60,
+    required: false,
+    minimum: 1,
+    maximum: 10000
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(10000)
+  plotLength?: number;
+
+  @ApiProperty({ 
+    description: 'Plot Width (should be between 1 and 10000)', 
+    example: 40,
+    required: false,
+    minimum: 1,
+    maximum: 10000
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(10000)
+  plotWidth?: number;
+
+  @ApiProperty({ 
+    description: 'Width of Facing Road', 
+    example: '30 ft',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  plotFacingRoadWidth?: string;
 }
