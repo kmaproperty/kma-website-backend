@@ -22,6 +22,7 @@ export const USER_MESSAGES = {
       'Phone number is not verified. Please verify OTP first.',
     EMAIL_ALREADY_REGISTERED:
       'Email address is already registered with another user.',
+    ALREADY_EXISTS: 'User exists, please login',
   },
   OTP: {
     SENT: 'OTP sent successfully',

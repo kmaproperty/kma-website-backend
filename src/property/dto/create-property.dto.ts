@@ -9,9 +9,13 @@ import {
   IsNotEmpty,
   Min,
   Max,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { TransactionType } from '../enum/transaction-type.enum';
+import { ConstructionStatus } from '../enum/construction-status.enum';
+import { PossessionTime } from '../enum/possession-time.enum';
 
 export class CityInfo {
   @ApiProperty({ 
@@ -358,16 +362,58 @@ export class CreatePropertyStep1Dto {
   bhk: BhkInfo;
 
   @ApiProperty({ 
-    description: 'Age of property in years', 
+    description: 'Transaction Type', 
+    example: 'new_booking',
+    enum: TransactionType,
+    required: true
+  })
+  @IsEnum(TransactionType)
+  @IsNotEmpty()
+  transactionType: TransactionType;
+
+  @ApiProperty({ 
+    description: 'Construction Status', 
+    example: 'ready_to_move',
+    enum: ConstructionStatus,
+    required: true
+  })
+  @IsEnum(ConstructionStatus)
+  @IsNotEmpty()
+  constructionStatus: ConstructionStatus;
+
+  @ApiProperty({ 
+    description: 'Age of property in years (required when construction status is Ready to Move)', 
     example: 5,
-    required: true,
+    required: false,
     minimum: 0,
     maximum: 100
   })
+  @ValidateIf((o) => o.constructionStatus === ConstructionStatus.READY_TO_MOVE)
   @IsNumber()
   @Min(0)
   @Max(100)
-  ageOfProperty: number;
+  ageOfProperty?: number;
+
+  @ApiProperty({ 
+    description: 'Possession By (required when construction status is Under Construction)', 
+    example: 'q1_2025',
+    enum: PossessionTime,
+    required: false
+  })
+  @ValidateIf((o) => o.constructionStatus === ConstructionStatus.UNDER_CONSTRUCTION)
+  @IsEnum(PossessionTime)
+  @IsNotEmpty()
+  possessionBy?: PossessionTime;
+
+  @ApiProperty({ 
+    description: 'Possession Time (required when construction status is Under Construction)', 
+    example: 'Q1 2025',
+    required: false
+  })
+  @ValidateIf((o) => o.constructionStatus === ConstructionStatus.UNDER_CONSTRUCTION)
+  @IsString()
+  @IsNotEmpty()
+  possessionTime?: string;
 
   @ApiProperty({ 
     description: 'Property facing direction (e.g., North, South, East, West, North-East, etc.)', 

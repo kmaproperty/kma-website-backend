@@ -153,6 +153,20 @@ export class UserService {
   }
 
   /**
+   * Send OTP for signup - phone must not exist
+   */
+  async sendOtpForSignup(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
+    const { phone } = sendOtpDto;
+
+    const existingUser = await this.userRepository.findByPhone(phone);
+    if (existingUser) {
+      throw new BadRequestException(USER_MESSAGES.USER.ALREADY_EXISTS);
+    }
+
+    return this.sendOtp(sendOtpDto);
+  }
+
+  /**
    * Send OTP for login - phone must already exist
    */
   async sendOtpForLogin(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {

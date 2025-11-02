@@ -38,7 +38,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post('signup/send-otp')
-  @ApiOperation({ summary: 'Send OTP for signup (phone may be new)' })
+  @ApiOperation({ summary: 'Send OTP for signup (phone must be new)' })
   @ApiResponse({
     status: 200,
     description: 'OTP sent successfully',
@@ -47,8 +47,7 @@ export class UserController {
   async signupSendOtp(
     @Body() sendOtpDto: SendOtpDto,
   ): Promise<SendOtpResponseDto> {
-    // Use existing flow for signup
-    return await this.userService.sendOtp(sendOtpDto);
+    return await this.userService.sendOtpForSignup(sendOtpDto);
   }
 
   @Post('login/send-otp')

@@ -6,6 +6,9 @@ import { MasterCity } from './master-city.entity';
 import { MasterSociety } from './master-society.entity';
 import { MasterPropertyType } from './master-property-type.entity';
 import { MasterBhkType } from './master-bhk-type.entity';
+import { TransactionType } from '../enum/transaction-type.enum';
+import { ConstructionStatus } from '../enum/construction-status.enum';
+import { PossessionTime } from '../enum/possession-time.enum';
 
 @Entity('properties')
 export class Property extends BaseEntity {
@@ -179,4 +182,36 @@ export class Property extends BaseEntity {
     name: 'facing',
   })
   facing: string | null;
+
+  // Transaction Type (New Booking/Resale)
+  @Column({
+    type: 'enum',
+    enum: TransactionType,
+    nullable: true,
+  })
+  transactionType: TransactionType | null;
+
+  // Construction Status (Ready to Move/Under Construction)
+  @Column({
+    type: 'enum',
+    enum: ConstructionStatus,
+    nullable: true,
+  })
+  constructionStatus: ConstructionStatus | null;
+
+  // Possession By (for Under Construction properties)
+  @Column({
+    type: 'enum',
+    enum: PossessionTime,
+    nullable: true,
+  })
+  possessionBy: PossessionTime | null;
+
+  // Possession Time (for Under Construction properties)
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  possessionTime: string | null;
 }
