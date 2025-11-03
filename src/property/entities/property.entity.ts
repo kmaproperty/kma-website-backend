@@ -171,6 +171,143 @@ export class Property extends BaseEntity {
 
   @Column({ type: 'boolean', nullable: true, default: false })
   isBrokerageNegotiable: boolean | null;
+
+  // Property price
+  @Column({ type: 'int', nullable: true })
+  price: number | null;
+
+  // Plot number
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  plotNumber: string | null;
+
+  // House number
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  houseNumber: string | null;
+
+  // Villa number
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  villaNumber: string | null;
+
+  // Possession status (immediate/future)
+  @Column({
+    type: 'enum',
+    enum: ['immediate', 'future'],
+    nullable: true,
+  })
+  possessionStatus: 'immediate' | 'future' | null;
+
+  // Possession date
+  @Column({ type: 'date', nullable: true })
+  possessionDate: Date | null;
+
+  // Plot price
+  @Column({ type: 'int', nullable: true })
+  plotPrice: number | null;
+
+  // Brokerage (yes/no)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  brokerage: 'yes' | 'no' | null;
+
+  // Loan available (yes/no)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  loanAvailable: 'yes' | 'no' | null;
+
+  // Boundary wall (yes/no)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  boundaryWall: 'yes' | 'no' | null;
+
+  // Number of open sides
+  @Column({ type: 'int', nullable: true })
+  noOfOpenSides: number | null;
+
+  // Floors allowed for construction
+  @Column({ type: 'int', nullable: true })
+  floorsAllowedForConstruction: number | null;
+
+  // Construction done (yes/no)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  constructionDone: 'yes' | 'no' | null;
+
+  // Construction type
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  constructionType: string | null;
+
+  // Corner property (yes/no)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  cornerProperty: 'yes' | 'no' | null;
+
+  // Property description
+  @Column({ type: 'text', nullable: true })
+  propertyDescription: string | null;
+
+  // Step 3 fields
+  // Additional rooms (stored as simple comma-separated array)
+  @Column({ type: 'simple-array', nullable: true })
+  additionalRooms: string[] | null;
+
+  // Reserved parking counts
+  @Column({ type: 'int', nullable: true })
+  reservedParkingCovered: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  reservedParkingOpen: number | null;
+
+  // Power backup
+  @Column({
+    type: 'enum',
+    enum: ['No Back-up', 'Available'],
+    nullable: true,
+  })
+  powerBackup: 'No Back-up' | 'Available' | null;
+
+  // Furnish type
+  @Column({
+    type: 'enum',
+    enum: ['Furnished', 'Semi-Furnished', 'Unfurnished'],
+    nullable: true,
+  })
+  furnishType: 'Furnished' | 'Semi-Furnished' | 'Unfurnished' | null;
+
+  // Furnishings with counts (stored as JSON)
+  @Column({ type: 'jsonb', nullable: true })
+  furnishingsCounts: { item: string; count: number }[] | null;
+
+  // Amenities selection
+  @Column({ type: 'simple-array', nullable: true })
+  amenities: string[] | null;
+
+  // Water source
+  @Column({
+    type: 'enum',
+    enum: ['Municipal Supply', 'BoreWell/ Underground', 'other'],
+    nullable: true,
+  })
+  waterSource: 'Municipal Supply' | 'BoreWell/ Underground' | 'other' | null;
+
+  // Lift availability
+  @Column({ type: 'boolean', nullable: true })
+  isLiftAvailable: boolean | null;
+
   // Completion step tracks progress through posting workflow (1-5)
   // Step 1: Basic details, Step 2: Additional details, Step 3: Media, Step 4: Review, Step 5: Completed
   @Column({

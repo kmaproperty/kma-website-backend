@@ -57,6 +57,24 @@ export enum BrokerageType {
   CUSTOM = 'custom',
 }
 
+export enum PlotAreaUnit {
+  ACRES = 'acres',
+  SQ_FT = 'sqft',
+  SQ_YARDS = 'sq_yards',
+  SQ_M = 'sq_m',
+  MARLA = 'marla',
+}
+
+export enum YesNo {
+  YES = 'yes',
+  NO = 'no',
+}
+
+export enum PossessionStatus {
+  IMMEDIATE = 'immediate',
+  FUTURE = 'future',
+}
+
 export class CreatePropertyStep2Dto {
   @ApiProperty({
     description: 'Existing property ID to update',
@@ -66,25 +84,27 @@ export class CreatePropertyStep2Dto {
   @IsNotEmpty()
   propertyId: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Floor number of the unit',
     minimum: 0,
     maximum: 100,
   })
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
-  floorNumber: number;
+  floorNumber?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Total floors in the building',
     minimum: 1,
     maximum: 100,
   })
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(100)
-  totalFloors: number;
+  totalFloors?: number;
 
   @ApiPropertyOptional({ description: 'Flat/Unit number' })
   @IsOptional()
@@ -117,9 +137,10 @@ export class CreatePropertyStep2Dto {
   @IsEnum(CompanyOccupancy)
   companyOccupancy?: CompanyOccupancy;
 
-  @ApiProperty({ enum: RentAvailability })
+  @ApiPropertyOptional({ enum: RentAvailability })
+  @IsOptional()
   @IsEnum(RentAvailability)
-  rentAvailability: RentAvailability;
+  rentAvailability?: RentAvailability;
 
   @ApiPropertyOptional({
     description: 'Required when rentAvailability is later',
@@ -129,19 +150,21 @@ export class CreatePropertyStep2Dto {
   @IsDateString()
   availableFromDate?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Monthly rent',
     minimum: 1500,
     maximum: 2000000,
   })
+  @IsOptional()
   @IsInt()
   @Min(1500)
   @Max(2000000)
-  monthlyRent: number;
+  monthlyRent?: number;
 
-  @ApiProperty({ enum: MaintenanceType })
+  @ApiPropertyOptional({ enum: MaintenanceType })
+  @IsOptional()
   @IsEnum(MaintenanceType)
-  maintenanceType: MaintenanceType;
+  maintenanceType?: MaintenanceType;
 
   @ApiPropertyOptional({
     description: 'Required when maintenanceType is separate',
@@ -151,9 +174,10 @@ export class CreatePropertyStep2Dto {
   @Min(1)
   maintenanceChargeAmount?: number;
 
-  @ApiProperty({ enum: SecurityDepositType })
+  @ApiPropertyOptional({ enum: SecurityDepositType })
+  @IsOptional()
   @IsEnum(SecurityDepositType)
-  securityDepositType: SecurityDepositType;
+  securityDepositType?: SecurityDepositType;
 
   @ApiPropertyOptional({
     description: 'Required when securityDepositType is custom',
@@ -163,9 +187,10 @@ export class CreatePropertyStep2Dto {
   @Min(0)
   securityDepositAmount?: number;
 
-  @ApiProperty({ enum: LockInType })
+  @ApiPropertyOptional({ enum: LockInType })
+  @IsOptional()
   @IsEnum(LockInType)
-  lockInType: LockInType;
+  lockInType?: LockInType;
 
   @ApiPropertyOptional({
     description: 'Required when lockInType is custom (months)',
@@ -176,9 +201,10 @@ export class CreatePropertyStep2Dto {
   @Max(60)
   lockInMonths?: number;
 
-  @ApiProperty({ enum: BrokerageType })
+  @ApiPropertyOptional({ enum: BrokerageType })
+  @IsOptional()
   @IsEnum(BrokerageType)
-  brokerageType: BrokerageType;
+  brokerageType?: BrokerageType;
 
   @ApiPropertyOptional({ description: 'Required when brokerageType is custom' })
   @IsOptional()
@@ -190,4 +216,188 @@ export class CreatePropertyStep2Dto {
   @IsOptional()
   @IsBoolean()
   isBrokerageNegotiable?: boolean;
+
+  @ApiPropertyOptional({ 
+    description: 'Property price', 
+    example: 5000000,
+    minimum: 0
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  price?: number;
+
+  @ApiPropertyOptional({ 
+    description: 'Plot Area (Saleable area should be between 10 and 100000)', 
+    example: 1200,
+    minimum: 10,
+    maximum: 100000
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(10)
+  @Max(100000)
+  plotArea?: number;
+
+  @ApiPropertyOptional({ 
+    description: 'Plot Area Unit',
+    enum: PlotAreaUnit,
+    example: 'sqft'
+  })
+  @IsOptional()
+  @IsEnum(PlotAreaUnit)
+  plotAreaUnit?: PlotAreaUnit;
+
+  @ApiPropertyOptional({ 
+    description: 'Plot number', 
+    example: 'Plot-123'
+  })
+  @IsOptional()
+  @IsString()
+  plotNumber?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'House number', 
+    example: 'H-45'
+  })
+  @IsOptional()
+  @IsString()
+  houseNumber?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Villa number', 
+    example: 'Villa-12'
+  })
+  @IsOptional()
+  @IsString()
+  villaNumber?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Transaction Type', 
+    enum: ['new_booking', 'resale'],
+    example: 'new_booking'
+  })
+  @IsOptional()
+  @IsEnum(['new_booking', 'resale'])
+  transactionType?: 'new_booking' | 'resale';
+
+  @ApiPropertyOptional({ 
+    description: 'Possession Status', 
+    enum: PossessionStatus,
+    example: 'immediate'
+  })
+  @IsOptional()
+  @IsEnum(PossessionStatus)
+  possessionStatus?: PossessionStatus;
+
+  @ApiPropertyOptional({ 
+    description: 'Possession Date', 
+    example: '2025-12-31'
+  })
+  @IsOptional()
+  @IsDateString()
+  possessionDate?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Plot price', 
+    example: 5000000,
+    minimum: 0
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  plotPrice?: number;
+
+  @ApiPropertyOptional({ 
+    description: 'Brokerage available', 
+    enum: YesNo,
+    example: 'yes'
+  })
+  @IsOptional()
+  @IsEnum(YesNo)
+  brokerage?: YesNo;
+
+  @ApiPropertyOptional({ 
+    description: 'Loan available', 
+    enum: YesNo,
+    example: 'yes'
+  })
+  @IsOptional()
+  @IsEnum(YesNo)
+  loanAvailable?: YesNo;
+
+  @ApiPropertyOptional({ 
+    description: 'Property facing direction (e.g., North, South, East, West)', 
+    example: 'North'
+  })
+  @IsOptional()
+  @IsString()
+  facing?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Boundary wall present', 
+    enum: YesNo,
+    example: 'yes'
+  })
+  @IsOptional()
+  @IsEnum(YesNo)
+  boundaryWall?: YesNo;
+
+  @ApiPropertyOptional({ 
+    description: 'Number of open sides', 
+    example: 2,
+    minimum: 0,
+    maximum: 4
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(4)
+  noOfOpenSides?: number;
+
+  @ApiPropertyOptional({ 
+    description: 'Floors allowed for construction', 
+    example: 3,
+    minimum: 1,
+    maximum: 100
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  floorsAllowedForConstruction?: number;
+
+  @ApiPropertyOptional({ 
+    description: 'Construction done', 
+    enum: YesNo,
+    example: 'yes'
+  })
+  @IsOptional()
+  @IsEnum(YesNo)
+  constructionDone?: YesNo;
+
+  @ApiPropertyOptional({ 
+    description: 'Construction type', 
+    example: 'RCC'
+  })
+  @IsOptional()
+  @IsString()
+  constructionType?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Corner property', 
+    enum: YesNo,
+    example: 'yes'
+  })
+  @IsOptional()
+  @IsEnum(YesNo)
+  cornerProperty?: YesNo;
+
+  @ApiPropertyOptional({ 
+    description: 'Property description', 
+    example: 'Beautiful property with modern amenities'
+  })
+  @IsOptional()
+  @IsString()
+  propertyDescription?: string;
 }

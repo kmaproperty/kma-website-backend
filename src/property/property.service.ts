@@ -21,6 +21,7 @@ import {
   BrokerageType,
   TenantType,
 } from './dto/create-property-step2.dto';
+import { CreatePropertyStep3Dto, FurnishingCountDto, FurnishType, PowerBackupType } from './dto/create-property-step3.dto';
 
 @Injectable()
 export class PropertyService {
@@ -923,20 +924,16 @@ export class PropertyService {
       throw new BadRequestException('You can only update your own properties');
     }
 
-    // Floor validations
-    if (dto.floorNumber == null) {
-      throw new BadRequestException('Please enter the floor number');
-    }
-    if (dto.totalFloors == null) {
-      throw new BadRequestException('Please enter valid total floors');
-    }
-    if (dto.floorNumber > dto.totalFloors) {
-      throw new BadRequestException(
-        'Selected floor exceeds total floors of this building',
-      );
+    // Floor validations - only validate if both are provided
+    if (dto.floorNumber != null && dto.totalFloors != null) {
+      if (dto.floorNumber > dto.totalFloors) {
+        throw new BadRequestException(
+          'Selected floor exceeds total floors of this building',
+        );
+      }
     }
 
-    // Rent availability validation
+    // Rent availability validation - only if rentAvailability is provided
     if (dto.rentAvailability === RentAvailability.LATER) {
       if (!dto.availableFromDate) {
         throw new BadRequestException('Hint: Enter Available Date');
@@ -949,7 +946,7 @@ export class PropertyService {
       }
     }
 
-    // Maintenance charge validation
+    // Maintenance charge validation - only if maintenanceType is provided
     if (dto.maintenanceType === MaintenanceType.SEPARATE) {
       if (
         dto.maintenanceChargeAmount == null ||
@@ -959,7 +956,7 @@ export class PropertyService {
       }
     }
 
-    // Security deposit validation
+    // Security deposit validation - only if securityDepositType is provided
     if (dto.securityDepositType === SecurityDepositType.CUSTOM) {
       if (dto.monthlyRent == null) {
         throw new BadRequestException(
@@ -976,14 +973,14 @@ export class PropertyService {
       }
     }
 
-    // Lock-in validation
+    // Lock-in validation - only if lockInType is provided
     if (dto.lockInType === LockInType.CUSTOM) {
       if (dto.lockInMonths == null || dto.lockInMonths < 1) {
         throw new BadRequestException('Please Select Lock in Period');
       }
     }
 
-    // Brokerage validation
+    // Brokerage validation - only if brokerageType is provided
     if (dto.brokerageType === BrokerageType.CUSTOM) {
       if (dto.monthlyRent == null) {
         throw new BadRequestException(
@@ -1000,45 +997,141 @@ export class PropertyService {
       }
     }
 
-    // Company occupancy requirement
+    // Company occupancy requirement - only if tenantType is provided
     if (dto.tenantType === TenantType.COMPANY && !dto.companyOccupancy) {
       throw new BadRequestException('Please select company occupancy');
     }
 
-    await this.propertyRepository.updateProperty(dto.propertyId, {
-      floorNumber: dto.floorNumber,
-      totalFloors: dto.totalFloors,
-      flatNumber: dto.flatNumber ?? null,
-      towerBlock: dto.towerBlock ?? null,
-      propertyAreaAcre: dto.propertyAreaAcre ?? null,
-      tenantType: dto.tenantType ?? (null as any),
-      companyOccupancy: dto.companyOccupancy ?? (null as any),
-      rentAvailability: dto.rentAvailability as any,
-      availableFromDate: dto.availableFromDate
+    // Build update object with only provided fields
+    const updateData: any = {
+      completionStep: PropertyCompletionStep.STEP_2,
+    };
+
+    if (dto.floorNumber !== undefined) {
+      updateData.floorNumber = dto.floorNumber;
+    }
+    if (dto.totalFloors !== undefined) {
+      updateData.totalFloors = dto.totalFloors;
+    }
+    if (dto.flatNumber !== undefined) {
+      updateData.flatNumber = dto.flatNumber ?? null;
+    }
+    if (dto.towerBlock !== undefined) {
+      updateData.towerBlock = dto.towerBlock ?? null;
+    }
+    if (dto.propertyAreaAcre !== undefined) {
+      updateData.propertyAreaAcre = dto.propertyAreaAcre ?? null;
+    }
+    if (dto.tenantType !== undefined) {
+      updateData.tenantType = dto.tenantType ?? null;
+    }
+    if (dto.companyOccupancy !== undefined) {
+      updateData.companyOccupancy = dto.companyOccupancy ?? null;
+    }
+    if (dto.rentAvailability !== undefined) {
+      updateData.rentAvailability = dto.rentAvailability as any;
+    }
+    if (dto.availableFromDate !== undefined) {
+      updateData.availableFromDate = dto.availableFromDate
         ? new Date(dto.availableFromDate)
-        : null,
-      monthlyRent: dto.monthlyRent,
-      maintenanceType: dto.maintenanceType as any,
-      maintenanceChargeAmount:
+        : null;
+    }
+    if (dto.monthlyRent !== undefined) {
+      updateData.monthlyRent = dto.monthlyRent;
+    }
+    if (dto.maintenanceType !== undefined) {
+      updateData.maintenanceType = dto.maintenanceType as any;
+      updateData.maintenanceChargeAmount =
         dto.maintenanceType === MaintenanceType.SEPARATE
           ? dto.maintenanceChargeAmount!
-          : null,
-      securityDepositType: dto.securityDepositType as any,
-      securityDepositAmount:
+          : null;
+    }
+    if (dto.securityDepositType !== undefined) {
+      updateData.securityDepositType = dto.securityDepositType as any;
+      updateData.securityDepositAmount =
         dto.securityDepositType === SecurityDepositType.CUSTOM
           ? dto.securityDepositAmount!
-          : null,
-      lockInType: dto.lockInType as any,
-      lockInMonths:
-        dto.lockInType === LockInType.CUSTOM ? dto.lockInMonths! : null,
-      brokerageType: dto.brokerageType as any,
-      brokerageAmount:
+          : null;
+    }
+    if (dto.lockInType !== undefined) {
+      updateData.lockInType = dto.lockInType as any;
+      updateData.lockInMonths =
+        dto.lockInType === LockInType.CUSTOM ? dto.lockInMonths! : null;
+    }
+    if (dto.brokerageType !== undefined) {
+      updateData.brokerageType = dto.brokerageType as any;
+      updateData.brokerageAmount =
         dto.brokerageType === BrokerageType.CUSTOM
           ? dto.brokerageAmount!
-          : null,
-      isBrokerageNegotiable: dto.isBrokerageNegotiable ?? false,
-      completionStep: PropertyCompletionStep.STEP_2,
-    });
+          : null;
+    }
+    if (dto.isBrokerageNegotiable !== undefined) {
+      updateData.isBrokerageNegotiable = dto.isBrokerageNegotiable ?? false;
+    }
+    if (dto.price !== undefined) {
+      updateData.price = dto.price;
+    }
+    if (dto.plotArea !== undefined) {
+      updateData.plotArea = dto.plotArea;
+    }
+    if (dto.plotAreaUnit !== undefined) {
+      updateData.plotAreaUnit = dto.plotAreaUnit || null;
+    }
+    if (dto.plotNumber !== undefined) {
+      updateData.plotNumber = dto.plotNumber || null;
+    }
+    if (dto.houseNumber !== undefined) {
+      updateData.houseNumber = dto.houseNumber || null;
+    }
+    if (dto.villaNumber !== undefined) {
+      updateData.villaNumber = dto.villaNumber || null;
+    }
+    if (dto.transactionType !== undefined) {
+      updateData.transactionType = dto.transactionType as any;
+    }
+    if (dto.possessionStatus !== undefined) {
+      updateData.possessionStatus = dto.possessionStatus as any;
+    }
+    if (dto.possessionDate !== undefined) {
+      updateData.possessionDate = dto.possessionDate
+        ? new Date(dto.possessionDate)
+        : null;
+    }
+    if (dto.plotPrice !== undefined) {
+      updateData.plotPrice = dto.plotPrice;
+    }
+    if (dto.brokerage !== undefined) {
+      updateData.brokerage = dto.brokerage as any;
+    }
+    if (dto.loanAvailable !== undefined) {
+      updateData.loanAvailable = dto.loanAvailable as any;
+    }
+    if (dto.facing !== undefined) {
+      updateData.facing = dto.facing || null;
+    }
+    if (dto.boundaryWall !== undefined) {
+      updateData.boundaryWall = dto.boundaryWall as any;
+    }
+    if (dto.noOfOpenSides !== undefined) {
+      updateData.noOfOpenSides = dto.noOfOpenSides;
+    }
+    if (dto.floorsAllowedForConstruction !== undefined) {
+      updateData.floorsAllowedForConstruction = dto.floorsAllowedForConstruction;
+    }
+    if (dto.constructionDone !== undefined) {
+      updateData.constructionDone = dto.constructionDone as any;
+    }
+    if (dto.constructionType !== undefined) {
+      updateData.constructionType = dto.constructionType || null;
+    }
+    if (dto.cornerProperty !== undefined) {
+      updateData.cornerProperty = dto.cornerProperty as any;
+    }
+    if (dto.propertyDescription !== undefined) {
+      updateData.propertyDescription = dto.propertyDescription || null;
+    }
+
+    await this.propertyRepository.updateProperty(dto.propertyId, updateData);
 
     const updated = await this.propertyRepository.findById(dto.propertyId);
     return { 
@@ -1070,6 +1163,130 @@ export class PropertyService {
       name: cat.name,
       code: cat.code,
     }));
+  }
+
+  async updatePropertyStep3(
+    dto: CreatePropertyStep3Dto,
+    userId: string,
+  ): Promise<{ id: string; status: string; completionStep: number }> {
+    const property = await this.propertyRepository.findById(dto.propertyId);
+    if (!property) {
+      throw new BadRequestException(
+        `Property with ID ${dto.propertyId} not found`,
+      );
+    }
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only update your own properties');
+    }
+
+    // Build update object with only provided fields
+    const updateData: any = {
+      completionStep: PropertyCompletionStep.STEP_3,
+    };
+
+    if (dto.additionalRooms !== undefined) {
+      updateData.additionalRooms = dto.additionalRooms && dto.additionalRooms.length > 0 ? dto.additionalRooms : null;
+    }
+    if (dto.reservedParkingCovered !== undefined) {
+      updateData.reservedParkingCovered = dto.reservedParkingCovered;
+    }
+    if (dto.reservedParkingOpen !== undefined) {
+      updateData.reservedParkingOpen = dto.reservedParkingOpen;
+    }
+    if (dto.powerBackup !== undefined) {
+      updateData.powerBackup = dto.powerBackup as any;
+    }
+    if (dto.furnishType !== undefined) {
+      updateData.furnishType = dto.furnishType as any;
+    }
+    if (dto.furnishingsCounts !== undefined) {
+      const sanitized: FurnishingCountDto[] = (dto.furnishingsCounts || []).map(fc => ({
+        item: fc.item,
+        count: Math.min(100, Math.max(0, fc.count ?? 0)),
+      }));
+      updateData.furnishingsCounts = sanitized.length > 0 ? sanitized : null;
+    }
+    if (dto.amenities !== undefined) {
+      updateData.amenities = dto.amenities && dto.amenities.length > 0 ? dto.amenities : null;
+    }
+    if (dto.waterSource !== undefined) {
+      updateData.waterSource = dto.waterSource as any;
+    }
+    if (dto.isLiftAvailable !== undefined) {
+      updateData.isLiftAvailable = dto.isLiftAvailable ?? null;
+    }
+    if (dto.propertyDescription !== undefined) {
+      updateData.propertyDescription = dto.propertyDescription || null;
+    }
+
+    // If description not provided, auto-generate a simple one from available data
+    if (dto.propertyDescription == null) {
+      const parts: string[] = [];
+      if (dto.furnishType) parts.push(`${dto.furnishType} unit`);
+      if (dto.additionalRooms && dto.additionalRooms.length) {
+        parts.push(`with ${dto.additionalRooms.join(', ')}`);
+      }
+      const covered = dto.reservedParkingCovered ?? property.reservedParkingCovered ?? 0;
+      const open = dto.reservedParkingOpen ?? property.reservedParkingOpen ?? 0;
+      if (covered || open) {
+        parts.push(`reserved parking (${covered} covered${open ? `, ${open} open` : ''})`);
+      }
+      if (dto.powerBackup) parts.push(`${dto.powerBackup.toLowerCase()} power backup`);
+      if (dto.furnishingsCounts && dto.furnishingsCounts.length) {
+        const top = dto.furnishingsCounts
+          .filter(fc => (fc.count ?? 0) > 0)
+          .slice(0, 3)
+          .map(fc => `${fc.count} ${fc.item}`);
+        if (top.length) parts.push(`includes ${top.join(', ')}`);
+      }
+      if (dto.amenities && dto.amenities.length) {
+        parts.push(`amenities: ${dto.amenities.slice(0, 5).join(', ')}`);
+      }
+      const sentence = parts.filter(Boolean).join(', ');
+      if (sentence) {
+        updateData.propertyDescription = `Well-maintained ${sentence}.`;
+      }
+    }
+
+    await this.propertyRepository.updateProperty(dto.propertyId, updateData);
+    const updated = await this.propertyRepository.findById(dto.propertyId);
+    return {
+      id: updated!.id,
+      status: updated!.status,
+      completionStep:
+        updated!.completionStep || PropertyCompletionStep.STEP_3,
+    };
+  }
+
+  async getPropertyStep3Details(
+    propertyId: string,
+    userId: string,
+  ): Promise<any> {
+    const property = await this.propertyRepository.findById(propertyId);
+    if (!property) {
+      throw new BadRequestException(`Property with ID ${propertyId} not found`);
+    }
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only view your own properties');
+    }
+
+    return {
+      propertyId: property.id,
+      additionalRooms: property.additionalRooms || [],
+      reservedParkingCovered: property.reservedParkingCovered ?? null,
+      reservedParkingOpen: property.reservedParkingOpen ?? null,
+      powerBackup: property.powerBackup || null,
+      furnishType: property.furnishType || null,
+      furnishingsCounts: property.furnishingsCounts || [],
+      amenities: property.amenities || [],
+      waterSource: property.waterSource || null,
+      isLiftAvailable: property.isLiftAvailable ?? null,
+      propertyDescription: property.propertyDescription || null,
+      status: property.status,
+      completionStep: property.completionStep || 0,
+      createdAt: property.createdAt,
+      updatedAt: property.updatedAt,
+    };
   }
 
   /**
@@ -1358,7 +1575,37 @@ export class PropertyService {
       brokerageType: property.brokerageType,
       brokerageAmount: property.brokerageAmount,
       isBrokerageNegotiable: property.isBrokerageNegotiable,
+      price: property.price,
+      plotArea: property.plotArea,
+      plotAreaUnit: property.plotAreaUnit,
+      plotNumber: property.plotNumber,
+      houseNumber: property.houseNumber,
+      villaNumber: property.villaNumber,
+      transactionType: property.transactionType,
+      possessionStatus: property.possessionStatus,
+      possessionDate: property.possessionDate
+        ? (() => {
+            try {
+              const date = property.possessionDate instanceof Date 
+                ? property.possessionDate 
+                : new Date(property.possessionDate);
+              return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+            } catch {
+              return null;
+            }
+          })()
+        : null,
+      plotPrice: property.plotPrice,
+      brokerage: property.brokerage,
+      loanAvailable: property.loanAvailable,
       facing: property.facing,
+      boundaryWall: property.boundaryWall,
+      noOfOpenSides: property.noOfOpenSides,
+      floorsAllowedForConstruction: property.floorsAllowedForConstruction,
+      constructionDone: property.constructionDone,
+      constructionType: property.constructionType,
+      cornerProperty: property.cornerProperty,
+      propertyDescription: property.propertyDescription,
       status: property.status,
       completionStep: property.completionStep || 0,
       createdAt: property.createdAt,

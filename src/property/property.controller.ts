@@ -21,6 +21,7 @@ import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { CreatePropertyStep1Dto } from './dto/create-property.dto';
 import { CreatePropertyStep2Dto } from './dto/create-property-step2.dto';
+import { CreatePropertyStep3Dto } from './dto/create-property-step3.dto';
 import {
   MasterDataResponseDto,
   ReseedMasterDataResponseDto,
@@ -354,7 +355,7 @@ export class PropertyController {
   @ApiOperation({
     summary: 'Step 2: Update property with unit and rent details',
     description:
-      'Updates floor, total floors, unit identifiers, area, tenant type, rent availability and date, rent amount, maintenance, security deposit, lock-in period, brokerage and negotiable flag with validations.',
+      'Updates property step 2 details. Only propertyId is required; all other fields are optional. Updates floor, total floors, unit identifiers, area, tenant type, rent availability and date, rent amount, maintenance, security deposit, lock-in period, brokerage and negotiable flag with conditional validations based on provided fields.',
   })
   @ApiResponse({
     status: 200,
@@ -370,6 +371,52 @@ export class PropertyController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.propertyService.updatePropertyStep2(body, req.user.id);
+  }
+
+  @Post('/step-3')
+  @ApiOperation({
+    summary: 'Step 3: Update property with additional rooms, parking, power, furnishing',
+    description:
+      'Updates property step 3 details. Only propertyId is required; all other fields are optional. Includes additional rooms (array), reserved parking counts with bounds (0-100), power back-up, furnish type, optional furnishings, and property description (AI can auto-generate if omitted).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property updated with step 3 completion',
+    type: PropertyStatusResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  async updatePropertyStep3(
+    @Body() body: CreatePropertyStep3Dto,
+    @Req() req: Request,
+  ): Promise<PropertyStatusResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.updatePropertyStep3(body, req.user.id);
+  }
+
+  @Get('/step-3/:propertyId')
+  @ApiOperation({
+    summary: 'Get property step 3 details',
+    description:
+      'Retrieves the saved property step 3 details by property ID. Only the property owner can view their property details.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property step 3 details retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property not found or you can only view your own properties',
+  })
+  async getPropertyStep3Details(
+    @Param('propertyId') propertyId: string,
+    @Req() req: Request,
+  ): Promise<any> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.getPropertyStep3Details(propertyId, req.user.id);
   }
 
   @Get('/step-1/:propertyId')
