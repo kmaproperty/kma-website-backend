@@ -387,4 +387,13 @@ export class Property extends BaseEntity {
     nullable: true,
   })
   plotFacingRoadWidth: string | null;
+
+  // Step 4 fields - Photos and Videos
+  // Property photos with metadata (stored as JSONB)
+  @Column({ type: 'jsonb', nullable: true })
+  photos: { fileKey: string; view: string; isCoverImage?: boolean }[] | null;
+
+  // Property videos with metadata (stored as JSONB)
+  @Column({ type: 'jsonb', nullable: true })
+  videos: { fileKey: string; format: string }[] | null;
 }

@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { UserController } from './user/user.controller';
 import { PropertyModule } from './property/property.module';
 import { ContactUsModule } from './contact-us/contact-us.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { ConfigModule } from './common/config/config.module';
 import { ConfigService } from './common/config/config.service';
 
@@ -23,6 +24,7 @@ import { ConfigService } from './common/config/config.service';
     UserModule,
     PropertyModule,
     ContactUsModule,
+    UploadsModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService],

@@ -22,6 +22,7 @@ import {
   TenantType,
 } from './dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto, FurnishingCountDto, FurnishType, PowerBackupType } from './dto/create-property-step3.dto';
+import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
 
 @Injectable()
 export class PropertyService {
@@ -1282,6 +1283,99 @@ export class PropertyService {
       waterSource: property.waterSource || null,
       isLiftAvailable: property.isLiftAvailable ?? null,
       propertyDescription: property.propertyDescription || null,
+      status: property.status,
+      completionStep: property.completionStep || 0,
+      createdAt: property.createdAt,
+      updatedAt: property.updatedAt,
+    };
+  }
+
+  async updatePropertyStep4(
+    dto: CreatePropertyStep4Dto,
+    userId: string,
+  ): Promise<{ id: string; status: string; completionStep: number }> {
+    const property = await this.propertyRepository.findById(dto.propertyId);
+    if (!property) {
+      throw new BadRequestException(
+        `Property with ID ${dto.propertyId} not found`,
+      );
+    }
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only update your own properties');
+    }
+
+    // Validate: minimum 2 photos required (for cover selection)
+    if (!dto.photos || dto.photos.length < 2) {
+      throw new BadRequestException('At least 2 photos are required');
+    }
+
+    // Validate: at least one cover image must be selected
+    const coverImages = dto.photos.filter(p => p.isCoverImage);
+    if (coverImages.length === 0) {
+      throw new BadRequestException('At least one cover image must be selected');
+    }
+
+    // Validate photos: each must have fileKey and view
+    for (const photo of dto.photos) {
+      if (!photo.fileKey || !photo.view) {
+        throw new BadRequestException('Each photo must have fileKey and view');
+      }
+    }
+
+    // Validate videos if provided
+    if (dto.videos) {
+      for (const video of dto.videos) {
+        if (!video.fileKey || !video.format) {
+          throw new BadRequestException('Each video must have fileKey and format');
+        }
+      }
+    }
+
+    // Build update object
+    const updateData: any = {
+      completionStep: PropertyCompletionStep.STEP_4,
+      photos: dto.photos.map(p => ({
+        fileKey: p.fileKey,
+        view: p.view,
+        isCoverImage: p.isCoverImage || false,
+      })),
+    };
+
+    if (dto.videos !== undefined) {
+      updateData.videos = dto.videos && dto.videos.length > 0 
+        ? dto.videos.map(v => ({
+          fileKey: v.fileKey,
+          format: v.format,
+        }))
+        : null;
+    }
+
+    await this.propertyRepository.updateProperty(dto.propertyId, updateData);
+    const updated = await this.propertyRepository.findById(dto.propertyId);
+    return {
+      id: updated!.id,
+      status: updated!.status,
+      completionStep:
+        updated!.completionStep || PropertyCompletionStep.STEP_4,
+    };
+  }
+
+  async getPropertyStep4Details(
+    propertyId: string,
+    userId: string,
+  ): Promise<any> {
+    const property = await this.propertyRepository.findById(propertyId);
+    if (!property) {
+      throw new BadRequestException(`Property with ID ${propertyId} not found`);
+    }
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only view your own properties');
+    }
+
+    return {
+      propertyId: property.id,
+      photos: property.photos || [],
+      videos: property.videos || [],
       status: property.status,
       completionStep: property.completionStep || 0,
       createdAt: property.createdAt,

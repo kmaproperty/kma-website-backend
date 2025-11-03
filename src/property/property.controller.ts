@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { CreatePropertyStep1Dto } from './dto/create-property.dto';
 import { CreatePropertyStep2Dto } from './dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from './dto/create-property-step3.dto';
+import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
 import {
   MasterDataResponseDto,
   ReseedMasterDataResponseDto,
@@ -417,6 +418,52 @@ export class PropertyController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.propertyService.getPropertyStep3Details(propertyId, req.user.id);
+  }
+
+  @Post('/step-4')
+  @ApiOperation({
+    summary: 'Step 4: Update property with photos and videos',
+    description:
+      'Updates property step 4 details (photos and videos). Requires minimum 2 photos with at least one cover image. Photos must include fileKey (from S3 upload) and view type. Videos are optional.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property updated with step 4 completion',
+    type: PropertyStatusResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  async updatePropertyStep4(
+    @Body() body: CreatePropertyStep4Dto,
+    @Req() req: Request,
+  ): Promise<PropertyStatusResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.updatePropertyStep4(body, req.user.id);
+  }
+
+  @Get('/step-4/:propertyId')
+  @ApiOperation({
+    summary: 'Get property step 4 details',
+    description:
+      'Retrieves the saved property step 4 details (photos and videos) by property ID. Only the property owner can view their property details.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property step 4 details retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property not found or you can only view your own properties',
+  })
+  async getPropertyStep4Details(
+    @Param('propertyId') propertyId: string,
+    @Req() req: Request,
+  ): Promise<any> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.getPropertyStep4Details(propertyId, req.user.id);
   }
 
   @Get('/step-1/:propertyId')

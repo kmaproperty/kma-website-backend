@@ -1,34 +1,48 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { S3Service } from '../common/aws/s3.service';
-import { MESSAGES } from './constants/upload.constant';
+import { GeneratePresignedUrlDto, PresignedUrlResponseDto } from './dto/generate-presigned-url.dto';
+import * as crypto from 'crypto';
+import * as path from 'path';
 
 @Injectable()
 export class UploadsService {
   constructor(private readonly s3Service: S3Service) {}
 
   /**
-   * Upload a file to S3
+   * Generate a presigned URL for uploading files to S3
    */
-  async uploadFile(file: Express.Multer.File) {
+  async generatePresignedUrl(dto: GeneratePresignedUrlDto): Promise<PresignedUrlResponseDto> {
     try {
-      if (!file) {
-        throw new HttpException(
-          MESSAGES.FILE_UPLOAD.NO_FILE,
-          HttpStatus.BAD_REQUEST,
-        );
-      }
+      // Generate unique filename
+      const fileExtension = path.extname(dto.filename);
+      const timestamp = Date.now();
+      const randomString = crypto.randomBytes(8).toString('hex');
+      const sanitizedFilename = path.basename(dto.filename, fileExtension);
+      const uniqueFilename = `${timestamp}-${randomString}${fileExtension}`;
 
-      const uploadResult = await this.s3Service.uploadFile(file);
+      // Create S3 key with folder structure
+      const folder = dto.folder || 'uploads';
+      const key = `${folder}/${uniqueFilename}`;
+
+      // Generate presigned URL
+      const expiresIn = dto.expiresIn || 3600;
+      const url = await this.s3Service.generatePresignedUploadUrl(
+        key,
+        dto.contentType,
+        expiresIn,
+      );
 
       return {
-        key: uploadResult.key,
+        url,
+        key,
+        expiresIn,
       };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
       }
       throw new HttpException(
-        MESSAGES.FILE_UPLOAD.UNEXPECTED_ERROR,
+        'Failed to generate presigned URL',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

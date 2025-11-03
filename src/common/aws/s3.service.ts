@@ -179,6 +179,33 @@ export class S3Service {
     }
   }
 
+  async generatePresignedUploadUrl(
+    key: string,
+    contentType: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: contentType,
+        CacheControl: 'max-age=31536000',
+      });
+
+      return await getSignedUrl(this.s3Client, command, { expiresIn });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to generate presigned upload URL: ${errorMessage}`,
+        error instanceof Error ? error.stack : '',
+      );
+      throw new InternalServerErrorException(
+        `Failed to generate presigned upload URL: ${errorMessage}`,
+      );
+    }
+  }
+
   private validateFile(file: Express.Multer.File): void {
     // Check file size (20MB limit)
     const maxSize = 20 * 1024 * 1024; // 20MB
