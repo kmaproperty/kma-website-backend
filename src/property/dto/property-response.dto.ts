@@ -517,6 +517,14 @@ export class PropertyResponseDto {
     maximum: 5,
   })
   completionStep: number;
+
+  @ApiProperty({
+    description: 'Progress percentage based on completion step (0-100%)',
+    example: 25,
+    minimum: 0,
+    maximum: 100,
+  })
+  progressPercentage: number;
 }
 
 // Minimal property response for step updates
@@ -538,6 +546,14 @@ export class PropertyStatusResponseDto {
     maximum: 5,
   })
   completionStep: number;
+
+  @ApiProperty({
+    description: 'Progress percentage based on completion step (0-100%)',
+    example: 50,
+    minimum: 0,
+    maximum: 100,
+  })
+  progressPercentage: number;
 }
 
 // Property Step 2 Response DTO
@@ -706,6 +722,14 @@ export class PropertyStep2ResponseDto {
     maximum: 5,
   })
   completionStep: number;
+
+  @ApiProperty({
+    description: 'Progress percentage based on completion step (0-100%)',
+    example: 50,
+    minimum: 0,
+    maximum: 100,
+  })
+  progressPercentage: number;
 
   @ApiProperty({
     description: 'Creation timestamp',

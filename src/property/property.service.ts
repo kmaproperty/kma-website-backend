@@ -40,6 +40,23 @@ export class PropertyService {
     private readonly googlePlacesService: GooglePlacesService,
   ) {}
 
+  /**
+   * Calculate progress percentage based on completion step
+   * There are 4 steps total, so each step adds 25%
+   */
+  private calculateProgressPercentage(completionStep: number): number {
+    if (completionStep >= PropertyCompletionStep.STEP_4) {
+      return 100; // Step 4 or completed = 100%
+    } else if (completionStep === PropertyCompletionStep.STEP_3) {
+      return 75; // Step 3 = 75%
+    } else if (completionStep === PropertyCompletionStep.STEP_2) {
+      return 50; // Step 2 = 50%
+    } else if (completionStep === PropertyCompletionStep.STEP_1) {
+      return 25; // Step 1 = 25%
+    }
+    return 0; // Not started = 0%
+  }
+
   async getFilteredMasterData(
     listingTypeCode: string,
     categoryCode: string,
@@ -898,11 +915,12 @@ export class PropertyService {
         property = await this.propertyRepository.createProperty(createData);
       }
 
+      const completionStep = property.completionStep ?? PropertyCompletionStep.STEP_1;
       return {
         id: property.id,
         status: property.status,
-        completionStep:
-          property.completionStep ?? PropertyCompletionStep.STEP_1,
+        completionStep,
+        progressPercentage: this.calculateProgressPercentage(completionStep),
       };
     } catch (error) {
       throw new BadRequestException(
@@ -914,7 +932,7 @@ export class PropertyService {
   async updatePropertyStep2(
     dto: CreatePropertyStep2Dto,
     userId: string,
-  ): Promise<{ id: string; status: string; completionStep: number }> {
+  ): Promise<{ id: string; status: string; completionStep: number; progressPercentage: number }> {
     const property = await this.propertyRepository.findById(dto.propertyId);
     if (!property) {
       throw new BadRequestException(
@@ -1135,10 +1153,12 @@ export class PropertyService {
     await this.propertyRepository.updateProperty(dto.propertyId, updateData);
 
     const updated = await this.propertyRepository.findById(dto.propertyId);
+    const completionStep = updated!.completionStep || PropertyCompletionStep.STEP_2;
     return { 
       id: updated!.id, 
       status: updated!.status, 
-      completionStep: updated!.completionStep || PropertyCompletionStep.STEP_2 
+      completionStep,
+      progressPercentage: this.calculateProgressPercentage(completionStep),
     };
   }
 
@@ -1169,7 +1189,7 @@ export class PropertyService {
   async updatePropertyStep3(
     dto: CreatePropertyStep3Dto,
     userId: string,
-  ): Promise<{ id: string; status: string; completionStep: number }> {
+  ): Promise<{ id: string; status: string; completionStep: number; progressPercentage: number }> {
     const property = await this.propertyRepository.findById(dto.propertyId);
     if (!property) {
       throw new BadRequestException(
@@ -1251,11 +1271,12 @@ export class PropertyService {
 
     await this.propertyRepository.updateProperty(dto.propertyId, updateData);
     const updated = await this.propertyRepository.findById(dto.propertyId);
+    const completionStep = updated!.completionStep || PropertyCompletionStep.STEP_3;
     return {
       id: updated!.id,
       status: updated!.status,
-      completionStep:
-        updated!.completionStep || PropertyCompletionStep.STEP_3,
+      completionStep,
+      progressPercentage: this.calculateProgressPercentage(completionStep),
     };
   }
 
@@ -1271,6 +1292,7 @@ export class PropertyService {
       throw new BadRequestException('You can only view your own properties');
     }
 
+    const completionStep = property.completionStep || 0;
     return {
       propertyId: property.id,
       additionalRooms: property.additionalRooms || [],
@@ -1284,7 +1306,8 @@ export class PropertyService {
       isLiftAvailable: property.isLiftAvailable ?? null,
       propertyDescription: property.propertyDescription || null,
       status: property.status,
-      completionStep: property.completionStep || 0,
+      completionStep,
+      progressPercentage: this.calculateProgressPercentage(completionStep),
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };
@@ -1293,7 +1316,7 @@ export class PropertyService {
   async updatePropertyStep4(
     dto: CreatePropertyStep4Dto,
     userId: string,
-  ): Promise<{ id: string; status: string; completionStep: number }> {
+  ): Promise<{ id: string; status: string; completionStep: number; progressPercentage: number }> {
     const property = await this.propertyRepository.findById(dto.propertyId);
     if (!property) {
       throw new BadRequestException(
@@ -1352,11 +1375,12 @@ export class PropertyService {
 
     await this.propertyRepository.updateProperty(dto.propertyId, updateData);
     const updated = await this.propertyRepository.findById(dto.propertyId);
+    const completionStep = updated!.completionStep || PropertyCompletionStep.STEP_4;
     return {
       id: updated!.id,
       status: updated!.status,
-      completionStep:
-        updated!.completionStep || PropertyCompletionStep.STEP_4,
+      completionStep,
+      progressPercentage: this.calculateProgressPercentage(completionStep),
     };
   }
 
@@ -1372,12 +1396,14 @@ export class PropertyService {
       throw new BadRequestException('You can only view your own properties');
     }
 
+    const completionStep = property.completionStep || 0;
     return {
       propertyId: property.id,
       photos: property.photos || [],
       videos: property.videos || [],
       status: property.status,
-      completionStep: property.completionStep || 0,
+      completionStep,
+      progressPercentage: this.calculateProgressPercentage(completionStep),
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };
@@ -1536,6 +1562,7 @@ export class PropertyService {
     }
 
     // Format the response similar to CreatePropertyStep1Dto
+    const completionStep = property.completionStep || 0;
     return {
       propertyId: property.id,
       listingType: listingType
@@ -1612,7 +1639,8 @@ export class PropertyService {
       plotFacingRoadWidth: property.plotFacingRoadWidth || null,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
-      completionStep: property.completionStep || 0,
+      completionStep,
+      progressPercentage: this.calculateProgressPercentage(completionStep),
     };
   }
 
@@ -1637,6 +1665,7 @@ export class PropertyService {
     }
 
     // Format the response with step 2 fields
+    const completionStep = property.completionStep || 0;
     return {
       propertyId: property.id,
       floorNumber: property.floorNumber,
@@ -1701,7 +1730,8 @@ export class PropertyService {
       cornerProperty: property.cornerProperty,
       propertyDescription: property.propertyDescription,
       status: property.status,
-      completionStep: property.completionStep || 0,
+      completionStep,
+      progressPercentage: this.calculateProgressPercentage(completionStep),
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };

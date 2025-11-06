@@ -241,7 +241,6 @@ export class BhkInfo {
   })
   @IsOptional()
   @IsNumber()
-  @Min(1)
   buildUpAreaSqFt?: number;
 
   @ApiProperty({ 
@@ -252,7 +251,6 @@ export class BhkInfo {
   })
   @IsOptional()
   @IsNumber()
-  @Min(1)
   carpetAreaSqFt?: number;
 
   @ApiProperty({ 
@@ -264,8 +262,6 @@ export class BhkInfo {
   })
   @IsOptional()
   @IsNumber()
-  @Min(1)
-  @Max(10)
   noOfBathrooms?: number;
 
   @ApiProperty({ 
@@ -277,8 +273,6 @@ export class BhkInfo {
   })
   @IsOptional()
   @IsNumber()
-  @Min(0)
-  @Max(10)
   noOfBedrooms?: number;
 
   @ApiProperty({ 
@@ -290,8 +284,6 @@ export class BhkInfo {
   })
   @IsOptional()
   @IsNumber()
-  @Min(0)
-  @Max(10)
   balconies?: number;
 }
 
