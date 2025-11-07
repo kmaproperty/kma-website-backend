@@ -87,23 +87,19 @@ export class CreatePropertyStep2Dto {
   @ApiPropertyOptional({
     description: 'Floor number of the unit',
     minimum: 0,
-    maximum: 100,
   })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(100)
   floorNumber?: number;
 
   @ApiPropertyOptional({
     description: 'Total floors in the building',
     minimum: 1,
-    maximum: 100,
   })
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(100)
   totalFloors?: number;
 
   @ApiPropertyOptional({ description: 'Flat/Unit number' })
@@ -153,12 +149,10 @@ export class CreatePropertyStep2Dto {
   @ApiPropertyOptional({
     description: 'Monthly rent',
     minimum: 1500,
-    maximum: 2000000,
   })
   @IsOptional()
   @IsInt()
   @Min(1500)
-  @Max(2000000)
   monthlyRent?: number;
 
   @ApiPropertyOptional({ enum: MaintenanceType })
@@ -198,7 +192,6 @@ export class CreatePropertyStep2Dto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(60)
   lockInMonths?: number;
 
   @ApiPropertyOptional({ enum: BrokerageType })
@@ -218,6 +211,106 @@ export class CreatePropertyStep2Dto {
   isBrokerageNegotiable?: boolean;
 
   @ApiPropertyOptional({ 
+    description: 'Number of Staircases', 
+    minimum: 1,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  noOfStaircases?: number;
+
+  @ApiPropertyOptional({ 
+    description: 'Private parking count', 
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  privateParking?: number;
+
+  @ApiPropertyOptional({ 
+    description: 'Public parking count', 
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  publicParking?: number;
+
+  @ApiPropertyOptional({ description: 'Is rent negotiable?' })
+  @IsOptional()
+  @IsBoolean()
+  isRentNegotiable?: boolean;
+
+  @ApiPropertyOptional({ 
+    description: 'DG & UPS Charge included?', 
+    enum: ['yes', 'no']
+  })
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  dgUpsChargeIncluded?: 'yes' | 'no';
+
+  @ApiPropertyOptional({ 
+    description: 'Electricity charges included?', 
+    enum: ['yes', 'no']
+  })
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  electricityChargeIncluded?: 'yes' | 'no';
+
+  @ApiPropertyOptional({ 
+    description: 'Water charges included?', 
+    enum: ['yes', 'no']
+  })
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  waterChargeIncluded?: 'yes' | 'no';
+
+  @ApiPropertyOptional({ 
+    description: 'Expected Rent Increase (e.g., "10%" or "5000")', 
+    example: '10%'
+  })
+  @IsOptional()
+  @IsString()
+  expectedRentIncrease?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Tax & Govt. charge included?', 
+    enum: ['yes', 'no']
+  })
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  taxGovtChargeIncluded?: 'yes' | 'no';
+
+  @ApiPropertyOptional({ 
+    description: 'Is it pre-leased/pre-rented?', 
+    enum: ['yes', 'no']
+  })
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  isPreLeasedRented?: 'yes' | 'no';
+
+  @ApiPropertyOptional({ 
+    description: 'Current Rent per Month (when pre-leased)', 
+    example: 50000,
+    minimum: 0
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  currentRentPerMonth?: number;
+
+  @ApiPropertyOptional({ 
+    description: 'Lease Years (when pre-leased)', 
+    example: 3,
+    minimum: 1,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  leaseYears?: number;
+
+  @ApiPropertyOptional({ 
     description: 'Property price', 
     example: 5000000,
     minimum: 0
@@ -228,15 +321,13 @@ export class CreatePropertyStep2Dto {
   price?: number;
 
   @ApiPropertyOptional({ 
-    description: 'Plot Area (Saleable area should be between 10 and 100000)', 
+    description: 'Plot Area (Saleable area should be at least 10)', 
     example: 1200,
     minimum: 10,
-    maximum: 100000
   })
   @IsOptional()
   @IsInt()
   @Min(10)
-  @Max(100000)
   plotArea?: number;
 
   @ApiPropertyOptional({ 
@@ -347,24 +438,20 @@ export class CreatePropertyStep2Dto {
     description: 'Number of open sides', 
     example: 2,
     minimum: 0,
-    maximum: 4
   })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(4)
   noOfOpenSides?: number;
 
   @ApiPropertyOptional({ 
     description: 'Floors allowed for construction', 
     example: 3,
     minimum: 1,
-    maximum: 100
   })
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(100)
   floorsAllowedForConstruction?: number;
 
   @ApiPropertyOptional({ 

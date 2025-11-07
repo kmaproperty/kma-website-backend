@@ -1255,6 +1255,42 @@ export class PropertyService {
     if (dto.isBrokerageNegotiable !== undefined) {
       updateData.isBrokerageNegotiable = dto.isBrokerageNegotiable ?? false;
     }
+    if (dto.noOfStaircases !== undefined) {
+      updateData.noOfStaircases = dto.noOfStaircases;
+    }
+    if (dto.privateParking !== undefined) {
+      updateData.privateParking = dto.privateParking;
+    }
+    if (dto.publicParking !== undefined) {
+      updateData.publicParking = dto.publicParking;
+    }
+    if (dto.isRentNegotiable !== undefined) {
+      updateData.isRentNegotiable = dto.isRentNegotiable ?? false;
+    }
+    if (dto.dgUpsChargeIncluded !== undefined) {
+      updateData.dgUpsChargeIncluded = dto.dgUpsChargeIncluded;
+    }
+    if (dto.electricityChargeIncluded !== undefined) {
+      updateData.electricityChargeIncluded = dto.electricityChargeIncluded;
+    }
+    if (dto.waterChargeIncluded !== undefined) {
+      updateData.waterChargeIncluded = dto.waterChargeIncluded;
+    }
+    if (dto.expectedRentIncrease !== undefined) {
+      updateData.expectedRentIncrease = dto.expectedRentIncrease || null;
+    }
+    if (dto.taxGovtChargeIncluded !== undefined) {
+      updateData.taxGovtChargeIncluded = dto.taxGovtChargeIncluded;
+    }
+    if (dto.isPreLeasedRented !== undefined) {
+      updateData.isPreLeasedRented = dto.isPreLeasedRented;
+    }
+    if (dto.currentRentPerMonth !== undefined) {
+      updateData.currentRentPerMonth = dto.currentRentPerMonth;
+    }
+    if (dto.leaseYears !== undefined) {
+      updateData.leaseYears = dto.leaseYears;
+    }
     if (dto.price !== undefined) {
       updateData.price = dto.price;
     }
@@ -1902,6 +1938,18 @@ export class PropertyService {
       brokerageType: property.brokerageType,
       brokerageAmount: property.brokerageAmount,
       isBrokerageNegotiable: property.isBrokerageNegotiable,
+      noOfStaircases: property.noOfStaircases || null,
+      privateParking: property.privateParking || null,
+      publicParking: property.publicParking || null,
+      isRentNegotiable: property.isRentNegotiable || null,
+      dgUpsChargeIncluded: property.dgUpsChargeIncluded || null,
+      electricityChargeIncluded: property.electricityChargeIncluded || null,
+      waterChargeIncluded: property.waterChargeIncluded || null,
+      expectedRentIncrease: property.expectedRentIncrease || null,
+      taxGovtChargeIncluded: property.taxGovtChargeIncluded || null,
+      isPreLeasedRented: property.isPreLeasedRented || null,
+      currentRentPerMonth: property.currentRentPerMonth || null,
+      leaseYears: property.leaseYears || null,
       price: property.price,
       plotArea: property.plotArea,
       plotAreaUnit: property.plotAreaUnit,

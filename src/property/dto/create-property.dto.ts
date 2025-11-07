@@ -272,7 +272,6 @@ export class BhkInfo {
     example: 2,
     required: false,
     minimum: 1,
-    maximum: 10
   })
   @IsOptional()
   @IsNumber()
@@ -283,7 +282,6 @@ export class BhkInfo {
     example: 2,
     required: false,
     minimum: 0,
-    maximum: 10
   })
   @IsOptional()
   @IsNumber()
@@ -294,7 +292,6 @@ export class BhkInfo {
     example: 2,
     required: false,
     minimum: 0,
-    maximum: 10
   })
   @IsOptional()
   @IsNumber()
@@ -339,7 +336,6 @@ export class BuiltUpAreaInfo {
   @IsOptional()
   @IsNumber()
   @Min(1)
-  @Max(10)
   noOfBathrooms?: number;
 
   @ApiProperty({ 
@@ -347,12 +343,10 @@ export class BuiltUpAreaInfo {
     example: 2,
     required: false,
     minimum: 0,
-    maximum: 10
   })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @Max(10)
   noOfBedrooms?: number;
 
   @ApiProperty({ 
@@ -360,12 +354,10 @@ export class BuiltUpAreaInfo {
     example: 2,
     required: false,
     minimum: 0,
-    maximum: 10
   })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @Max(10)
   balconies?: number;
 }
 
@@ -442,12 +434,10 @@ export class CreatePropertyStep1Dto {
     example: 5,
     required: false,
     minimum: 0,
-    maximum: 100
   })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @Max(100)
   ageOfProperty?: number;
 
   @ApiProperty({ 
@@ -538,16 +528,14 @@ export class CreatePropertyStep1Dto {
   locality?: LocalityInfo;
 
   @ApiProperty({ 
-    description: 'Plot Area (Saleable area should be between 10 and 100000)', 
+    description: 'Plot Area (Saleable area should be at least 10)', 
     example: 1200,
     required: false,
     minimum: 10,
-    maximum: 100000
   })
   @IsOptional()
   @IsNumber()
   @Min(10)
-  @Max(100000)
   plotArea?: number;
 
   @ApiProperty({ 
@@ -560,16 +548,14 @@ export class CreatePropertyStep1Dto {
   plotAreaUnit?: string;
 
   @ApiProperty({ 
-    description: 'Plot Length (should be between 1 and 10000)', 
+    description: 'Plot Length (should be at least 1)', 
     example: 60,
     required: false,
     minimum: 1,
-    maximum: 10000
   })
   @IsOptional()
   @IsNumber()
   @Min(1)
-  @Max(10000)
   plotLength?: number;
 
   @ApiProperty({ 
@@ -583,16 +569,14 @@ export class CreatePropertyStep1Dto {
   plotLengthUnit?: DistanceUnit;
 
   @ApiProperty({ 
-    description: 'Plot Width (should be between 1 and 10000)', 
+    description: 'Plot Width (should be at least 1)', 
     example: 40,
     required: false,
     minimum: 1,
-    maximum: 10000
   })
   @IsOptional()
   @IsNumber()
   @Min(1)
-  @Max(10000)
   plotWidth?: number;
 
   @ApiProperty({ 
@@ -796,12 +780,10 @@ export class CreatePropertyStep1Dto {
     example: 2,
     required: false,
     minimum: 0,
-    maximum: 4
   })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @Max(4)
   noOfOpenSides?: number;
 
   @ApiProperty({ 

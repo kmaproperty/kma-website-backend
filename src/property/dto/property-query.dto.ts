@@ -34,13 +34,11 @@ export class CitySearchQueryDto {
     example: 10,
     required: false,
     minimum: 1,
-    maximum: 50
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  @Max(50)
   limit?: number = 10;
 }
 
@@ -76,13 +74,11 @@ export class SocietySearchQueryDto {
     example: 10,
     required: false,
     minimum: 1,
-    maximum: 50
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  @Max(50)
   limit?: number = 10;
 }
 
@@ -118,13 +114,11 @@ export class LocalitySearchQueryDto {
     example: 10,
     required: false,
     minimum: 1,
-    maximum: 50
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  @Max(50)
   limit?: number = 10;
 }
 
@@ -179,12 +173,10 @@ export class LocationSearchQueryDto {
     example: 10,
     required: false,
     minimum: 1,
-    maximum: 50
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  @Max(50)
   limit?: number = 10;
 }

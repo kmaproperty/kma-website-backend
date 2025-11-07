@@ -514,7 +514,6 @@ export class PropertyResponseDto {
       'Completion step (0=not started, 1-4=in progress, 5=completed)',
     example: 1,
     minimum: 0,
-    maximum: 5,
   })
   completionStep: number;
 
@@ -522,7 +521,6 @@ export class PropertyResponseDto {
     description: 'Progress percentage based on completion step (0-100%)',
     example: 25,
     minimum: 0,
-    maximum: 100,
   })
   progressPercentage: number;
 }
@@ -543,7 +541,6 @@ export class PropertyStatusResponseDto {
     description: 'Completion step',
     example: 2,
     minimum: 0,
-    maximum: 5,
   })
   completionStep: number;
 
@@ -551,7 +548,6 @@ export class PropertyStatusResponseDto {
     description: 'Progress percentage based on completion step (0-100%)',
     example: 50,
     minimum: 0,
-    maximum: 100,
   })
   progressPercentage: number;
 }
@@ -719,7 +715,6 @@ export class PropertyStep2ResponseDto {
     description: 'Completion step',
     example: 2,
     minimum: 0,
-    maximum: 5,
   })
   completionStep: number;
 
@@ -727,7 +722,6 @@ export class PropertyStep2ResponseDto {
     description: 'Progress percentage based on completion step (0-100%)',
     example: 50,
     minimum: 0,
-    maximum: 100,
   })
   progressPercentage: number;
 

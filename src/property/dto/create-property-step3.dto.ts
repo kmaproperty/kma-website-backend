@@ -37,10 +37,9 @@ export class FurnishingCountDto {
   @IsString()
   item: string;
 
-  @ApiProperty({ minimum: 0, maximum: 100 })
+  @ApiProperty({ minimum: 0 })
   @IsInt()
   @Min(0)
-  @Max(100)
   count: number;
 }
 
@@ -57,18 +56,16 @@ export class CreatePropertyStep3Dto {
   @IsEnum(AdditionalRoomType, { each: true })
   additionalRooms?: AdditionalRoomType[];
 
-  @ApiPropertyOptional({ description: 'Covered reserved parking count (0-100)', minimum: 0, maximum: 100 })
+  @ApiPropertyOptional({ description: 'Covered reserved parking count', minimum: 0 })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(100)
   reservedParkingCovered?: number;
 
-  @ApiPropertyOptional({ description: 'Open reserved parking count (0-100)', minimum: 0, maximum: 100 })
+  @ApiPropertyOptional({ description: 'Open reserved parking count', minimum: 0 })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(100)
   reservedParkingOpen?: number;
 
   @ApiPropertyOptional({ description: 'Power back-up', enum: PowerBackupType })

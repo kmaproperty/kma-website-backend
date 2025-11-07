@@ -280,6 +280,14 @@ export class Property extends BaseEntity {
   @Column({ type: 'int', nullable: true })
   reservedParkingOpen: number | null;
 
+  // Private parking (Step 2)
+  @Column({ type: 'int', nullable: true })
+  privateParking: number | null;
+
+  // Public parking (Step 2)
+  @Column({ type: 'int', nullable: true })
+  publicParking: number | null;
+
   // Power backup
   @Column({
     type: 'enum',
@@ -315,6 +323,66 @@ export class Property extends BaseEntity {
   // Lift availability
   @Column({ type: 'boolean', nullable: true })
   isLiftAvailable: boolean | null;
+
+  // Number of Staircases (optional)
+  @Column({ type: 'int', nullable: true })
+  noOfStaircases: number | null;
+
+  // Rent Negotiable (optional)
+  @Column({ type: 'boolean', nullable: true })
+  isRentNegotiable: boolean | null;
+
+  // DG & UPS Charge included (optional)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  dgUpsChargeIncluded: 'yes' | 'no' | null;
+
+  // Electricity charges included (optional)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  electricityChargeIncluded: 'yes' | 'no' | null;
+
+  // Water charges included (optional)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  waterChargeIncluded: 'yes' | 'no' | null;
+
+  // Expected Rent Increase (optional, in percentage or amount)
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  expectedRentIncrease: string | null;
+
+  // Tax & Govt. charge included (optional)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  taxGovtChargeIncluded: 'yes' | 'no' | null;
+
+  // Is it pre-leased/pre-rented (optional)
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  isPreLeasedRented: 'yes' | 'no' | null;
+
+  // Current Rent per Month (optional, when pre-leased)
+  @Column({ type: 'int', nullable: true })
+  currentRentPerMonth: number | null;
+
+  // Lease Years (optional, when pre-leased)
+  @Column({ type: 'int', nullable: true })
+  leaseYears: number | null;
 
   // Completion step tracks progress through posting workflow (1-5)
   // Step 1: Basic details, Step 2: Additional details, Step 3: Media, Step 4: Review, Step 5: Completed
