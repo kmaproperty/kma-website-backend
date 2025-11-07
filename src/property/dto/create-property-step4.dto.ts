@@ -53,7 +53,6 @@ export class PropertyVideoDto {
   fileKey: string;
 
   @ApiProperty({ description: 'Video format', enum: VideoFormat, example: VideoFormat.MPEG })
-  @IsEnum(VideoFormat)
   format: VideoFormat;
 }
 

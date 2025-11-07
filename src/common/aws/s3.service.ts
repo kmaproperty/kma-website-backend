@@ -215,23 +215,39 @@ export class S3Service {
       );
     }
 
-    // Check file type for images
+    // Check file type for images and videos
     const allowedMimeTypes = [
       'image/jpeg',
       'image/jpg',
       'image/png',
       'image/gif',
       'image/webp',
+      'video/mp4',
+      'video/mov',
+      'video/avi',
+      'video/mkv',
+      'video/webm',
     ];
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed',
+        'Invalid file type. Only JPEG, PNG, GIF, WebP images and MP4, MOV, AVI, MKV, WebM videos are allowed',
       );
     }
 
     // Check file extension
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedExtensions = [
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.webp',
+      '.mp4',
+      '.mov',
+      '.avi',
+      '.mkv',
+      '.webm',
+    ];
     const fileExtension = path.extname(file.originalname).toLowerCase();
 
     if (!allowedExtensions.includes(fileExtension)) {
