@@ -493,7 +493,7 @@ export class PropertyResponseDto {
   @ApiProperty({
     description: 'Property status',
     example: 'draft',
-    enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
+    enum: ['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'],
   })
   status: string;
 
@@ -535,7 +535,7 @@ export class PropertyStatusResponseDto {
   @ApiProperty({
     description: 'Property status',
     example: 'draft',
-    enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
+    enum: ['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'],
   })
   status: string;
 
@@ -711,7 +711,7 @@ export class PropertyStep2ResponseDto {
   @ApiProperty({
     description: 'Property status',
     example: 'draft',
-    enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
+    enum: ['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'],
   })
   status: string;
 

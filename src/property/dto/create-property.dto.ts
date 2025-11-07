@@ -10,11 +10,25 @@ import {
   Min,
   Max,
   ValidateIf,
+  IsDateString,
+  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { TransactionType } from '../enum/transaction-type.enum';
 import { ConstructionStatus } from '../enum/construction-status.enum';
+import { PossessionStatus } from './create-property-step2.dto';
+import { LocationHub } from '../enum/location-hub.enum';
+import { ZoneType } from '../enum/zone-type.enum';
+import { PropertyCondition } from '../enum/property-condition.enum';
+import { WallConstructionStatus } from '../enum/wall-construction-status.enum';
+import { Ownership } from '../enum/ownership.enum';
+import { AreaUnit } from '../enum/area-unit.enum';
+import { SuitableFor } from '../enum/suitable-for.enum';
+import { DistanceUnit } from '../enum/distance-unit.enum';
+import { LocatedNear } from '../enum/located-near.enum';
+import { PlotLandType } from '../enum/plot-land-type.enum';
+import { ConstructionTypeOption } from '../enum/construction-type.enum';
 
 export class CityInfo {
   @ApiProperty({ 
@@ -455,6 +469,25 @@ export class CreatePropertyStep1Dto {
   possessionTime?: string;
 
   @ApiProperty({ 
+    description: 'Possession Status', 
+    example: 'immediate',
+    enum: PossessionStatus,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(PossessionStatus)
+  possessionStatus?: PossessionStatus;
+
+  @ApiProperty({ 
+    description: 'Possession Date', 
+    example: '2025-06-01',
+    required: false
+  })
+  @IsOptional()
+  @IsDateString()
+  possessionDate?: string;
+
+  @ApiProperty({ 
     description: 'Property facing direction (e.g., North, South, East, West, North-East, etc.)', 
     example: 'North',
     required: false
@@ -466,12 +499,12 @@ export class CreatePropertyStep1Dto {
   @ApiProperty({ 
     description: 'Property status', 
     example: 'draft',
-    enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
+    enum: ['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'],
     required: false,
     default: 'draft'
   })
   @IsOptional()
-  @IsEnum(['draft', 'active', 'inactive', 'sold', 'rented'])
+  @IsEnum(['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'])
   status?: string;
 
   @ApiProperty({ 
@@ -540,6 +573,16 @@ export class CreatePropertyStep1Dto {
   plotLength?: number;
 
   @ApiProperty({ 
+    description: 'Plot Length Unit', 
+    example: 'ft',
+    enum: DistanceUnit,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(DistanceUnit)
+  plotLengthUnit?: DistanceUnit;
+
+  @ApiProperty({ 
     description: 'Plot Width (should be between 1 and 10000)', 
     example: 40,
     required: false,
@@ -553,6 +596,16 @@ export class CreatePropertyStep1Dto {
   plotWidth?: number;
 
   @ApiProperty({ 
+    description: 'Plot Width Unit', 
+    example: 'ft',
+    enum: DistanceUnit,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(DistanceUnit)
+  plotWidthUnit?: DistanceUnit;
+
+  @ApiProperty({ 
     description: 'Width of Facing Road', 
     example: '30 ft',
     required: false
@@ -560,4 +613,216 @@ export class CreatePropertyStep1Dto {
   @IsOptional()
   @IsString()
   plotFacingRoadWidth?: string;
+
+  @ApiProperty({ 
+    description: 'Location Hub', 
+    example: 'it_park',
+    enum: LocationHub,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(LocationHub)
+  locationHub?: LocationHub;
+
+  @ApiProperty({ 
+    description: 'Other Location Hub (when locationHub is "others")', 
+    example: 'Custom Hub Name',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  otherLocationHub?: string;
+
+  @ApiProperty({ 
+    description: 'Zone Type', 
+    example: 'residential',
+    enum: ZoneType,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(ZoneType)
+  zoneType?: ZoneType;
+
+  @ApiProperty({ 
+    description: 'Property Condition', 
+    example: 'ready_to_use',
+    enum: PropertyCondition,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(PropertyCondition)
+  propertyCondition?: PropertyCondition;
+
+  @ApiProperty({ 
+    description: 'Wall Construction Status', 
+    example: 'brick_wall',
+    enum: WallConstructionStatus,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(WallConstructionStatus)
+  wallConstructionStatus?: WallConstructionStatus;
+
+  @ApiProperty({ 
+    description: 'Ownership', 
+    example: 'freehold',
+    enum: Ownership,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(Ownership)
+  ownership?: Ownership;
+
+  @ApiProperty({ 
+    description: 'Built Up Area', 
+    example: 1200,
+    required: false,
+    minimum: 1
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  builtUpArea?: number;
+
+  @ApiProperty({ 
+    description: 'Built Up Area Unit', 
+    example: 'sq_ft',
+    enum: AreaUnit,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(AreaUnit)
+  builtUpAreaUnit?: AreaUnit;
+
+  @ApiProperty({ 
+    description: 'Carpet Area', 
+    example: 1000,
+    required: false,
+    minimum: 1
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  carpetArea?: number;
+
+  @ApiProperty({ 
+    description: 'Carpet Area Unit', 
+    example: 'sq_ft',
+    enum: AreaUnit,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(AreaUnit)
+  carpetAreaUnit?: AreaUnit;
+
+  @ApiProperty({ 
+    description: 'Suitable For (array of purposes)', 
+    example: ['gym', 'clinic'],
+    enum: SuitableFor,
+    isArray: true,
+    required: false
+  })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(SuitableFor, { each: true })
+  suitableFor?: SuitableFor[];
+
+  @ApiProperty({ 
+    description: 'Entrance Width', 
+    example: 10.5,
+    required: false,
+    minimum: 0
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  entranceWidth?: number;
+
+  @ApiProperty({ 
+    description: 'Entrance Width Unit', 
+    example: 'ft',
+    enum: DistanceUnit,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(DistanceUnit)
+  entranceWidthUnit?: DistanceUnit;
+
+  @ApiProperty({ 
+    description: 'Ceiling Height', 
+    example: 12.0,
+    required: false,
+    minimum: 0
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  ceilingHeight?: number;
+
+  @ApiProperty({ 
+    description: 'Ceiling Height Unit', 
+    example: 'ft',
+    enum: DistanceUnit,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(DistanceUnit)
+  ceilingHeightUnit?: DistanceUnit;
+
+  @ApiProperty({ 
+    description: 'Located Near (array of locations)', 
+    example: ['elevator', 'entrance'],
+    enum: LocatedNear,
+    isArray: true,
+    required: false
+  })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(LocatedNear, { each: true })
+  locatedNear?: LocatedNear[];
+
+  @ApiProperty({ 
+    description: 'Plot/Land Type', 
+    example: 'industrial_land_plots',
+    enum: PlotLandType,
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(PlotLandType)
+  plotLandType?: PlotLandType;
+
+  @ApiProperty({ 
+    description: 'Number of Open Sides', 
+    example: 2,
+    required: false,
+    minimum: 0,
+    maximum: 4
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(4)
+  noOfOpenSides?: number;
+
+  @ApiProperty({ 
+    description: 'Any Construction Done On This Property', 
+    example: 'yes',
+    enum: ['yes', 'no'],
+    required: false
+  })
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  constructionDone?: 'yes' | 'no';
+
+  @ApiProperty({ 
+    description: 'Construction Type Options (array of construction types)', 
+    example: ['shed', 'room'],
+    enum: ConstructionTypeOption,
+    isArray: true,
+    required: false
+  })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(ConstructionTypeOption, { each: true })
+  constructionTypeOptions?: ConstructionTypeOption[];
 }

@@ -9,6 +9,14 @@ import { MasterPropertyType } from './master-property-type.entity';
 import { MasterBhkType } from './master-bhk-type.entity';
 import { TransactionType } from '../enum/transaction-type.enum';
 import { ConstructionStatus } from '../enum/construction-status.enum';
+import { LocationHub } from '../enum/location-hub.enum';
+import { ZoneType } from '../enum/zone-type.enum';
+import { PropertyCondition } from '../enum/property-condition.enum';
+import { WallConstructionStatus } from '../enum/wall-construction-status.enum';
+import { Ownership } from '../enum/ownership.enum';
+import { AreaUnit } from '../enum/area-unit.enum';
+import { DistanceUnit } from '../enum/distance-unit.enum';
+import { PlotLandType } from '../enum/plot-land-type.enum';
 
 @Entity('properties')
 export class Property extends BaseEntity {
@@ -76,10 +84,10 @@ export class Property extends BaseEntity {
   @Column({ type: 'uuid' })
   userId: string;
 
-  // Property status (lifecycle: draft, active, inactive, sold, rented)
+  // Property status (lifecycle: draft, pending_review, active, inactive, sold, rented)
   @Column({
     type: 'enum',
-    enum: ['draft', 'active', 'inactive', 'sold', 'rented'],
+    enum: ['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'],
     default: 'draft',
   })
   status: string;
@@ -373,12 +381,28 @@ export class Property extends BaseEntity {
   plotAreaUnit: string | null;
 
   // Plot Length (optional)
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   plotLength: number | null;
 
+  // Plot Length Unit (optional)
+  @Column({
+    type: 'enum',
+    enum: DistanceUnit,
+    nullable: true,
+  })
+  plotLengthUnit: DistanceUnit | null;
+
   // Plot Width (optional)
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   plotWidth: number | null;
+
+  // Plot Width Unit (optional)
+  @Column({
+    type: 'enum',
+    enum: DistanceUnit,
+    nullable: true,
+  })
+  plotWidthUnit: DistanceUnit | null;
 
   // Width of Facing Road (optional)
   @Column({
@@ -387,6 +411,122 @@ export class Property extends BaseEntity {
     nullable: true,
   })
   plotFacingRoadWidth: string | null;
+
+  // Location Hub (optional)
+  @Column({
+    type: 'enum',
+    enum: LocationHub,
+    nullable: true,
+  })
+  locationHub: LocationHub | null;
+
+  // Other Location Hub (when locationHub is 'others')
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  otherLocationHub: string | null;
+
+  // Zone Type (optional)
+  @Column({
+    type: 'enum',
+    enum: ZoneType,
+    nullable: true,
+  })
+  zoneType: ZoneType | null;
+
+  // Property Condition (optional)
+  @Column({
+    type: 'enum',
+    enum: PropertyCondition,
+    nullable: true,
+  })
+  propertyCondition: PropertyCondition | null;
+
+  // Wall Construction Status (optional)
+  @Column({
+    type: 'enum',
+    enum: WallConstructionStatus,
+    nullable: true,
+  })
+  wallConstructionStatus: WallConstructionStatus | null;
+
+  // Ownership (optional)
+  @Column({
+    type: 'enum',
+    enum: Ownership,
+    nullable: true,
+  })
+  ownership: Ownership | null;
+
+  // Built Up Area (optional)
+  @Column({ type: 'int', nullable: true })
+  builtUpArea: number | null;
+
+  // Built Up Area Unit (optional)
+  @Column({
+    type: 'enum',
+    enum: AreaUnit,
+    nullable: true,
+  })
+  builtUpAreaUnit: AreaUnit | null;
+
+  // Carpet Area (optional)
+  @Column({ type: 'int', nullable: true })
+  carpetArea: number | null;
+
+  // Carpet Area Unit (optional)
+  @Column({
+    type: 'enum',
+    enum: AreaUnit,
+    nullable: true,
+  })
+  carpetAreaUnit: AreaUnit | null;
+
+  // Suitable For (array of options)
+  @Column({ type: 'simple-array', nullable: true })
+  suitableFor: string[] | null;
+
+  // Entrance Width (optional)
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  entranceWidth: number | null;
+
+  // Entrance Width Unit (optional)
+  @Column({
+    type: 'enum',
+    enum: DistanceUnit,
+    nullable: true,
+  })
+  entranceWidthUnit: DistanceUnit | null;
+
+  // Ceiling Height (optional)
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  ceilingHeight: number | null;
+
+  // Ceiling Height Unit (optional)
+  @Column({
+    type: 'enum',
+    enum: DistanceUnit,
+    nullable: true,
+  })
+  ceilingHeightUnit: DistanceUnit | null;
+
+  // Located Near (array of options)
+  @Column({ type: 'simple-array', nullable: true })
+  locatedNear: string[] | null;
+
+  // Plot/Land Type (optional)
+  @Column({
+    type: 'enum',
+    enum: PlotLandType,
+    nullable: true,
+  })
+  plotLandType: PlotLandType | null;
+
+  // Construction Type Options (array - Shed, Room, Washroom, Other)
+  @Column({ type: 'simple-array', nullable: true })
+  constructionTypeOptions: string[] | null;
 
   // Step 4 fields - Photos and Videos
   // Property photos with metadata (stored as JSONB)

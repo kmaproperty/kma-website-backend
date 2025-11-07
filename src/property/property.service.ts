@@ -519,6 +519,8 @@ export class PropertyService {
       ageOfProperty,
       possessionBy,
       possessionTime,
+      possessionStatus,
+      possessionDate,
       facing,
       status = 'draft',
       city,
@@ -527,8 +529,30 @@ export class PropertyService {
       plotArea,
       plotAreaUnit,
       plotLength,
+      plotLengthUnit,
       plotWidth,
+      plotWidthUnit,
       plotFacingRoadWidth,
+      locationHub,
+      otherLocationHub,
+      zoneType,
+      propertyCondition,
+      wallConstructionStatus,
+      ownership,
+      builtUpArea,
+      builtUpAreaUnit,
+      carpetArea,
+      carpetAreaUnit,
+      suitableFor,
+      entranceWidth,
+      entranceWidthUnit,
+      ceilingHeight,
+      ceilingHeightUnit,
+      locatedNear,
+      plotLandType,
+      noOfOpenSides,
+      constructionDone,
+      constructionTypeOptions,
     } = createPropertyDto;
 
     // Helper function to get or create city
@@ -829,6 +853,12 @@ export class PropertyService {
         if (possessionTime !== undefined) {
           updateData.possessionTime = possessionTime;
         }
+        if (possessionStatus !== undefined) {
+          updateData.possessionStatus = possessionStatus;
+        }
+        if (possessionDate !== undefined) {
+          updateData.possessionDate = possessionDate ? new Date(possessionDate) : null;
+        }
         if (plotArea !== undefined) {
           updateData.plotArea = plotArea;
         }
@@ -838,11 +868,77 @@ export class PropertyService {
         if (plotLength !== undefined) {
           updateData.plotLength = plotLength;
         }
+        if (plotLengthUnit !== undefined) {
+          updateData.plotLengthUnit = plotLengthUnit;
+        }
         if (plotWidth !== undefined) {
           updateData.plotWidth = plotWidth;
         }
+        if (plotWidthUnit !== undefined) {
+          updateData.plotWidthUnit = plotWidthUnit;
+        }
         if (plotFacingRoadWidth !== undefined) {
           updateData.plotFacingRoadWidth = plotFacingRoadWidth || null;
+        }
+        if (locationHub !== undefined) {
+          updateData.locationHub = locationHub;
+        }
+        if (otherLocationHub !== undefined) {
+          updateData.otherLocationHub = otherLocationHub || null;
+        }
+        if (zoneType !== undefined) {
+          updateData.zoneType = zoneType;
+        }
+        if (propertyCondition !== undefined) {
+          updateData.propertyCondition = propertyCondition;
+        }
+        if (wallConstructionStatus !== undefined) {
+          updateData.wallConstructionStatus = wallConstructionStatus;
+        }
+        if (ownership !== undefined) {
+          updateData.ownership = ownership;
+        }
+        if (builtUpArea !== undefined) {
+          updateData.builtUpArea = builtUpArea;
+        }
+        if (builtUpAreaUnit !== undefined) {
+          updateData.builtUpAreaUnit = builtUpAreaUnit;
+        }
+        if (carpetArea !== undefined) {
+          updateData.carpetArea = carpetArea;
+        }
+        if (carpetAreaUnit !== undefined) {
+          updateData.carpetAreaUnit = carpetAreaUnit;
+        }
+        if (suitableFor !== undefined) {
+          updateData.suitableFor = suitableFor && suitableFor.length > 0 ? suitableFor : null;
+        }
+        if (entranceWidth !== undefined) {
+          updateData.entranceWidth = entranceWidth;
+        }
+        if (entranceWidthUnit !== undefined) {
+          updateData.entranceWidthUnit = entranceWidthUnit;
+        }
+        if (ceilingHeight !== undefined) {
+          updateData.ceilingHeight = ceilingHeight;
+        }
+        if (ceilingHeightUnit !== undefined) {
+          updateData.ceilingHeightUnit = ceilingHeightUnit;
+        }
+        if (locatedNear !== undefined) {
+          updateData.locatedNear = locatedNear && locatedNear.length > 0 ? locatedNear : null;
+        }
+        if (plotLandType !== undefined) {
+          updateData.plotLandType = plotLandType;
+        }
+        if (noOfOpenSides !== undefined) {
+          updateData.noOfOpenSides = noOfOpenSides;
+        }
+        if (constructionDone !== undefined) {
+          updateData.constructionDone = constructionDone;
+        }
+        if (constructionTypeOptions !== undefined) {
+          updateData.constructionTypeOptions = constructionTypeOptions && constructionTypeOptions.length > 0 ? constructionTypeOptions : null;
         }
 
         updateData.completionStep = PropertyCompletionStep.STEP_1;
@@ -895,6 +991,12 @@ export class PropertyService {
         if (possessionTime !== undefined) {
           createData.possessionTime = possessionTime;
         }
+        if (possessionStatus !== undefined) {
+          createData.possessionStatus = possessionStatus;
+        }
+        if (possessionDate !== undefined) {
+          createData.possessionDate = possessionDate ? new Date(possessionDate) : null;
+        }
         if (plotArea !== undefined) {
           createData.plotArea = plotArea;
         }
@@ -904,11 +1006,77 @@ export class PropertyService {
         if (plotLength !== undefined) {
           createData.plotLength = plotLength;
         }
+        if (plotLengthUnit !== undefined) {
+          createData.plotLengthUnit = plotLengthUnit;
+        }
         if (plotWidth !== undefined) {
           createData.plotWidth = plotWidth;
         }
+        if (plotWidthUnit !== undefined) {
+          createData.plotWidthUnit = plotWidthUnit;
+        }
         if (plotFacingRoadWidth !== undefined) {
           createData.plotFacingRoadWidth = plotFacingRoadWidth || null;
+        }
+        if (locationHub !== undefined) {
+          createData.locationHub = locationHub;
+        }
+        if (otherLocationHub !== undefined) {
+          createData.otherLocationHub = otherLocationHub || null;
+        }
+        if (zoneType !== undefined) {
+          createData.zoneType = zoneType;
+        }
+        if (propertyCondition !== undefined) {
+          createData.propertyCondition = propertyCondition;
+        }
+        if (wallConstructionStatus !== undefined) {
+          createData.wallConstructionStatus = wallConstructionStatus;
+        }
+        if (ownership !== undefined) {
+          createData.ownership = ownership;
+        }
+        if (builtUpArea !== undefined) {
+          createData.builtUpArea = builtUpArea;
+        }
+        if (builtUpAreaUnit !== undefined) {
+          createData.builtUpAreaUnit = builtUpAreaUnit;
+        }
+        if (carpetArea !== undefined) {
+          createData.carpetArea = carpetArea;
+        }
+        if (carpetAreaUnit !== undefined) {
+          createData.carpetAreaUnit = carpetAreaUnit;
+        }
+        if (suitableFor !== undefined) {
+          createData.suitableFor = suitableFor && suitableFor.length > 0 ? suitableFor : null;
+        }
+        if (entranceWidth !== undefined) {
+          createData.entranceWidth = entranceWidth;
+        }
+        if (entranceWidthUnit !== undefined) {
+          createData.entranceWidthUnit = entranceWidthUnit;
+        }
+        if (ceilingHeight !== undefined) {
+          createData.ceilingHeight = ceilingHeight;
+        }
+        if (ceilingHeightUnit !== undefined) {
+          createData.ceilingHeightUnit = ceilingHeightUnit;
+        }
+        if (locatedNear !== undefined) {
+          createData.locatedNear = locatedNear && locatedNear.length > 0 ? locatedNear : null;
+        }
+        if (plotLandType !== undefined) {
+          createData.plotLandType = plotLandType;
+        }
+        if (noOfOpenSides !== undefined) {
+          createData.noOfOpenSides = noOfOpenSides;
+        }
+        if (constructionDone !== undefined) {
+          createData.constructionDone = constructionDone;
+        }
+        if (constructionTypeOptions !== undefined) {
+          createData.constructionTypeOptions = constructionTypeOptions && constructionTypeOptions.length > 0 ? constructionTypeOptions : null;
         }
 
         // Create new property
@@ -1357,6 +1525,7 @@ export class PropertyService {
     // Build update object
     const updateData: any = {
       completionStep: PropertyCompletionStep.STEP_4,
+      status: 'pending_review',
       photos: dto.photos.map(p => ({
         fileKey: p.fileKey,
         view: p.view,
@@ -1632,11 +1801,46 @@ export class PropertyService {
       constructionStatus: property.constructionStatus || null,
       possessionBy: property.possessionBy || null,
       possessionTime: property.possessionTime || null,
+      possessionStatus: property.possessionStatus || null,
+      possessionDate: property.possessionDate
+        ? (() => {
+            try {
+              const date = property.possessionDate instanceof Date 
+                ? property.possessionDate 
+                : new Date(property.possessionDate);
+              return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+            } catch {
+              return null;
+            }
+          })()
+        : null,
       plotArea: property.plotArea || null,
       plotAreaUnit: property.plotAreaUnit || null,
       plotLength: property.plotLength || null,
+      plotLengthUnit: property.plotLengthUnit || null,
       plotWidth: property.plotWidth || null,
+      plotWidthUnit: property.plotWidthUnit || null,
       plotFacingRoadWidth: property.plotFacingRoadWidth || null,
+      locationHub: property.locationHub || null,
+      otherLocationHub: property.otherLocationHub || null,
+      zoneType: property.zoneType || null,
+      propertyCondition: property.propertyCondition || null,
+      wallConstructionStatus: property.wallConstructionStatus || null,
+      ownership: property.ownership || null,
+      builtUpArea: property.builtUpArea || null,
+      builtUpAreaUnit: property.builtUpAreaUnit || null,
+      carpetArea: property.carpetArea || null,
+      carpetAreaUnit: property.carpetAreaUnit || null,
+      suitableFor: property.suitableFor || [],
+      entranceWidth: property.entranceWidth || null,
+      entranceWidthUnit: property.entranceWidthUnit || null,
+      ceilingHeight: property.ceilingHeight || null,
+      ceilingHeightUnit: property.ceilingHeightUnit || null,
+      locatedNear: property.locatedNear || [],
+      plotLandType: property.plotLandType || null,
+      noOfOpenSides: property.noOfOpenSides || null,
+      constructionDone: property.constructionDone || null,
+      constructionTypeOptions: property.constructionTypeOptions || [],
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
       completionStep,
