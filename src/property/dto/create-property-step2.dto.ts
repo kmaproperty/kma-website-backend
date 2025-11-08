@@ -487,4 +487,14 @@ export class CreatePropertyStep2Dto {
   @IsOptional()
   @IsString()
   propertyDescription?: string;
+
+  @ApiPropertyOptional({
+    description: 'Age of the property in years',
+    example: 5,
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  ageOfProperty?: number;
 }

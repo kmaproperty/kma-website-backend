@@ -157,10 +157,8 @@ export class PropertyService {
    * Search cities - first from database, then from Google Places API
    */
   async searchCities(query: string, limit: number = 10): Promise<any[]> {
-    if (!query || query.trim().length < 2) {
-      throw new BadRequestException(
-        'Search query must be at least 2 characters long',
-      );
+    if (!query || !query.trim()) {
+      throw new BadRequestException('Search query is required');
     }
 
     // First, search in local database
@@ -232,10 +230,8 @@ export class PropertyService {
     cityName: string,
     limit: number = 10,
   ): Promise<any[]> {
-    if (!query || query.trim().length < 2) {
-      throw new BadRequestException(
-        'Search query must be at least 2 characters long',
-      );
+    if (!query || !query.trim()) {
+      throw new BadRequestException('Search query is required');
     }
 
     if (!cityName || cityName.trim().length === 0) {
@@ -1259,6 +1255,9 @@ export class PropertyService {
     if (dto.propertyAreaAcre !== undefined) {
       updateData.propertyAreaAcre = dto.propertyAreaAcre ?? null;
     }
+    if (dto.ageOfProperty !== undefined) {
+      updateData.ageOfProperty = dto.ageOfProperty ?? null;
+    }
     if (dto.tenantType !== undefined) {
       updateData.tenantType = dto.tenantType ?? null;
     }
@@ -1673,10 +1672,8 @@ export class PropertyService {
     cityName?: string,
     limit: number = 10,
   ): Promise<any[]> {
-    if (!query || query.trim().length < 2) {
-      throw new BadRequestException(
-        'Search query must be at least 2 characters long',
-      );
+    if (!query || !query.trim()) {
+      throw new BadRequestException('Search query is required');
     }
 
     // Search societies by name or locality name

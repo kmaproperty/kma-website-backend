@@ -356,7 +356,7 @@ export class PropertyController {
   @ApiOperation({
     summary: 'Step 2: Update property with unit and rent details',
     description:
-      'Updates property step 2 details. Only propertyId is required; all other fields are optional. Updates floor, total floors, unit identifiers, area, tenant type, rent availability and date, rent amount, maintenance, security deposit, lock-in period, brokerage and negotiable flag with conditional validations based on provided fields.',
+      'Updates property step 2 details. Only propertyId is required; all other fields are optional. Updates floor, total floors, unit identifiers, area, property age, tenant type, rent availability and date, rent amount, maintenance, security deposit, lock-in period, brokerage and negotiable flag with conditional validations based on provided fields.',
   })
   @ApiResponse({
     status: 200,

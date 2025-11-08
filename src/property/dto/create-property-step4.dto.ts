@@ -39,21 +39,16 @@ export class PropertyPhotoDto {
   isCoverImage?: boolean;
 }
 
-export enum VideoFormat {
-  MPEG = 'MPEG',
-  FLV = 'FLV',
-  MOV = 'MOV',
-  SWF = 'SWF',
-}
-
 export class PropertyVideoDto {
   @ApiProperty({ description: 'S3 file key for the video', example: 'uploads/1234567890-xyz789.mp4' })
   @IsString()
   @IsNotEmpty()
   fileKey: string;
 
-  @ApiProperty({ description: 'Video format', enum: VideoFormat, example: VideoFormat.MPEG })
-  format: VideoFormat;
+  @ApiProperty({ description: 'Video format (e.g., mp4, mov)', example: 'mp4' })
+  @IsString()
+  @IsNotEmpty()
+  format: string;
 }
 
 export class CreatePropertyStep4Dto {
