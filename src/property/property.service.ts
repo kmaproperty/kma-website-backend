@@ -1310,8 +1310,14 @@ export class PropertyService {
     if (dto.privateParking !== undefined) {
       updateData.privateParking = dto.privateParking;
     }
+    if (dto.privateWashrooms !== undefined) {
+      updateData.privateWashrooms = dto.privateWashrooms ?? null;
+    }
     if (dto.publicParking !== undefined) {
       updateData.publicParking = dto.publicParking;
+    }
+    if (dto.publicWashrooms !== undefined) {
+      updateData.publicWashrooms = dto.publicWashrooms ?? null;
     }
     if (dto.isRentNegotiable !== undefined) {
       updateData.isRentNegotiable = dto.isRentNegotiable ?? false;
@@ -1473,6 +1479,30 @@ export class PropertyService {
     if (dto.furnishType !== undefined) {
       updateData.furnishType = dto.furnishType as any;
     }
+    if (dto.minNumberOfSeats !== undefined) {
+      updateData.minNumberOfSeats = dto.minNumberOfSeats;
+    }
+    if (dto.maxNumberOfSeats !== undefined) {
+      updateData.maxNumberOfSeats = dto.maxNumberOfSeats;
+    }
+    if (dto.numberOfCabins !== undefined) {
+      updateData.numberOfCabins = dto.numberOfCabins;
+    }
+    if (dto.numberOfMeetingRooms !== undefined) {
+      updateData.numberOfMeetingRooms = dto.numberOfMeetingRooms;
+    }
+    if (dto.privateWashrooms !== undefined) {
+      updateData.privateWashrooms = dto.privateWashrooms ?? null;
+    }
+    if (dto.publicWashrooms !== undefined) {
+      updateData.publicWashrooms = dto.publicWashrooms ?? null;
+    }
+    if (dto.conferenceRoom !== undefined) {
+      updateData.conferenceRoom = dto.conferenceRoom ?? null;
+    }
+    if (dto.receptionArea !== undefined) {
+      updateData.receptionArea = dto.receptionArea ?? null;
+    }
     if (dto.furnishingsCounts !== undefined) {
       const sanitized: FurnishingCountDto[] = (dto.furnishingsCounts || []).map(fc => ({
         item: fc.item,
@@ -1500,10 +1530,52 @@ export class PropertyService {
       if (dto.additionalRooms && dto.additionalRooms.length) {
         parts.push(`with ${dto.additionalRooms.join(', ')}`);
       }
+      if (
+        dto.minNumberOfSeats !== undefined ||
+        dto.maxNumberOfSeats !== undefined
+      ) {
+        const minSeats =
+          dto.minNumberOfSeats ??
+          property.minNumberOfSeats ??
+          null;
+        const maxSeats =
+          dto.maxNumberOfSeats ??
+          property.maxNumberOfSeats ??
+          null;
+        if (minSeats != null && maxSeats != null) {
+          parts.push(`seating capacity ${minSeats}-${maxSeats}`);
+        } else if (maxSeats != null) {
+          parts.push(`up to ${maxSeats} seats`);
+        } else if (minSeats != null) {
+          parts.push(`at least ${minSeats} seats`);
+        }
+      }
+      const cabins =
+        dto.numberOfCabins ?? property.numberOfCabins ?? null;
+      if (cabins) {
+        parts.push(`${cabins} cabins`);
+      }
+      const meetings =
+        dto.numberOfMeetingRooms ??
+        property.numberOfMeetingRooms ??
+        null;
+      if (meetings) {
+        parts.push(`${meetings} meeting rooms`);
+      }
       const covered = dto.reservedParkingCovered ?? property.reservedParkingCovered ?? 0;
       const open = dto.reservedParkingOpen ?? property.reservedParkingOpen ?? 0;
       if (covered || open) {
         parts.push(`reserved parking (${covered} covered${open ? `, ${open} open` : ''})`);
+      }
+      const conferenceRoom =
+        dto.conferenceRoom ?? property.conferenceRoom ?? null;
+      if (conferenceRoom) {
+        parts.push(`${conferenceRoom} conference room${conferenceRoom > 1 ? 's' : ''}`);
+      }
+      const reception =
+        dto.receptionArea ?? property.receptionArea ?? null;
+      if (reception === 'yes') {
+        parts.push('reception area available');
       }
       if (dto.powerBackup) parts.push(`${dto.powerBackup.toLowerCase()} power backup`);
       if (dto.furnishingsCounts && dto.furnishingsCounts.length) {
@@ -1554,6 +1626,14 @@ export class PropertyService {
       powerBackup: property.powerBackup || null,
       furnishType: property.furnishType || null,
       furnishingsCounts: property.furnishingsCounts || [],
+      minNumberOfSeats: property.minNumberOfSeats ?? null,
+      maxNumberOfSeats: property.maxNumberOfSeats ?? null,
+      numberOfCabins: property.numberOfCabins ?? null,
+      numberOfMeetingRooms: property.numberOfMeetingRooms ?? null,
+      privateWashrooms: property.privateWashrooms ?? null,
+      publicWashrooms: property.publicWashrooms ?? null,
+      conferenceRoom: property.conferenceRoom ?? null,
+      receptionArea: property.receptionArea ?? null,
       amenities: property.amenities || [],
       waterSource: property.waterSource || null,
       isLiftAvailable: property.isLiftAvailable ?? null,
@@ -1987,7 +2067,9 @@ export class PropertyService {
       isBrokerageNegotiable: property.isBrokerageNegotiable,
       noOfStaircases: property.noOfStaircases || null,
       privateParking: property.privateParking || null,
+      privateWashrooms: property.privateWashrooms || null,
       publicParking: property.publicParking || null,
+      publicWashrooms: property.publicWashrooms || null,
       isRentNegotiable: property.isRentNegotiable || null,
       dgUpsChargeIncluded: property.dgUpsChargeIncluded || null,
       electricityChargeIncluded: property.electricityChargeIncluded || null,

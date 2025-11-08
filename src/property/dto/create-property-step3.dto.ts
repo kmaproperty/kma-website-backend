@@ -13,6 +13,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
+import { YesNo } from './create-property-step2.dto';
 
 export enum AdditionalRoomType {
   POOJA_ROOM = 'Pooja Room',
@@ -77,6 +78,53 @@ export class CreatePropertyStep3Dto {
   @IsOptional()
   @IsEnum(FurnishType)
   furnishType?: FurnishType;
+
+  @ApiPropertyOptional({ description: 'Minimum number of seats available', minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  minNumberOfSeats?: number;
+
+  @ApiPropertyOptional({ description: 'Maximum number of seats available', minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxNumberOfSeats?: number;
+
+  @ApiPropertyOptional({ description: 'Number of cabins', minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  numberOfCabins?: number;
+
+  @ApiPropertyOptional({ description: 'Number of meeting rooms', minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  numberOfMeetingRooms?: number;
+
+  @ApiPropertyOptional({ description: 'Private washrooms count', minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  privateWashrooms?: number;
+
+  @ApiPropertyOptional({ description: 'Public washrooms count', minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  publicWashrooms?: number;
+
+  @ApiPropertyOptional({ description: 'Conference rooms count', minimum: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  conferenceRoom?: number;
+
+  @ApiPropertyOptional({ description: 'Reception area availability', enum: YesNo })
+  @IsOptional()
+  @IsEnum(YesNo)
+  receptionArea?: YesNo;
 
   @ApiPropertyOptional({ description: 'Furnishings with counts (0-100 each)', isArray: true, type: () => FurnishingCountDto })
   @IsOptional()

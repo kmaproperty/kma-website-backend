@@ -228,6 +228,15 @@ export class CreatePropertyStep2Dto {
   @Min(0)
   privateParking?: number;
 
+  @ApiPropertyOptional({
+    description: 'Number of private washrooms',
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  privateWashrooms?: number;
+
   @ApiPropertyOptional({ 
     description: 'Public parking count', 
     minimum: 0,
@@ -236,6 +245,15 @@ export class CreatePropertyStep2Dto {
   @IsInt()
   @Min(0)
   publicParking?: number;
+
+  @ApiPropertyOptional({
+    description: 'Number of public washrooms',
+    minimum: 0,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  publicWashrooms?: number;
 
   @ApiPropertyOptional({ description: 'Is rent negotiable?' })
   @IsOptional()

@@ -308,6 +308,29 @@ export class Property extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   furnishingsCounts: { item: string; count: number }[] | null;
 
+  // Seating capacity details
+  @Column({ type: 'int', nullable: true })
+  minNumberOfSeats: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  maxNumberOfSeats: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  numberOfCabins: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  numberOfMeetingRooms: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  conferenceRoom: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['yes', 'no'],
+    nullable: true,
+  })
+  receptionArea: 'yes' | 'no' | null;
+
   // Amenities selection
   @Column({ type: 'simple-array', nullable: true })
   amenities: string[] | null;
@@ -331,6 +354,14 @@ export class Property extends BaseEntity {
   // Rent Negotiable (optional)
   @Column({ type: 'boolean', nullable: true })
   isRentNegotiable: boolean | null;
+
+  // Private washrooms count (optional)
+  @Column({ type: 'int', nullable: true })
+  privateWashrooms: number | null;
+
+  // Public washrooms count (optional)
+  @Column({ type: 'int', nullable: true })
+  publicWashrooms: number | null;
 
   // DG & UPS Charge included (optional)
   @Column({
