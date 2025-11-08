@@ -223,9 +223,9 @@ export class S3Service {
       'image/gif',
       'image/webp',
       'video/mp4',
-      'video/mov',
-      'video/avi',
-      'video/mkv',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-matroska',
       'video/webm',
     ];
 

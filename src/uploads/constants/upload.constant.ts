@@ -2,7 +2,8 @@ export const MESSAGES = {
   FILE_UPLOAD: {
     SUCCESS: 'File uploaded successfully',
     NO_FILE: 'No file provided',
-    INVALID_TYPE: 'Only PNG, JPG, and JPEG files are allowed',
+    INVALID_TYPE:
+      'Only PNG, JPG, JPEG, GIF, WebP images and MP4, MOV, WebM, AVI, MKV videos are allowed',
     SIZE_EXCEEDED: 'File size exceeds 5MB limit',
     S3_UPLOAD_FAILED: 'Failed to upload file to S3',
     UNEXPECTED_ERROR: 'An unexpected error occurred while uploading the file',

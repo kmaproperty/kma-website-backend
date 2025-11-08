@@ -86,6 +86,25 @@ export class PropertyService {
         category.id,
       );
 
+    const orderKey = `${listingType.code}:${category.code}`;
+    const customOrder = this.getCustomPropertyTypeOrder(orderKey);
+
+    if (customOrder) {
+      propertyTypes.sort((a, b) => {
+        const indexA = customOrder.indexOf(a.code);
+        const indexB = customOrder.indexOf(b.code);
+
+        const safeIndexA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+        const safeIndexB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+
+        if (safeIndexA === safeIndexB) {
+          return a.name.localeCompare(b.name);
+        }
+
+        return safeIndexA - safeIndexB;
+      });
+    }
+
     // Structure the response - only return property types
     return {
       propertyTypes: propertyTypes.map((pt) => ({
@@ -94,6 +113,37 @@ export class PropertyService {
         code: pt.code,
       })),
     };
+  }
+
+  private getCustomPropertyTypeOrder(
+    orderKey: string,
+  ): string[] | undefined {
+    const orderMap: Record<string, string[]> = {
+      'rent:residential': [
+        'res-rent-flat',
+        'res-rent-house',
+        'res-rent-duplex',
+        'res-rent-builder-floor',
+        'res-rent-villa',
+        'res-rent-penthouse',
+        'res-rent-studio',
+        'res-rent-farmhouse',
+      ],
+      'sale:residential': [
+        'res-sale-flat',
+        'res-sale-house',
+        'res-sale-duplex',
+        'res-sale-builder-floor',
+        'res-sale-villa',
+        'res-sale-penthouse',
+        'res-sale-studio',
+        'res-sale-farmhouse',
+        'res-sale-plot',
+        'res-sale-agri-land',
+      ],
+    };
+
+    return orderMap[orderKey];
   }
 
   /**

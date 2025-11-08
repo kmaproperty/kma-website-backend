@@ -13,11 +13,33 @@ export class GeneratePresignedUrlDto {
   @ApiProperty({
     description: 'MIME type of the file',
     example: 'image/jpeg',
-    enum: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    enum: [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'video/mp4',
+      'video/quicktime',
+      'video/webm',
+      'video/x-msvideo',
+      'video/x-matroska',
+    ],
   })
   @IsString()
   @IsNotEmpty()
-  @IsIn(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'])
+  @IsIn([
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'video/mp4',
+    'video/quicktime',
+    'video/webm',
+    'video/x-msvideo',
+    'video/x-matroska',
+  ])
   contentType: string;
 
   @ApiProperty({
