@@ -14,6 +14,7 @@ import { MasterBuiltUpArea } from '../../property/entities/master-built-up-area.
 import { UnitConfiguration } from '../../property/entities/unit-configuration.entity';
 import { Property } from '../../property/entities/property.entity';
 import { ContactUs } from '../../contact-us/entities/contact-us.entity';
+import { Admin } from '../../admin/entities/admin.entity';
 
 @Injectable()
 export class ConfigService implements TypeOrmOptionsFactory {
@@ -91,6 +92,7 @@ export class ConfigService implements TypeOrmOptionsFactory {
         MasterBuiltUpArea,
         UnitConfiguration,
         Property,
+        Admin,
         ContactUs,
       ],
       autoLoadEntities: true,

@@ -16,6 +16,10 @@ declare global {
         role: UserRole;
         type: 'access_token' | 'refresh_token';
       };
+      admin?: {
+        id: string;
+        username: string;
+      };
     }
   }
 }

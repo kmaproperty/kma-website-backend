@@ -44,6 +44,7 @@
     "@nestjs/typeorm": "^11.0.0",
     "@types/multer": "^2.0.0",
     "aws-sdk": "^2.1692.0",
+    "bcryptjs": "^2.4.3",
     "axios": "^1.12.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
@@ -57,6 +58,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",

@@ -17,6 +17,7 @@ import { Ownership } from '../enum/ownership.enum';
 import { AreaUnit } from '../enum/area-unit.enum';
 import { DistanceUnit } from '../enum/distance-unit.enum';
 import { PlotLandType } from '../enum/plot-land-type.enum';
+import { User } from '../../user/entities/user.entity';
 
 @Entity('properties')
 export class Property extends BaseEntity {
@@ -84,10 +85,23 @@ export class Property extends BaseEntity {
   @Column({ type: 'uuid' })
   userId: string;
 
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
+  user: User;
+
   // Property status (lifecycle: draft, pending_review, active, inactive, sold, rented)
   @Column({
     type: 'enum',
-    enum: ['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'],
+    enum: [
+      'draft',
+      'pending_review',
+      'approved',
+      'rejected',
+      'active',
+      'inactive',
+      'sold',
+      'rented',
+    ],
     default: 'draft',
   })
   status: string;
@@ -635,4 +649,16 @@ export class Property extends BaseEntity {
   // Property videos with metadata (stored as JSONB)
   @Column({ type: 'jsonb', nullable: true })
   videos: { fileKey: string; format: string }[] | null;
+
+  @Column({ type: 'text', nullable: true })
+  adminReviewComment: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  adminReviewedBy: string | null;
+
+  @Column({
+    type: 'timestamp with time zone',
+    nullable: true,
+  })
+  adminReviewedAt: Date | null;
 }

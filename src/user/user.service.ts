@@ -23,6 +23,8 @@ import {
   RefreshTokenResponseDto,
   LogoutResponseDto,
 } from './dto';
+import { PropertyRepository } from '../property/repositories/property.repository';
+import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
 
 @Injectable()
 export class UserService {
@@ -36,6 +38,7 @@ export class UserService {
     private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
+    private readonly propertyRepository: PropertyRepository,
   ) {}
 
   /**
@@ -282,6 +285,12 @@ export class UserService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
+      const hasReachedListingLimit =
+        user.role === UserRole.OWNER
+          ? (await this.propertyRepository.countByUserId(user.id)) >=
+            MAX_LISTINGS_PER_OWNER
+          : false;
+
       return {
         success: true,
         message: isNewUser
@@ -299,7 +308,8 @@ export class UserService {
           role: user.role,
           isActive: user.isActive,
         },
-      };
+        hasReachedListingLimit,
+      } as ValidateOtpResponseDto;
     } catch (error) {
       // Rollback transaction on error
       await queryRunner.rollbackTransaction();

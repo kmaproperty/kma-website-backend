@@ -24,6 +24,7 @@ import {
 import { CreatePropertyStep3Dto, FurnishingCountDto, FurnishType, PowerBackupType } from './dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
 import { Property } from './entities/property.entity';
+import { MAX_LISTINGS_PER_OWNER } from './constants/property.constants';
 
 @Injectable()
 export class PropertyService {
@@ -1045,6 +1046,14 @@ export class PropertyService {
         property = await this.propertyRepository.findById(propertyId);
       } else {
         // Create new property - propertyId is required but doesn't exist, so create new with that ID or generate new
+        const ownerPropertyCount =
+          await this.propertyRepository.countByUserId(userId);
+        if (ownerPropertyCount >= MAX_LISTINGS_PER_OWNER) {
+          throw new BadRequestException(
+            `Owners can create a maximum of ${MAX_LISTINGS_PER_OWNER} listings.`,
+          );
+        }
+
         const createData: any = {
           listingTypeId,
           categoryId,

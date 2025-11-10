@@ -82,6 +82,12 @@ export class ValidateOtpResponseDto {
   refreshToken?: string;
 
   @ApiProperty({
+    description: 'Indicates if the owner has reached the maximum allowed listings',
+    example: false,
+  })
+  hasReachedListingLimit: boolean;
+
+  @ApiProperty({
     description: 'User information',
     example: {
       id: 'uuid-string',

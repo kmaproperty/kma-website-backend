@@ -4,12 +4,12 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LoggerModule } from './logger/logger.module';
 import { UserModule } from './user/user.module';
-import { UserController } from './user/user.controller';
 import { PropertyModule } from './property/property.module';
 import { ContactUsModule } from './contact-us/contact-us.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ConfigModule } from './common/config/config.module';
 import { ConfigService } from './common/config/config.service';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -25,8 +25,9 @@ import { ConfigService } from './common/config/config.service';
     PropertyModule,
     ContactUsModule,
     UploadsModule,
+    AdminModule,
   ],
-  controllers: [AppController, UserController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}

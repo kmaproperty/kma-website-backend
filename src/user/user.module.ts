@@ -8,6 +8,8 @@ import { ChannelPartnerCode } from './entities/channel-partner-code.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
+import { Property } from '../property/entities/property.entity';
+import { PropertyRepository } from '../property/repositories/property.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { UserController } from './user.controller';
@@ -16,11 +18,12 @@ import { LoggerService } from '../logger/logger.service';
 import { ErrorHandlerService } from '../common/errorHandler/error-handler.service';
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 
-const entities = [User, Otp, ChannelPartnerCode];
+const entities = [User, Otp, ChannelPartnerCode, Property];
 const repositories = [
   UserRepository,
   OtpRepository,
   ChannelPartnerCodeRepository,
+  PropertyRepository,
 ];
 
 @Module({
