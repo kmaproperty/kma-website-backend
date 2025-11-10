@@ -23,6 +23,7 @@ import {
 } from './dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto, FurnishingCountDto, FurnishType, PowerBackupType } from './dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
+import { Property } from './entities/property.entity';
 
 @Injectable()
 export class PropertyService {
@@ -40,21 +41,63 @@ export class PropertyService {
     private readonly googlePlacesService: GooglePlacesService,
   ) {}
 
+  private readonly DEFAULT_TOTAL_STEPS = 4;
+
   /**
-   * Calculate progress percentage based on completion step
-   * There are 4 steps total, so each step adds 25%
+   * Calculate progress percentage based on completion step and total steps.
    */
-  private calculateProgressPercentage(completionStep: number): number {
-    if (completionStep >= PropertyCompletionStep.STEP_4) {
-      return 100; // Step 4 or completed = 100%
-    } else if (completionStep === PropertyCompletionStep.STEP_3) {
-      return 75; // Step 3 = 75%
-    } else if (completionStep === PropertyCompletionStep.STEP_2) {
-      return 50; // Step 2 = 50%
-    } else if (completionStep === PropertyCompletionStep.STEP_1) {
-      return 25; // Step 1 = 25%
+  private calculateProgressPercentage(
+    completionStep: number,
+    totalSteps: number = this.DEFAULT_TOTAL_STEPS,
+  ): number {
+    if (totalSteps <= 0) {
+      return 0;
     }
-    return 0; // Not started = 0%
+
+    const normalizedTotalSteps = Math.max(totalSteps, 1);
+    const cappedStep = Math.min(
+      Math.max(completionStep, 0),
+      normalizedTotalSteps,
+    );
+
+    const percentage = (cappedStep / normalizedTotalSteps) * 100;
+
+    if (
+      completionStep >= PropertyCompletionStep.COMPLETED ||
+      percentage >= 100
+    ) {
+      return 100;
+    }
+
+    return Number(percentage.toFixed(2));
+  }
+
+  private determineTotalSteps(property?: Property | null): number {
+    if (!property) {
+      return this.DEFAULT_TOTAL_STEPS;
+    }
+
+    const propertyTypeCode = property.propertyType?.code?.toLowerCase() ?? '';
+    const categoryCode = property.category?.code?.toLowerCase() ?? '';
+
+    const isResidentialPlot =
+      categoryCode === 'residential' && propertyTypeCode.includes('plot');
+
+    if (isResidentialPlot) {
+      return 3;
+    }
+
+    return this.DEFAULT_TOTAL_STEPS;
+  }
+
+  private async getProgressPercentageForProperty(
+    propertyId: string,
+    completionStep: number,
+  ): Promise<number> {
+    const property =
+      await this.propertyRepository.findByIdWithRelations(propertyId);
+    const totalSteps = this.determineTotalSteps(property);
+    return this.calculateProgressPercentage(completionStep, totalSteps);
   }
 
   async getFilteredMasterData(
@@ -849,6 +892,8 @@ export class PropertyService {
         : null;
 
       if (existingProperty) {
+        const previouslyCompletedStep = existingProperty.completionStep ?? 0;
+
         // Update existing property
         // Check if user owns this property
         if (existingProperty.userId !== userId) {
@@ -987,7 +1032,11 @@ export class PropertyService {
           updateData.constructionTypeOptions = constructionTypeOptions && constructionTypeOptions.length > 0 ? constructionTypeOptions : null;
         }
 
-        updateData.completionStep = PropertyCompletionStep.STEP_1;
+        const targetCompletionStep = PropertyCompletionStep.STEP_1;
+        updateData.completionStep =
+          previouslyCompletedStep > targetCompletionStep
+            ? previouslyCompletedStep
+            : targetCompletionStep;
 
         // Update the property
         await this.propertyRepository.updateProperty(propertyId, updateData);
@@ -1129,12 +1178,24 @@ export class PropertyService {
         property = await this.propertyRepository.createProperty(createData);
       }
 
-      const completionStep = property.completionStep ?? PropertyCompletionStep.STEP_1;
+      if (!property) {
+        throw new BadRequestException(
+          'Failed to retrieve property after save',
+        );
+      }
+
+      const completionStep =
+        property.completionStep ?? PropertyCompletionStep.STEP_1;
+      const progressPercentage = await this.getProgressPercentageForProperty(
+        property.id,
+        completionStep,
+      );
+
       return {
         id: property.id,
         status: property.status,
         completionStep,
-        progressPercentage: this.calculateProgressPercentage(completionStep),
+        progressPercentage,
       };
     } catch (error) {
       throw new BadRequestException(
@@ -1236,8 +1297,10 @@ export class PropertyService {
     }
 
     // Build update object with only provided fields
+    const previouslyCompletedStep = property.completionStep ?? 0;
+    const targetCompletionStep = PropertyCompletionStep.STEP_2;
     const updateData: any = {
-      completionStep: PropertyCompletionStep.STEP_2,
+      completionStep: Math.max(previouslyCompletedStep, targetCompletionStep),
     };
 
     if (dto.floorNumber !== undefined) {
@@ -1412,12 +1475,22 @@ export class PropertyService {
     await this.propertyRepository.updateProperty(dto.propertyId, updateData);
 
     const updated = await this.propertyRepository.findById(dto.propertyId);
-    const completionStep = updated!.completionStep || PropertyCompletionStep.STEP_2;
-    return { 
-      id: updated!.id, 
-      status: updated!.status, 
+    if (!updated) {
+      throw new BadRequestException(
+        `Property with ID ${dto.propertyId} not found after update`,
+      );
+    }
+    const completionStep =
+      updated.completionStep || PropertyCompletionStep.STEP_2;
+    const progressPercentage = await this.getProgressPercentageForProperty(
+      updated.id,
       completionStep,
-      progressPercentage: this.calculateProgressPercentage(completionStep),
+    );
+    return {
+      id: updated.id,
+      status: updated.status,
+      completionStep,
+      progressPercentage,
     };
   }
 
@@ -1460,8 +1533,10 @@ export class PropertyService {
     }
 
     // Build update object with only provided fields
+    const previouslyCompletedStep = property.completionStep ?? 0;
+    const targetCompletionStep = PropertyCompletionStep.STEP_3;
     const updateData: any = {
-      completionStep: PropertyCompletionStep.STEP_3,
+      completionStep: Math.max(previouslyCompletedStep, targetCompletionStep),
     };
 
     if (dto.additionalRooms !== undefined) {
@@ -1596,12 +1671,22 @@ export class PropertyService {
 
     await this.propertyRepository.updateProperty(dto.propertyId, updateData);
     const updated = await this.propertyRepository.findById(dto.propertyId);
-    const completionStep = updated!.completionStep || PropertyCompletionStep.STEP_3;
-    return {
-      id: updated!.id,
-      status: updated!.status,
+    if (!updated) {
+      throw new BadRequestException(
+        `Property with ID ${dto.propertyId} not found after update`,
+      );
+    }
+    const completionStep =
+      updated.completionStep || PropertyCompletionStep.STEP_3;
+    const progressPercentage = await this.getProgressPercentageForProperty(
+      updated.id,
       completionStep,
-      progressPercentage: this.calculateProgressPercentage(completionStep),
+    );
+    return {
+      id: updated.id,
+      status: updated.status,
+      completionStep,
+      progressPercentage,
     };
   }
 
@@ -1609,7 +1694,8 @@ export class PropertyService {
     propertyId: string,
     userId: string,
   ): Promise<any> {
-    const property = await this.propertyRepository.findById(propertyId);
+    const property =
+      await this.propertyRepository.findByIdWithRelations(propertyId);
     if (!property) {
       throw new BadRequestException(`Property with ID ${propertyId} not found`);
     }
@@ -1618,6 +1704,10 @@ export class PropertyService {
     }
 
     const completionStep = property.completionStep || 0;
+    const progressPercentage = this.calculateProgressPercentage(
+      completionStep,
+      this.determineTotalSteps(property),
+    );
     return {
       propertyId: property.id,
       additionalRooms: property.additionalRooms || [],
@@ -1640,7 +1730,7 @@ export class PropertyService {
       propertyDescription: property.propertyDescription || null,
       status: property.status,
       completionStep,
-      progressPercentage: this.calculateProgressPercentage(completionStep),
+      progressPercentage,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };
@@ -1687,9 +1777,12 @@ export class PropertyService {
       }
     }
 
+    const previouslyCompletedStep = property.completionStep ?? 0;
+    const targetCompletionStep = PropertyCompletionStep.STEP_4;
+
     // Build update object
     const updateData: any = {
-      completionStep: PropertyCompletionStep.STEP_4,
+      completionStep: Math.max(previouslyCompletedStep, targetCompletionStep),
       status: 'pending_review',
       photos: dto.photos.map(p => ({
         fileKey: p.fileKey,
@@ -1709,12 +1802,22 @@ export class PropertyService {
 
     await this.propertyRepository.updateProperty(dto.propertyId, updateData);
     const updated = await this.propertyRepository.findById(dto.propertyId);
-    const completionStep = updated!.completionStep || PropertyCompletionStep.STEP_4;
-    return {
-      id: updated!.id,
-      status: updated!.status,
+    if (!updated) {
+      throw new BadRequestException(
+        `Property with ID ${dto.propertyId} not found after update`,
+      );
+    }
+    const completionStep =
+      updated.completionStep || PropertyCompletionStep.STEP_4;
+    const progressPercentage = await this.getProgressPercentageForProperty(
+      updated.id,
       completionStep,
-      progressPercentage: this.calculateProgressPercentage(completionStep),
+    );
+    return {
+      id: updated.id,
+      status: updated.status,
+      completionStep,
+      progressPercentage,
     };
   }
 
@@ -1722,7 +1825,8 @@ export class PropertyService {
     propertyId: string,
     userId: string,
   ): Promise<any> {
-    const property = await this.propertyRepository.findById(propertyId);
+    const property =
+      await this.propertyRepository.findByIdWithRelations(propertyId);
     if (!property) {
       throw new BadRequestException(`Property with ID ${propertyId} not found`);
     }
@@ -1731,13 +1835,17 @@ export class PropertyService {
     }
 
     const completionStep = property.completionStep || 0;
+    const progressPercentage = this.calculateProgressPercentage(
+      completionStep,
+      this.determineTotalSteps(property),
+    );
     return {
       propertyId: property.id,
       photos: property.photos || [],
       videos: property.videos || [],
       status: property.status,
       completionStep,
-      progressPercentage: this.calculateProgressPercentage(completionStep),
+      progressPercentage,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };
@@ -1895,6 +2003,10 @@ export class PropertyService {
 
     // Format the response similar to CreatePropertyStep1Dto
     const completionStep = property.completionStep || 0;
+    const progressPercentage = this.calculateProgressPercentage(
+      completionStep,
+      this.determineTotalSteps(property),
+    );
     return {
       propertyId: property.id,
       listingType: listingType
@@ -2007,7 +2119,7 @@ export class PropertyService {
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
       completionStep,
-      progressPercentage: this.calculateProgressPercentage(completionStep),
+      progressPercentage,
     };
   }
 
@@ -2033,6 +2145,10 @@ export class PropertyService {
 
     // Format the response with step 2 fields
     const completionStep = property.completionStep || 0;
+    const progressPercentage = this.calculateProgressPercentage(
+      completionStep,
+      this.determineTotalSteps(property),
+    );
     return {
       propertyId: property.id,
       floorNumber: property.floorNumber,
@@ -2112,7 +2228,7 @@ export class PropertyService {
       propertyDescription: property.propertyDescription,
       status: property.status,
       completionStep,
-      progressPercentage: this.calculateProgressPercentage(completionStep),
+      progressPercentage,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };
