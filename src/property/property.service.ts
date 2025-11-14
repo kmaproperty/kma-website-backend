@@ -1238,16 +1238,6 @@ export class PropertyService {
       throw new BadRequestException('You can only update your own properties');
     }
 
-    const effectiveMonthlyRent = dto.monthlyRent ?? property.monthlyRent ?? null;
-    const effectiveSecurityDepositType =
-      dto.securityDepositType ?? property.securityDepositType ?? null;
-    const effectiveSecurityDepositAmount =
-      dto.securityDepositAmount ?? property.securityDepositAmount ?? null;
-    const shouldValidateSecurityDeposit =
-      dto.securityDepositType !== undefined ||
-      dto.securityDepositAmount !== undefined ||
-      dto.monthlyRent !== undefined;
-
     // Floor validations - only validate if both are provided
     if (dto.floorNumber != null && dto.totalFloors != null) {
       if (dto.floorNumber > dto.totalFloors) {
@@ -1277,35 +1267,6 @@ export class PropertyService {
         dto.maintenanceChargeAmount <= 0
       ) {
         throw new BadRequestException('Please enter the maintenance charges');
-      }
-    }
-
-    // Security deposit validation - only if security deposit fields are touched
-    if (
-      shouldValidateSecurityDeposit &&
-      effectiveSecurityDepositType === SecurityDepositType.CUSTOM
-    ) {
-      if (effectiveMonthlyRent == null) {
-        throw new BadRequestException(
-          'Please enter rent before specifying deposit',
-        );
-      }
-      if (
-        dto.securityDepositType === SecurityDepositType.CUSTOM &&
-        (dto.securityDepositAmount == null || dto.securityDepositAmount < 0)
-      ) {
-        throw new BadRequestException('Please enter the security deposit');
-      }
-      if (
-        effectiveSecurityDepositAmount == null ||
-        effectiveSecurityDepositAmount < 0
-      ) {
-        throw new BadRequestException('Please enter the security deposit');
-      }
-      if (effectiveSecurityDepositAmount > effectiveMonthlyRent * 12) {
-        throw new BadRequestException(
-          'Deposit seems high as per market standards',
-        );
       }
     }
 
@@ -1389,18 +1350,9 @@ export class PropertyService {
     }
     if (dto.securityDepositType !== undefined) {
       updateData.securityDepositType = dto.securityDepositType as any;
-      updateData.securityDepositAmount =
-        dto.securityDepositType === SecurityDepositType.CUSTOM
-          ? dto.securityDepositAmount ??
-            property.securityDepositAmount ??
-            null
-          : null;
-    } else if (dto.securityDepositAmount !== undefined) {
-      if (effectiveSecurityDepositType === SecurityDepositType.CUSTOM) {
-        updateData.securityDepositAmount = dto.securityDepositAmount;
-      } else {
-        updateData.securityDepositAmount = null;
-      }
+    }
+    if (dto.securityDepositAmount !== undefined) {
+      updateData.securityDepositAmount = dto.securityDepositAmount;
     }
     if (dto.lockInType !== undefined) {
       updateData.lockInType = dto.lockInType as any;
