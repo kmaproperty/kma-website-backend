@@ -1485,8 +1485,12 @@ export class PropertyService {
       }
     }
 
-    // Company occupancy requirement - only if tenantType is provided
-    if (dto.tenantType === TenantType.COMPANY && !dto.companyOccupancy) {
+    // Company occupancy requirement - only if tenantType includes company
+    if (
+      dto.tenantType &&
+      dto.tenantType.includes(TenantType.COMPANY) &&
+      !dto.companyOccupancy
+    ) {
       throw new BadRequestException('Please select company occupancy');
     }
 
@@ -1516,10 +1520,18 @@ export class PropertyService {
       updateData.ageOfProperty = dto.ageOfProperty ?? null;
     }
     if (dto.tenantType !== undefined) {
-      updateData.tenantType = dto.tenantType ?? null;
+      updateData.tenantType =
+        dto.tenantType && dto.tenantType.length > 0
+          ? dto.tenantType
+          : null;
     }
     if (dto.companyOccupancy !== undefined) {
       updateData.companyOccupancy = dto.companyOccupancy ?? null;
+    } else if (
+      dto.tenantType !== undefined &&
+      !dto.tenantType.includes(TenantType.COMPANY)
+    ) {
+      updateData.companyOccupancy = null;
     }
     if (dto.rentAvailability !== undefined) {
       updateData.rentAvailability = dto.rentAvailability as any;
@@ -2539,7 +2551,8 @@ export class PropertyService {
       flatNumber: property.flatNumber,
       towerBlock: property.towerBlock,
       propertyAreaAcre: property.propertyAreaAcre,
-      tenantType: property.tenantType,
+      isLiftAvailable: property.isLiftAvailable ?? null,
+      tenantType: property.tenantType ?? [],
       companyOccupancy: property.companyOccupancy,
       rentAvailability: property.rentAvailability,
       availableFromDate: property.availableFromDate

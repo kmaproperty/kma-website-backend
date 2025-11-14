@@ -10,7 +10,9 @@ import {
   IsEnum,
   IsBoolean,
   IsDateString,
+  IsArray,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export enum TenantType {
   FAMILY = 'family',
@@ -120,14 +122,35 @@ export class CreatePropertyStep2Dto {
   @Min(0)
   propertyAreaAcre?: number;
 
-  @ApiPropertyOptional({ enum: TenantType })
+  @ApiPropertyOptional({
+    enum: TenantType,
+    isArray: true,
+    description:
+      'Tenant type preferences (supports multiple selections for residential listings)',
+  })
   @IsOptional()
-  @IsEnum(TenantType)
-  tenantType?: TenantType;
+  @IsArray()
+  @IsEnum(TenantType, { each: true })
+  @Transform(({ value }) => {
+    if (value == null) {
+      return undefined;
+    }
+    if (Array.isArray(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    }
+    return value;
+  })
+  tenantType?: TenantType[];
 
   @ApiPropertyOptional({
     enum: CompanyOccupancy,
-    description: 'Required when tenantType is company',
+    description: 'Required when tenantType includes company',
   })
   @IsOptional()
   @IsEnum(CompanyOccupancy)

@@ -131,11 +131,12 @@ export class Property extends BaseEntity {
   propertyAreaAcre: number | null;
 
   @Column({
-    type: 'enum',
-    enum: ['family', 'bachelors', 'company'],
+    type: 'text',
+    array: true,
     nullable: true,
+    name: 'tenantType',
   })
-  tenantType: 'family' | 'bachelors' | 'company' | null;
+  tenantType: string[] | null;
 
   @Column({
     type: 'enum',

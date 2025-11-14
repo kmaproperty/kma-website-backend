@@ -790,12 +790,20 @@ export class PropertyStep2ResponseDto {
   propertyAreaAcre?: number | null;
 
   @ApiProperty({
-    description: 'Tenant type preference',
-    example: 'family',
-    enum: ['family', 'bachelors', 'company'],
+    description: 'Lift availability in the building',
+    example: true,
     required: false,
   })
-  tenantType?: 'family' | 'bachelors' | 'company' | null;
+  isLiftAvailable?: boolean | null;
+
+  @ApiProperty({
+    description: 'Tenant type preferences',
+    example: ['family', 'company'],
+    enum: ['family', 'bachelors', 'company'],
+    isArray: true,
+    required: false,
+  })
+  tenantType?: Array<'family' | 'bachelors' | 'company'> | null;
 
   @ApiProperty({
     description: 'Company occupancy type',
