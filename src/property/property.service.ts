@@ -1878,6 +1878,150 @@ export class PropertyService {
     };
   }
 
+  async resetProperty(
+    propertyId: string,
+    userId: string,
+  ): Promise<{
+    id: string;
+    status: string;
+    completionStep: number;
+    progressPercentage: number;
+  }> {
+    const property = await this.propertyRepository.findById(propertyId);
+    if (!property) {
+      throw new BadRequestException(
+        `Property with ID ${propertyId} not found`,
+      );
+    }
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only update your own properties');
+    }
+
+    const resetData: Partial<Property> = {
+      cityId: null,
+      societyId: null,
+      localityId: null,
+      propertyTypeId: null,
+      bhkTypeId: null,
+      builtUpAreaId: null,
+      ageOfProperty: null,
+      floorNumber: null,
+      totalFloors: null,
+      flatNumber: null,
+      towerBlock: null,
+      propertyAreaAcre: null,
+      tenantType: null,
+      companyOccupancy: null,
+      rentAvailability: null,
+      availableFromDate: null,
+      monthlyRent: null,
+      maintenanceType: null,
+      maintenanceChargeAmount: null,
+      securityDepositType: null,
+      securityDepositAmount: null,
+      lockInType: null,
+      lockInMonths: null,
+      brokerageType: null,
+      brokerageAmount: null,
+      isBrokerageNegotiable: null,
+      privateParking: null,
+      publicParking: null,
+      price: null,
+      plotNumber: null,
+      houseNumber: null,
+      villaNumber: null,
+      possessionStatus: null,
+      possessionDate: null,
+      plotPrice: null,
+      brokerage: null,
+      loanAvailable: null,
+      boundaryWall: null,
+      noOfOpenSides: null,
+      floorsAllowedForConstruction: null,
+      constructionDone: null,
+      constructionType: null,
+      cornerProperty: null,
+      propertyDescription: null,
+      additionalRooms: null,
+      reservedParkingCovered: null,
+      reservedParkingOpen: null,
+      powerBackup: null,
+      furnishType: null,
+      furnishingsCounts: null,
+      minNumberOfSeats: null,
+      maxNumberOfSeats: null,
+      numberOfCabins: null,
+      numberOfMeetingRooms: null,
+      conferenceRoom: null,
+      receptionArea: null,
+      amenities: null,
+      waterSource: null,
+      isLiftAvailable: null,
+      noOfStaircases: null,
+      isRentNegotiable: null,
+      privateWashrooms: null,
+      publicWashrooms: null,
+      dgUpsChargeIncluded: null,
+      electricityChargeIncluded: null,
+      waterChargeIncluded: null,
+      expectedRentIncrease: null,
+      expectedReturnOnInvestment: null,
+      taxGovtChargeIncluded: null,
+      isPreLeasedRented: null,
+      currentRentPerMonth: null,
+      leaseYears: null,
+      facing: null,
+      transactionType: null,
+      constructionStatus: null,
+      possessionBy: null,
+      possessionTime: null,
+      plotArea: null,
+      plotAreaUnit: null,
+      plotLength: null,
+      plotLengthUnit: null,
+      plotWidth: null,
+      plotWidthUnit: null,
+      plotFacingRoadWidth: null,
+      locationHub: null,
+      otherLocationHub: null,
+      zoneType: null,
+      propertyCondition: null,
+      wallConstructionStatus: null,
+      ownership: null,
+      builtUpArea: null,
+      builtUpAreaUnit: null,
+      carpetArea: null,
+      carpetAreaUnit: null,
+      suitableFor: null,
+      entranceWidth: null,
+      entranceWidthUnit: null,
+      ceilingHeight: null,
+      ceilingHeightUnit: null,
+      locatedNear: null,
+      plotLandType: null,
+      constructionTypeOptions: null,
+      photos: null,
+      videos: null,
+      adminReviewComment: null,
+      adminReviewedBy: null,
+      adminReviewedAt: null,
+      status: 'draft',
+      completionStep: PropertyCompletionStep.STEP_1,
+    };
+
+    await this.propertyRepository.updateProperty(propertyId, resetData);
+
+    const completionStep =
+      resetData.completionStep ?? PropertyCompletionStep.STEP_1;
+
+    return {
+      id: propertyId,
+      status: resetData.status ?? property.status ?? 'draft',
+      completionStep,
+      progressPercentage: 0,
+    };
+  }
+
   /**
    * Search for societies by name or locality name
    */

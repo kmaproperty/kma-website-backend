@@ -23,6 +23,7 @@ import { CreatePropertyStep1Dto } from './dto/create-property.dto';
 import { CreatePropertyStep2Dto } from './dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from './dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
+import { ResetPropertyDto } from './dto/reset-property.dto';
 import {
   MasterDataResponseDto,
   ReseedMasterDataResponseDto,
@@ -464,6 +465,27 @@ export class PropertyController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.propertyService.getPropertyStep4Details(propertyId, req.user.id);
+  }
+
+  @Post('/reset')
+  @ApiOperation({
+    summary: 'Reset property data for all steps',
+    description:
+      'Clears all saved property step data and reverts the completion progress back to step 1. Only the property owner can reset their property.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property data cleared successfully',
+    type: PropertyStatusResponseDto,
+  })
+  async resetProperty(
+    @Body() body: ResetPropertyDto,
+    @Req() req: Request,
+  ): Promise<PropertyStatusResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.resetProperty(body.propertyId, req.user.id);
   }
 
   @Get('/step-1/:propertyId')
