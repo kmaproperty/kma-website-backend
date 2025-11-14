@@ -37,6 +37,7 @@ import {
   ListingTypeResponseDto,
   CategoryResponseDto,
   LocationResponseDto,
+  OwnerPropertyListingResponseDto,
 } from './dto/property-response.dto';
 import {
   MasterDataQueryDto,
@@ -46,6 +47,7 @@ import {
   BhkTypesQueryDto,
   LocationSearchQueryDto,
 } from './dto/property-query.dto';
+import { OwnerPropertyListingQueryDto } from './dto/owner-property-listing-query.dto';
 
 @ApiTags('Property')
 @Controller('property')
@@ -136,6 +138,30 @@ export class PropertyController {
   })
   async getCategories(): Promise<CategoryResponseDto[]> {
     return await this.propertyService.getAllCategories();
+  }
+
+  @Get('listings')
+  @ApiOperation({
+    summary: 'Get owner/channel partner property listings',
+    description:
+      'Returns paginated property listings for the authenticated owner or channel partner with filters and summary counts.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property listings retrieved successfully',
+    type: OwnerPropertyListingResponseDto,
+  })
+  async getOwnerPropertyListings(
+    @Query() query: OwnerPropertyListingQueryDto,
+    @Req() req: Request,
+  ): Promise<OwnerPropertyListingResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.getOwnerPropertyListings(
+      query,
+      req.user.id,
+    );
   }
 
   @Get('cities/search')

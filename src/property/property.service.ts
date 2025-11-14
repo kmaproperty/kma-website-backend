@@ -25,6 +25,15 @@ import { CreatePropertyStep3Dto, FurnishingCountDto, FurnishType, PowerBackupTyp
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
 import { Property } from './entities/property.entity';
 import { MAX_LISTINGS_PER_OWNER } from './constants/property.constants';
+import {
+  OwnerPropertyListingQueryDto,
+  OwnerPropertySortBy,
+  OwnerPropertySortOrder,
+} from './dto/owner-property-listing-query.dto';
+import {
+  OwnerPropertyListingItemDto,
+  OwnerPropertyListingResponseDto,
+} from './dto/property-response.dto';
 
 @Injectable()
 export class PropertyService {
@@ -99,6 +108,188 @@ export class PropertyService {
       await this.propertyRepository.findByIdWithRelations(propertyId);
     const totalSteps = this.determineTotalSteps(property);
     return this.calculateProgressPercentage(completionStep, totalSteps);
+  }
+
+  async getOwnerPropertyListings(
+    query: OwnerPropertyListingQueryDto,
+    userId: string,
+  ): Promise<OwnerPropertyListingResponseDto> {
+    const {
+      page = 1,
+      limit = 10,
+      categoryIds,
+      propertyTypeIds,
+      listingTypeIds,
+      furnishingTypes,
+      projectStatuses,
+      statuses,
+      minPrice,
+      maxPrice,
+      search,
+      sortBy = OwnerPropertySortBy.CREATED_AT,
+      sortOrder = OwnerPropertySortOrder.DESC,
+    } = query;
+
+    const { items, total, statusCounts } =
+      await this.propertyRepository.findOwnerListings({
+        userId,
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        filters: {
+          categoryIds,
+          propertyTypeIds,
+          listingTypeIds,
+          furnishingTypes,
+          projectStatuses,
+          statuses,
+          minPrice,
+          maxPrice,
+          search,
+        },
+      });
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const mappedItems = items.map((property) =>
+      this.mapOwnerPropertyListingItem(property),
+    );
+
+    const defaultStatusBuckets = [
+      'draft',
+      'pending_review',
+      'approved',
+      'rejected',
+      'active',
+      'inactive',
+      'sold',
+      'rented',
+    ];
+
+    const normalizedCounts = { ...statusCounts };
+    for (const status of defaultStatusBuckets) {
+      if (normalizedCounts[status] == null) {
+        normalizedCounts[status] = 0;
+      }
+    }
+
+    return {
+      items: mappedItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+      summary: {
+        total,
+        byStatus: normalizedCounts,
+      },
+    };
+  }
+
+  private mapOwnerPropertyListingItem(
+    property: Property,
+  ): OwnerPropertyListingItemDto {
+    const bhkName = property.bhkType?.name ?? null;
+    const propertyTypeName = property.propertyType?.name ?? '';
+    const titleParts = [bhkName, propertyTypeName].filter(
+      (part) => part && part.trim().length > 0,
+    );
+    const title =
+      titleParts.join(' ').trim() ||
+      property.propertyDescription ||
+      property.listingType?.name ||
+      'Property';
+
+    const coverPhoto =
+      property.photos?.find((photo) => photo.isCoverImage) ??
+      property.photos?.[0] ??
+      null;
+
+    const areaFromMetadata = property.builtUpAreaMetadata?.superBuiltUpArea
+      ? Number(property.builtUpAreaMetadata.superBuiltUpArea)
+      : null;
+    const area =
+      property.builtUpArea ?? areaFromMetadata ?? property.carpetArea ?? null;
+
+    const areaUnit =
+      property.builtUpAreaUnit ??
+      property.carpetAreaUnit ??
+      (area != null ? 'sq.ft' : null);
+
+    const priceSource =
+      property.price != null
+        ? 'price'
+        : property.monthlyRent != null
+        ? 'monthlyRent'
+        : null;
+
+    const primaryPrice =
+      priceSource === 'price'
+        ? property.price
+        : priceSource === 'monthlyRent'
+        ? property.monthlyRent
+        : null;
+
+    const addressParts = [
+      property.houseNumber ?? property.flatNumber ?? null,
+      property.society?.name ?? null,
+      property.locality?.name ?? null,
+      property.city?.name ?? null,
+    ].filter((part) => part && part.toString().trim().length > 0);
+
+    const completionStep = property.completionStep ?? 0;
+    const progressPercentage = this.calculateProgressPercentage(
+      completionStep,
+      this.determineTotalSteps(property),
+    );
+
+    return {
+      id: property.id,
+      title,
+      status: property.status,
+      listingType: property.listingType
+        ? {
+            id: property.listingType.id,
+            name: property.listingType.name,
+            code: property.listingType.code,
+          }
+        : undefined,
+      category: property.category
+        ? {
+            id: property.category.id,
+            name: property.category.name,
+            code: property.category.code,
+          }
+        : undefined,
+      propertyType: property.propertyType
+        ? {
+            id: property.propertyType.id,
+            name: property.propertyType.name,
+            code: property.propertyType.code,
+          }
+        : null,
+      bhkTypeName: bhkName,
+      furnishingType: property.furnishType ?? null,
+      constructionStatus: property.constructionStatus ?? null,
+      price: primaryPrice ?? null,
+      monthlyRent: property.monthlyRent ?? null,
+      priceSource,
+      mediaCounts: {
+        photos: property.photos?.length ?? 0,
+        videos: property.videos?.length ?? 0,
+      },
+      coverPhotoKey: coverPhoto?.fileKey ?? null,
+      address: addressParts.length ? addressParts.join(', ') : null,
+      area,
+      areaUnit,
+      completionStep,
+      progressPercentage,
+      createdAt: property.createdAt,
+      updatedAt: property.updatedAt,
+    };
   }
 
   async getFilteredMasterData(

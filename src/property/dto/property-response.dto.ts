@@ -552,6 +552,203 @@ export class PropertyStatusResponseDto {
   progressPercentage: number;
 }
 
+export class OwnerPropertyListingItemDto {
+  @ApiProperty({ description: 'Property ID', example: '17840748' })
+  id: string;
+
+  @ApiProperty({
+    description: 'Human readable title composed from property details',
+    example: '1.5 BHK Independent Floor',
+  })
+  title: string;
+
+  @ApiProperty({
+    description: 'Property status',
+    example: 'pending_review',
+    enum: [
+      'draft',
+      'pending_review',
+      'approved',
+      'rejected',
+      'active',
+      'inactive',
+      'sold',
+      'rented',
+    ],
+  })
+  status: string;
+
+  @ApiProperty({
+    description: 'Property listing type details',
+    type: ListingTypeResponseDto,
+    required: false,
+  })
+  listingType?: ListingTypeResponseDto;
+
+  @ApiProperty({
+    description: 'Property category details',
+    type: CategoryResponseDto,
+    required: false,
+  })
+  category?: CategoryResponseDto;
+
+  @ApiProperty({
+    description: 'Property type details',
+    type: PropertyTypeResponseDto,
+    required: false,
+  })
+  propertyType?: PropertyTypeResponseDto | null;
+
+  @ApiProperty({
+    description: 'BHK type name',
+    example: '1.5 BHK',
+    required: false,
+  })
+  bhkTypeName?: string | null;
+
+  @ApiProperty({
+    description: 'Furnishing type',
+    example: 'Unfurnished',
+    required: false,
+  })
+  furnishingType?: string | null;
+
+  @ApiProperty({
+    description: 'Construction/project status',
+    example: 'ready_to_move',
+    required: false,
+  })
+  constructionStatus?: string | null;
+
+  @ApiProperty({
+    description: 'Primary price (sale price or lease amount)',
+    example: 4500000,
+    required: false,
+  })
+  price?: number | null;
+
+  @ApiProperty({
+    description: 'Monthly rent, if applicable',
+    example: 45000,
+    required: false,
+  })
+  monthlyRent?: number | null;
+
+  @ApiProperty({
+    description: 'Computed price source (price or monthlyRent)',
+    example: 'price',
+    required: false,
+  })
+  priceSource?: 'price' | 'monthlyRent' | null;
+
+  @ApiProperty({
+    description: 'Total media counts',
+    example: { photos: 15, videos: 2 },
+    required: false,
+  })
+  mediaCounts?: {
+    photos: number;
+    videos: number;
+  };
+
+  @ApiProperty({
+    description: 'Cover photo file key (if available)',
+    example: 'properties/uuid/cover.jpg',
+    required: false,
+  })
+  coverPhotoKey?: string | null;
+
+  @ApiProperty({
+    description: 'Society / locality / city formatted string',
+    example: '742 Evergreen Terrace, Springfield, IL',
+    required: false,
+  })
+  address?: string | null;
+
+  @ApiProperty({
+    description: 'Built-up area or super built-up area value',
+    example: 450,
+    required: false,
+  })
+  area?: number | null;
+
+  @ApiProperty({
+    description: 'Area unit',
+    example: 'sq.ft',
+    required: false,
+  })
+  areaUnit?: string | null;
+
+  @ApiProperty({
+    description: 'Completion step (0-5)',
+    example: 3,
+  })
+  completionStep: number;
+
+  @ApiProperty({
+    description: 'Progress percentage (0-100)',
+    example: 60,
+  })
+  progressPercentage: number;
+
+  @ApiProperty({
+    description: 'Created at timestamp',
+    example: '2025-07-18T10:15:00.000Z',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    description: 'Last updated timestamp',
+    example: '2025-07-20T08:45:00.000Z',
+  })
+  updatedAt: Date;
+}
+
+export class OwnerPropertyListingPaginationDto {
+  @ApiProperty({ description: 'Current page', example: 1 })
+  page: number;
+
+  @ApiProperty({ description: 'Items per page', example: 10 })
+  limit: number;
+
+  @ApiProperty({ description: 'Total items', example: 100 })
+  total: number;
+
+  @ApiProperty({ description: 'Total pages', example: 10 })
+  totalPages: number;
+}
+
+export class OwnerPropertyListingResponseDto {
+  @ApiProperty({
+    description: 'Property listings for the current owner/channel partner',
+    type: [OwnerPropertyListingItemDto],
+  })
+  items: OwnerPropertyListingItemDto[];
+
+  @ApiProperty({
+    description: 'Pagination details',
+    type: OwnerPropertyListingPaginationDto,
+  })
+  pagination: OwnerPropertyListingPaginationDto;
+
+  @ApiProperty({
+    description: 'Counts for each status bucket',
+    example: {
+      total: 30,
+      byStatus: {
+        draft: 5,
+        pending_review: 10,
+        active: 12,
+        rejected: 3,
+      },
+    },
+  })
+  summary: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+}
+
 // Property Step 2 Response DTO
 export class PropertyStep2ResponseDto {
   @ApiProperty({ description: 'Property ID', example: 'uuid-string' })
