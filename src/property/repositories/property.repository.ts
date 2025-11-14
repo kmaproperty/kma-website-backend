@@ -32,6 +32,7 @@ export class PropertyRepository {
         'society',
         'propertyType',
         'bhkType',
+        'builtUpAreaMetadata',
         'user',
       ],
     });

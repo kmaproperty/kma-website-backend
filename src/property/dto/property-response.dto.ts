@@ -698,6 +698,13 @@ export class PropertyStep2ResponseDto {
   isBrokerageNegotiable?: boolean | null;
 
   @ApiProperty({
+    description: 'Expected Return on Investment (e.g., "12%" or "150000")',
+    example: '12%',
+    required: false,
+  })
+  expectedReturnOnInvestment?: string | null;
+
+  @ApiProperty({
     description: 'Property facing direction',
     example: 'North',
     required: false,

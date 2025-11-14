@@ -7,6 +7,7 @@ import { MasterSociety } from './master-society.entity';
 import { MasterLocality } from './master-locality.entity';
 import { MasterPropertyType } from './master-property-type.entity';
 import { MasterBhkType } from './master-bhk-type.entity';
+import { MasterBuiltUpArea } from './master-built-up-area.entity';
 import { TransactionType } from '../enum/transaction-type.enum';
 import { ConstructionStatus } from '../enum/construction-status.enum';
 import { LocationHub } from '../enum/location-hub.enum';
@@ -76,6 +77,13 @@ export class Property extends BaseEntity {
   @ManyToOne(() => MasterBhkType, { nullable: true })
   @JoinColumn({ name: 'bhkTypeId' })
   bhkType: MasterBhkType | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  builtUpAreaId: string | null;
+
+  @ManyToOne(() => MasterBuiltUpArea, { nullable: true })
+  @JoinColumn({ name: 'builtUpAreaId' })
+  builtUpAreaMetadata: MasterBuiltUpArea | null;
 
   // Age of Property (in Years)
   @Column({ type: 'int', nullable: true })
@@ -404,6 +412,10 @@ export class Property extends BaseEntity {
   // Expected Rent Increase (optional, in percentage or amount)
   @Column({ type: 'varchar', length: 100, nullable: true })
   expectedRentIncrease: string | null;
+
+  // Expected Return on Investment (optional, in percentage or amount)
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  expectedReturnOnInvestment: string | null;
 
   // Tax & Govt. charge included (optional)
   @Column({

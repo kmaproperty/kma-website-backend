@@ -210,6 +210,11 @@ export class CreatePropertyStep2Dto {
   @IsBoolean()
   isBrokerageNegotiable?: boolean;
 
+  @ApiPropertyOptional({ description: 'Is lift available?' })
+  @IsOptional()
+  @IsBoolean()
+  isLiftAvailable?: boolean;
+
   @ApiPropertyOptional({ 
     description: 'Number of Staircases', 
     minimum: 1,
@@ -291,6 +296,14 @@ export class CreatePropertyStep2Dto {
   @IsOptional()
   @IsString()
   expectedRentIncrease?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Expected Return on Investment (e.g., "12%" or "150000")', 
+    example: '12%'
+  })
+  @IsOptional()
+  @IsString()
+  expectedReturnOnInvestment?: string;
 
   @ApiPropertyOptional({ 
     description: 'Tax & Govt. charge included?', 

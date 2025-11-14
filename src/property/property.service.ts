@@ -882,8 +882,13 @@ export class PropertyService {
       // Get or create BHK type (optional, requires societyId or localityId and propertyTypeId)
       const bhkTypeId = await getOrCreateBhk(bhk, societyId, localityId, propertyTypeId);
 
-      // Get or create built-up area (optional, requires bhk info)
-      await getOrCreateBuiltUpArea(bhk, bhkTypeId, societyId, localityId);
+    // Get or create built-up area (optional, requires bhk info)
+    const builtUpAreaId = await getOrCreateBuiltUpArea(
+      bhk,
+      bhkTypeId,
+      societyId,
+      localityId,
+    );
 
       let property;
 
@@ -923,6 +928,9 @@ export class PropertyService {
         }
         if (bhkTypeId !== null && bhkTypeId !== undefined) {
           updateData.bhkTypeId = bhkTypeId;
+        }
+        if (builtUpAreaId) {
+          updateData.builtUpAreaId = builtUpAreaId;
         }
         if (ageOfProperty !== undefined) {
           updateData.ageOfProperty = ageOfProperty;
@@ -1077,6 +1085,9 @@ export class PropertyService {
         if (bhkTypeId !== null && bhkTypeId !== undefined) {
           createData.bhkTypeId = bhkTypeId;
         }
+        if (builtUpAreaId) {
+          createData.builtUpAreaId = builtUpAreaId;
+        }
         if (ageOfProperty !== undefined) {
           createData.ageOfProperty = ageOfProperty;
         }
@@ -1227,6 +1238,16 @@ export class PropertyService {
       throw new BadRequestException('You can only update your own properties');
     }
 
+    const effectiveMonthlyRent = dto.monthlyRent ?? property.monthlyRent ?? null;
+    const effectiveSecurityDepositType =
+      dto.securityDepositType ?? property.securityDepositType ?? null;
+    const effectiveSecurityDepositAmount =
+      dto.securityDepositAmount ?? property.securityDepositAmount ?? null;
+    const shouldValidateSecurityDeposit =
+      dto.securityDepositType !== undefined ||
+      dto.securityDepositAmount !== undefined ||
+      dto.monthlyRent !== undefined;
+
     // Floor validations - only validate if both are provided
     if (dto.floorNumber != null && dto.totalFloors != null) {
       if (dto.floorNumber > dto.totalFloors) {
@@ -1259,17 +1280,29 @@ export class PropertyService {
       }
     }
 
-    // Security deposit validation - only if securityDepositType is provided
-    if (dto.securityDepositType === SecurityDepositType.CUSTOM) {
-      if (dto.monthlyRent == null) {
+    // Security deposit validation - only if security deposit fields are touched
+    if (
+      shouldValidateSecurityDeposit &&
+      effectiveSecurityDepositType === SecurityDepositType.CUSTOM
+    ) {
+      if (effectiveMonthlyRent == null) {
         throw new BadRequestException(
           'Please enter rent before specifying deposit',
         );
       }
-      if (dto.securityDepositAmount == null || dto.securityDepositAmount < 0) {
+      if (
+        dto.securityDepositType === SecurityDepositType.CUSTOM &&
+        (dto.securityDepositAmount == null || dto.securityDepositAmount < 0)
+      ) {
         throw new BadRequestException('Please enter the security deposit');
       }
-      if (dto.securityDepositAmount > dto.monthlyRent * 12) {
+      if (
+        effectiveSecurityDepositAmount == null ||
+        effectiveSecurityDepositAmount < 0
+      ) {
+        throw new BadRequestException('Please enter the security deposit');
+      }
+      if (effectiveSecurityDepositAmount > effectiveMonthlyRent * 12) {
         throw new BadRequestException(
           'Deposit seems high as per market standards',
         );
@@ -1358,8 +1391,16 @@ export class PropertyService {
       updateData.securityDepositType = dto.securityDepositType as any;
       updateData.securityDepositAmount =
         dto.securityDepositType === SecurityDepositType.CUSTOM
-          ? dto.securityDepositAmount!
+          ? dto.securityDepositAmount ??
+            property.securityDepositAmount ??
+            null
           : null;
+    } else if (dto.securityDepositAmount !== undefined) {
+      if (effectiveSecurityDepositType === SecurityDepositType.CUSTOM) {
+        updateData.securityDepositAmount = dto.securityDepositAmount;
+      } else {
+        updateData.securityDepositAmount = null;
+      }
     }
     if (dto.lockInType !== undefined) {
       updateData.lockInType = dto.lockInType as any;
@@ -1375,6 +1416,9 @@ export class PropertyService {
     }
     if (dto.isBrokerageNegotiable !== undefined) {
       updateData.isBrokerageNegotiable = dto.isBrokerageNegotiable ?? false;
+    }
+    if (dto.isLiftAvailable !== undefined) {
+      updateData.isLiftAvailable = dto.isLiftAvailable ?? null;
     }
     if (dto.noOfStaircases !== undefined) {
       updateData.noOfStaircases = dto.noOfStaircases;
@@ -1405,6 +1449,10 @@ export class PropertyService {
     }
     if (dto.expectedRentIncrease !== undefined) {
       updateData.expectedRentIncrease = dto.expectedRentIncrease || null;
+    }
+    if (dto.expectedReturnOnInvestment !== undefined) {
+      updateData.expectedReturnOnInvestment =
+        dto.expectedReturnOnInvestment || null;
     }
     if (dto.taxGovtChargeIncluded !== undefined) {
       updateData.taxGovtChargeIncluded = dto.taxGovtChargeIncluded;
@@ -1520,11 +1568,29 @@ export class PropertyService {
    */
   async getAllCategories(): Promise<any[]> {
     const categories = await this.propertyCategoryRepository.findAll();
-    return categories.map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-      code: cat.code,
-    }));
+    const priority: Record<string, number> = {
+      residential: 0,
+      commercial: 1,
+    };
+
+    return categories
+      .map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        code: cat.code,
+      }))
+      .sort((a, b) => {
+        const aPriority =
+          priority[a.code?.toLowerCase() ?? ''] ?? Number.MAX_SAFE_INTEGER;
+        const bPriority =
+          priority[b.code?.toLowerCase() ?? ''] ?? Number.MAX_SAFE_INTEGER;
+
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+
+        return (a.name ?? '').localeCompare(b.name ?? '');
+      });
   }
 
   async updatePropertyStep3(
@@ -1983,24 +2049,29 @@ export class PropertyService {
     }
 
     // Get built-up area for this BHK type - try societyId first, then localityId
-    let builtUpArea: any = null;
-    if (property.bhkTypeId) {
-      if (property.societyId) {
-        const builtUpAreas =
-          await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
-            property.bhkTypeId,
-            property.societyId,
-          );
-        // Get the first matching built-up area (or use the first one if multiple exist)
-        builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
-      } else if (property.localityId) {
-        const builtUpAreas =
-          await this.builtUpAreaRepository.findByBhkTypeIdAndLocalityId(
-            property.bhkTypeId,
-            property.localityId,
-          );
-        // Get the first matching built-up area (or use the first one if multiple exist)
-        builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
+    let builtUpArea: any = property.builtUpAreaMetadata ?? null;
+    if (!builtUpArea && property.bhkTypeId) {
+      if (property.builtUpAreaId) {
+        builtUpArea = await this.builtUpAreaRepository.findById(
+          property.builtUpAreaId,
+        );
+      }
+      if (!builtUpArea) {
+        if (property.societyId) {
+          const builtUpAreas =
+            await this.builtUpAreaRepository.findByBhkTypeIdAndSocietyId(
+              property.bhkTypeId,
+              property.societyId,
+            );
+          builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
+        } else if (property.localityId) {
+          const builtUpAreas =
+            await this.builtUpAreaRepository.findByBhkTypeIdAndLocalityId(
+              property.bhkTypeId,
+              property.localityId,
+            );
+          builtUpArea = builtUpAreas.length > 0 ? builtUpAreas[0] : null;
+        }
       }
     }
 
@@ -2016,6 +2087,20 @@ export class PropertyService {
       completionStep,
       this.determineTotalSteps(property),
     );
+    const builtUpAreaInfo = builtUpArea
+      ? {
+          id: builtUpArea.id,
+          superBuiltUpArea: Number(builtUpArea.superBuiltUpArea),
+          carpetArea: Number(builtUpArea.carpetArea),
+          noOfBathrooms: builtUpArea.noOfBathrooms,
+          noOfBedrooms: builtUpArea.noOfBedrooms,
+          balconies: builtUpArea.balconies,
+          bhkTypeId: builtUpArea.bhkTypeId,
+          societyId: builtUpArea.societyId,
+          localityId: builtUpArea.localityId,
+        }
+      : null;
+
     return {
       propertyId: property.id,
       listingType: listingType
@@ -2042,11 +2127,12 @@ export class PropertyService {
       bhk: {
         id: property.bhkType?.id,
         name: property.bhkType?.name || '',
-        buildUpAreaSqFt: builtUpArea?.superBuiltUpArea || 0,
-        carpetAreaSqFt: builtUpArea?.carpetArea || 0,
-        noOfBathrooms: builtUpArea?.noOfBathrooms || 0,
-        noOfBedrooms: builtUpArea?.noOfBedrooms ?? null,
-        balconies: builtUpArea?.balconies ?? null,
+        builtUpAreaId: builtUpAreaInfo?.id || null,
+        buildUpAreaSqFt: builtUpAreaInfo?.superBuiltUpArea || 0,
+        carpetAreaSqFt: builtUpAreaInfo?.carpetArea || 0,
+        noOfBathrooms: builtUpAreaInfo?.noOfBathrooms || 0,
+        noOfBedrooms: builtUpAreaInfo?.noOfBedrooms ?? null,
+        balconies: builtUpAreaInfo?.balconies ?? null,
       },
       ageOfProperty: property.ageOfProperty,
       facing: property.facing || null,
@@ -2127,6 +2213,7 @@ export class PropertyService {
       constructionTypeOptions: property.constructionTypeOptions || [],
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
+      builtUpAreaInfo,
       completionStep,
       progressPercentage,
     };
@@ -2200,6 +2287,8 @@ export class PropertyService {
       electricityChargeIncluded: property.electricityChargeIncluded || null,
       waterChargeIncluded: property.waterChargeIncluded || null,
       expectedRentIncrease: property.expectedRentIncrease || null,
+      expectedReturnOnInvestment:
+        property.expectedReturnOnInvestment || null,
       taxGovtChargeIncluded: property.taxGovtChargeIncluded || null,
       isPreLeasedRented: property.isPreLeasedRented || null,
       currentRentPerMonth: property.currentRentPerMonth || null,
