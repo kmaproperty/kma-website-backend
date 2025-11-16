@@ -5,11 +5,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from './entities/user.entity';
 import { Otp } from './entities/otp.entity';
 import { ChannelPartnerCode } from './entities/channel-partner-code.entity';
+import { Lead } from './entities/lead.entity';
+import { UserRoleHistory } from './entities/user-role-history.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
 import { Property } from '../property/entities/property.entity';
 import { PropertyRepository } from '../property/repositories/property.repository';
+import { LeadRepository } from './repositories/lead.repository';
+import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { UserController } from './user.controller';
@@ -18,12 +22,14 @@ import { LoggerService } from '../logger/logger.service';
 import { ErrorHandlerService } from '../common/errorHandler/error-handler.service';
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 
-const entities = [User, Otp, ChannelPartnerCode, Property];
+const entities = [User, Otp, ChannelPartnerCode, Lead, UserRoleHistory, Property];
 const repositories = [
   UserRepository,
   OtpRepository,
   ChannelPartnerCodeRepository,
   PropertyRepository,
+  LeadRepository,
+  UserRoleHistoryRepository,
 ];
 
 @Module({
@@ -62,6 +68,7 @@ const repositories = [
     OtpRepository,
     ChannelPartnerCodeService,
     ChannelPartnerCodeRepository,
+    LeadRepository,
   ],
 })
 export class UserModule implements NestModule {
@@ -72,11 +79,15 @@ export class UserModule implements NestModule {
       .forRoutes(
         'users/create-owner',
         'users/create-channel-partner',
+        'users/upgrade-channel-partner',
         'users/profile',
+        'users/dashboard',
         'users/logout',
       );
 
     // Apply auth middleware to profile and logout endpoints
-    consumer.apply(AuthMiddleware).forRoutes('users/profile', 'users/logout');
+    consumer
+      .apply(AuthMiddleware)
+      .forRoutes('users/profile', 'users/upgrade-channel-partner', 'users/dashboard', 'users/logout');
   }
 }

@@ -30,7 +30,9 @@ import {
   RefreshTokenDto,
   RefreshTokenResponseDto,
   LogoutResponseDto,
+  DashboardResponseDto,
 } from './dto';
+import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 
 @ApiTags('User Management')
 @Controller('users')
@@ -48,6 +50,24 @@ export class UserController {
     @Body() sendOtpDto: SendOtpDto,
   ): Promise<SendOtpResponseDto> {
     return await this.userService.sendOtpForSignup(sendOtpDto);
+  }
+
+  @Post('upgrade-channel-partner')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Upgrade OWNER to CHANNEL_PARTNER with valid code' })
+  @ApiResponse({
+    status: 200,
+    description: 'Upgraded successfully',
+    type: UpgradeToChannelPartnerResponseDto,
+  })
+  async upgradeToChannelPartner(
+    @Body() dto: UpgradeToChannelPartnerDto,
+    @Req() req: Request,
+  ): Promise<UpgradeToChannelPartnerResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.upgradeToChannelPartner(dto, req.user.id);
   }
 
   @Post('login/send-otp')
@@ -142,6 +162,21 @@ export class UserController {
       throw new BadRequestException('User not found');
     }
     return user;
+  }
+
+  @Get('dashboard')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get seller/channel partner dashboard data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard data',
+    type: DashboardResponseDto,
+  })
+  async getDashboard(@Req() req: Request): Promise<DashboardResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getDashboard(req.user.id);
   }
 
   @Post('resend-otp')

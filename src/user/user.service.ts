@@ -25,6 +25,11 @@ import {
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
+import { DashboardResponseDto } from './dto';
+import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
+import { LeadRepository } from './repositories/lead.repository';
+import { LeadType } from './entities/lead.entity';
+import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
 
 @Injectable()
 export class UserService {
@@ -39,6 +44,8 @@ export class UserService {
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
     private readonly propertyRepository: PropertyRepository,
+    private readonly leadRepository: LeadRepository,
+    private readonly userRoleHistoryRepository: UserRoleHistoryRepository,
   ) {}
 
   /**
@@ -55,6 +62,66 @@ export class UserService {
       phone,
       role,
       type,
+    };
+  }
+
+  /**
+   * Upgrade OWNER to CHANNEL_PARTNER with code validation and history
+   */
+  async upgradeToChannelPartner(
+    dto: UpgradeToChannelPartnerDto,
+    userId: string,
+  ): Promise<UpgradeToChannelPartnerResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    if (!user.phoneVerified) {
+      throw new BadRequestException('Phone number is not verified');
+    }
+    if (user.role === UserRole.CHANNEL_PARTNER) {
+      return { success: true, message: 'Already a CHANNEL_PARTNER' };
+    }
+    if (user.role !== UserRole.OWNER) {
+      throw new BadRequestException('Only OWNERs can be upgraded');
+    }
+
+    // Validate channel partner code
+    const validCode =
+      await this.channelPartnerCodeRepository.findByCode(
+        dto.channelPartnerCode,
+      );
+    if (!validCode) {
+      throw new BadRequestException('Invalid channel partner code');
+    }
+
+    // Update role and persist history in a transaction
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      await queryRunner.manager.update(
+        'users',
+        { id: user.id },
+        { role: UserRole.CHANNEL_PARTNER, channelPartnerCode: dto.channelPartnerCode },
+      );
+      await this.userRoleHistoryRepository.create({
+        userId: user.id,
+        fromRole: UserRole.OWNER,
+        toRole: UserRole.CHANNEL_PARTNER,
+        channelPartnerCode: dto.channelPartnerCode,
+      });
+      await queryRunner.commitTransaction();
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+      throw e;
+    } finally {
+      await queryRunner.release();
+    }
+
+    return {
+      success: true,
+      message: 'Upgraded to CHANNEL_PARTNER successfully',
     };
   }
 
@@ -623,5 +690,67 @@ export class UserService {
       token: null,
       refreshToken: null,
     });
+  }
+
+  /**
+   * Build seller/channel partner dashboard data
+   */
+  async getDashboard(userId: string): Promise<DashboardResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    const used = await this.propertyRepository.countByUserId(user.id);
+    const isChannelPartner = user.role === UserRole.CHANNEL_PARTNER;
+    const total = isChannelPartner ? null : MAX_LISTINGS_PER_OWNER;
+    const remaining = isChannelPartner ? null : Math.max(0, (total as number) - used);
+    const daySince = new Date();
+    daySince.setDate(daySince.getDate() - 1);
+    const weekSince = new Date();
+    weekSince.setDate(weekSince.getDate() - 7);
+    const monthSince = new Date();
+    monthSince.setDate(monthSince.getDate() - 30);
+
+    const [
+      dayResidential,
+      dayCommercial,
+      weekResidential,
+      weekCommercial,
+      monthResidential,
+      monthCommercial,
+    ] = await Promise.all([
+      this.leadRepository.countByUserAndTypeSinceQuery(user.id, LeadType.RESIDENTIAL, daySince),
+      this.leadRepository.countByUserAndTypeSinceQuery(user.id, LeadType.COMMERCIAL, daySince),
+      this.leadRepository.countByUserAndTypeSinceQuery(user.id, LeadType.RESIDENTIAL, weekSince),
+      this.leadRepository.countByUserAndTypeSinceQuery(user.id, LeadType.COMMERCIAL, weekSince),
+      this.leadRepository.countByUserAndTypeSinceQuery(user.id, LeadType.RESIDENTIAL, monthSince),
+      this.leadRepository.countByUserAndTypeSinceQuery(user.id, LeadType.COMMERCIAL, monthSince),
+    ]);
+
+    return {
+      name: user.name ?? null,
+      role: user.role,
+      plan: isChannelPartner ? 'CHANNEL_PARTNER' : 'FREE',
+      freeListings: {
+        used,
+        total,
+        remaining,
+        isUnlimited: isChannelPartner,
+      },
+      leadsSummary: {
+        lastDay: {
+          residential: dayResidential,
+          commercial: dayCommercial,
+        },
+        lastWeek: {
+          residential: weekResidential,
+          commercial: weekCommercial,
+        },
+        lastMonth: {
+          residential: monthResidential,
+          commercial: monthCommercial,
+        },
+      },
+    };
   }
 }

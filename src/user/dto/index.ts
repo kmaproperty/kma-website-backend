@@ -10,3 +10,5 @@ export * from './create-channel-partner.dto';
 export * from './resend-otp.dto';
 export * from './refresh-token.dto';
 export * from './logout.dto';
+export * from './dashboard.dto';
+export * from './upgrade-channel-partner.dto';
