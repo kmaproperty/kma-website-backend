@@ -1,10 +1,12 @@
-import { Controller, Post, Get, Delete, Body, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Get, Delete, Body, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import {
   CreateChannelPartnerCodeDto,
   CreateChannelPartnerCodeResponseDto,
   ListChannelPartnerCodesResponseDto,
+  ValidateChannelPartnerCodeQueryDto,
+  ValidateChannelPartnerCodeResponseDto,
 } from './dto';
 
 @ApiTags('Channel Partner Code Management')
@@ -38,6 +40,23 @@ export class ChannelPartnerCodeController {
   })
   async listChannelPartnerCodes(): Promise<ListChannelPartnerCodesResponseDto> {
     return await this.channelPartnerCodeService.listChannelPartnerCodes();
+  }
+
+  @Get('validate')
+  @ApiOperation({ summary: 'Validate a channel partner code' })
+  @ApiQuery({ name: 'code', required: true, description: 'Channel partner code to validate', example: 'CP001' })
+  @ApiResponse({
+    status: 200,
+    description: 'Validation result',
+    type: ValidateChannelPartnerCodeResponseDto,
+  })
+  async validateChannelPartnerCode(
+    @Query() query: ValidateChannelPartnerCodeQueryDto,
+  ): Promise<ValidateChannelPartnerCodeResponseDto> {
+    const result = await this.channelPartnerCodeService.validateChannelPartnerCode(
+      query.code,
+    );
+    return result;
   }
 
   @Delete(':id')

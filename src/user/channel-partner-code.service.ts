@@ -68,4 +68,24 @@ export class ChannelPartnerCodeService {
       message: 'Channel partner code deleted successfully',
     };
   }
+
+  async validateChannelPartnerCode(
+    code: string,
+  ): Promise<{ success: boolean; valid: boolean; message: string }> {
+    const existingCode = await this.channelPartnerCodeRepository.findByCode(
+      code,
+    );
+    if (!existingCode) {
+      return {
+        success: true,
+        valid: false,
+        message: 'Invalid channel partner code',
+      };
+    }
+    return {
+      success: true,
+      valid: true,
+      message: 'Channel partner code is valid',
+    };
+  }
 }

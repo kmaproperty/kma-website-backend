@@ -12,6 +12,37 @@ export class CreateChannelPartnerCodeDto {
   code: string;
 }
 
+export class ValidateChannelPartnerCodeQueryDto {
+  @ApiProperty({
+    description: 'Channel partner code to validate',
+    example: 'CP001',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Length(3, 50, { message: 'Code must be between 3 and 50 characters' })
+  code: string;
+}
+
+export class ValidateChannelPartnerCodeResponseDto {
+  @ApiProperty({
+    description: 'Success status',
+    example: true,
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'Whether the provided code is valid',
+    example: true,
+  })
+  valid: boolean;
+
+  @ApiProperty({
+    description: 'Response message',
+    example: 'Channel partner code is valid',
+  })
+  message: string;
+}
+
 export class ChannelPartnerCodeResponseDto {
   @ApiProperty({
     description: 'Channel partner code ID',
