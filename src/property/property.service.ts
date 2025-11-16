@@ -33,6 +33,7 @@ import {
 import {
   OwnerPropertyListingItemDto,
   OwnerPropertyListingResponseDto,
+  OwnerPropertyDetailResponseDto,
 } from './dto/property-response.dto';
 
 @Injectable()
@@ -294,6 +295,88 @@ export class PropertyService {
       progressPercentage,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
+    };
+  }
+
+  async getOwnerPropertyDetail(
+    propertyId: string,
+    userId: string,
+  ): Promise<OwnerPropertyDetailResponseDto> {
+    const property = await this.propertyRepository.findByIdWithRelations(propertyId);
+    if (!property) {
+      throw new BadRequestException(`Property with ID ${propertyId} not found`);
+    }
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only view your own properties');
+    }
+
+    const bhkName = property.bhkType?.name ?? null;
+    const propertyTypeName = property.propertyType?.name ?? '';
+    const titleParts = [bhkName, propertyTypeName].filter(
+      (part) => part && part.trim().length > 0,
+    );
+    const title =
+      titleParts.join(' ').trim() ||
+      property.propertyDescription ||
+      property.listingType?.name ||
+      'Property';
+
+    const areaFromMetadata = property.builtUpAreaMetadata?.superBuiltUpArea
+      ? Number(property.builtUpAreaMetadata.superBuiltUpArea)
+      : null;
+    const area =
+      property.builtUpArea ?? areaFromMetadata ?? property.carpetArea ?? null;
+
+    const completionStep = property.completionStep ?? 0;
+    const progressPercentage = this.calculateProgressPercentage(
+      completionStep,
+      this.determineTotalSteps(property),
+    );
+
+    const createdOn = property.createdAt.toISOString().split('T')[0];
+    const lastAddedOn = property.updatedAt.toISOString().split('T')[0];
+
+    return {
+      id: property.id,
+      title,
+      status: property.status,
+      area,
+      areaUnit:
+        property.builtUpAreaUnit ??
+        property.carpetAreaUnit ??
+        (area != null ? 'sq.ft' : null),
+      category: property.category?.name ?? null,
+      constructionStatus: property.constructionStatus ?? null,
+      furnishingType: property.furnishType ?? null,
+      photos:
+        property.photos?.map((p) => ({
+          fileKey: p.fileKey,
+          view: p.view,
+          isCoverImage: p.isCoverImage,
+        })) ?? [],
+      videos:
+        property.videos?.map((v) => ({
+          fileKey: v.fileKey,
+          view: v.format,
+        })) ?? [],
+      price: property.price ?? property.plotPrice ?? null,
+      monthlyRent: property.monthlyRent ?? null,
+      possessionDate: property.possessionDate
+        ? (() => {
+            try {
+              const date = property.possessionDate instanceof Date
+                ? property.possessionDate
+                : new Date(property.possessionDate);
+              return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+            } catch {
+              return null;
+            }
+          })()
+        : null,
+      createdOn,
+      lastAddedOn,
+      completionStep,
+      progressPercentage,
     };
   }
 

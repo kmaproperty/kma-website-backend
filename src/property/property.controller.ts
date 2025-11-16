@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { ApiParam } from '@nestjs/swagger';
 import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { CreatePropertyStep1Dto } from './dto/create-property.dto';
@@ -38,6 +39,7 @@ import {
   CategoryResponseDto,
   LocationResponseDto,
   OwnerPropertyListingResponseDto,
+  OwnerPropertyDetailResponseDto,
 } from './dto/property-response.dto';
 import {
   MasterDataQueryDto,
@@ -296,6 +298,26 @@ export class PropertyController {
       query.cityName,
       query.limit,
     );
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get property detail for owner/channel partner dashboard modal',
+  })
+  @ApiParam({ name: 'id', description: 'Property ID', example: '17840748' })
+  @ApiResponse({
+    status: 200,
+    description: 'Property detail retrieved successfully',
+    type: OwnerPropertyDetailResponseDto,
+  })
+  async getPropertyDetail(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ): Promise<OwnerPropertyDetailResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.getOwnerPropertyDetail(id, req.user.id);
   }
 
   @Get('bhk-types-and-areas')

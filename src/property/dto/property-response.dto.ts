@@ -749,6 +749,70 @@ export class OwnerPropertyListingResponseDto {
   };
 }
 
+export class PropertyMediaItemDto {
+  @ApiProperty({ description: 'S3 file key', example: 'properties/uuid/image1.jpg' })
+  fileKey: string;
+
+  @ApiProperty({ description: 'View or label', example: 'living_room', required: false })
+  view?: string;
+
+  @ApiProperty({ description: 'Whether this is cover image', example: true, required: false })
+  isCoverImage?: boolean;
+}
+
+export class OwnerPropertyDetailResponseDto {
+  @ApiProperty({ description: 'Property ID', example: '17840748' })
+  id: string;
+
+  @ApiProperty({ description: 'Title', example: '2 BHK Apartment' })
+  title: string;
+
+  @ApiProperty({ description: 'Status', example: 'active' })
+  status: string;
+
+  @ApiProperty({ description: 'Area number', example: 444, required: false })
+  area?: number | null;
+
+  @ApiProperty({ description: 'Area unit', example: 'sq.ft', required: false })
+  areaUnit?: string | null;
+
+  @ApiProperty({ description: 'Category label', example: 'Residential', required: false })
+  category?: string | null;
+
+  @ApiProperty({ description: 'Construction status', example: 'Under Construction', required: false })
+  constructionStatus?: string | null;
+
+  @ApiProperty({ description: 'Furnishing', example: 'Fully Furnished', required: false })
+  furnishingType?: string | null;
+
+  @ApiProperty({ description: 'Photos', type: [PropertyMediaItemDto] })
+  photos: PropertyMediaItemDto[];
+
+  @ApiProperty({ description: 'Videos', type: [PropertyMediaItemDto], required: false })
+  videos?: PropertyMediaItemDto[];
+
+  @ApiProperty({ description: 'Primary price (sale price)', example: 4500000, required: false })
+  price?: number | null;
+
+  @ApiProperty({ description: 'Monthly rent amount', example: 25000, required: false })
+  monthlyRent?: number | null;
+
+  @ApiProperty({ description: 'Possession date', example: '2025-07-22', required: false })
+  possessionDate?: string | null;
+
+  @ApiProperty({ description: 'Created at ISO date', example: '2025-07-18' })
+  createdOn: string;
+
+  @ApiProperty({ description: 'Last updated at ISO date', example: '2025-07-19' })
+  lastAddedOn: string;
+
+  @ApiProperty({ description: 'Completion step', example: 3 })
+  completionStep: number;
+
+  @ApiProperty({ description: 'Progress percentage', example: 60 })
+  progressPercentage: number;
+}
+
 // Property Step 2 Response DTO
 export class PropertyStep2ResponseDto {
   @ApiProperty({ description: 'Property ID', example: 'uuid-string' })
