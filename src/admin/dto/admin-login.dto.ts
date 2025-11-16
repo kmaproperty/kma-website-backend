@@ -1,4 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { AdminRole } from '../enum/admin-role.enum';
+import { AdminPermission } from '../enum/admin-permission.enum';
 import { IsString, MinLength, MaxLength } from 'class-validator';
 
 export class AdminLoginDto {
@@ -43,11 +45,15 @@ export class AdminLoginResponseDto {
     example: {
       id: 'uuid-string',
       username: 'admin',
+      role: 'SUPER_ADMIN',
+      permissions: ['USER_MANAGEMENT', 'PROPERTY_MANAGEMENT', 'DASHBOARD', 'ADMIN_MANAGEMENT'],
     },
   })
   admin: {
     id: string;
     username: string;
+    role: AdminRole;
+    permissions: AdminPermission[];
   };
 }
 

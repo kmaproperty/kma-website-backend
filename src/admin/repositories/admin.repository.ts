@@ -33,5 +33,18 @@ export class AdminRepository {
   ): Promise<void> {
     await this.repository.update(id, data);
   }
+
+  async findWithPagination(params: {
+    offset: number;
+    limit: number;
+  }): Promise<{ items: Pick<Admin, 'id' | 'username' | 'role' | 'permissions' | 'createdAt' | 'updatedAt'>[]; total: number }> {
+    const [items, total] = await this.repository.findAndCount({
+      skip: params.offset,
+      take: params.limit,
+      order: { createdAt: 'DESC' },
+      select: ['id', 'username', 'role', 'permissions', 'createdAt', 'updatedAt'],
+    });
+    return { items, total };
+  }
 }
 

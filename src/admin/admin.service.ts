@@ -3,8 +3,11 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { AdminRepository } from './repositories/admin.repository';
-import { AdminLoginDto, AdminLoginResponseDto, AdminPropertyListQueryDto, AdminPropertyListResponseDto, AdminReviewPropertyDto, AdminRejectPropertyDto, BootstrapAdminDto, BootstrapAdminResponseDto } from './dto';
+import { AdminLoginDto, AdminLoginResponseDto, AdminPropertyListQueryDto, AdminPropertyListResponseDto, AdminReviewPropertyDto, AdminRejectPropertyDto, BootstrapAdminDto, BootstrapAdminResponseDto, CreateAdminUserDto, UpdateAdminPermissionsDto } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
+import { AdminRole } from './enum/admin-role.enum';
+import { AdminPermission } from './enum/admin-permission.enum';
+import { AdminUserResponseDto, AdminUserListResponseDto, AdminUserListQueryDto } from './dto';
 
 @Injectable()
 export class AdminService {
@@ -24,11 +27,11 @@ export class AdminService {
     );
   }
 
-  private async generateTokens(admin: { id: string; username: string }) {
+  private async generateTokens(admin: { id: string; username: string; role: AdminRole }) {
     const payload = {
       sub: admin.id,
       username: admin.username,
-      role: 'ADMIN',
+      role: admin.role,
       type: 'admin_access_token',
     };
     const refreshPayload = {
@@ -71,11 +74,88 @@ export class AdminService {
     await this.adminRepository.createAdmin({
       username: dto.username,
       passwordHash,
+      role: AdminRole.SUPER_ADMIN,
+      permissions: Object.values(AdminPermission),
     });
 
     return {
       success: true,
       message: 'Admin credentials created successfully',
+    };
+  }
+
+  async createAdminUser(dto: CreateAdminUserDto): Promise<AdminUserResponseDto> {
+    const exists = await this.adminRepository.findByUsername(dto.username);
+    if (exists) {
+      throw new BadRequestException('Username already exists');
+    }
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const role = dto.role ?? AdminRole.ADMIN;
+    const permissions =
+      role === AdminRole.SUPER_ADMIN
+        ? Object.values(AdminPermission)
+        : dto.permissions ?? [];
+    const admin = await this.adminRepository.createAdmin({
+      username: dto.username,
+      passwordHash,
+      role,
+      permissions,
+    });
+    return {
+      id: admin.id,
+      username: admin.username,
+      role: admin.role,
+      permissions: (admin.permissions ?? []) as AdminPermission[],
+      createdAt: admin.createdAt,
+    };
+  }
+
+  async listAdminUsers(query: AdminUserListQueryDto): Promise<AdminUserListResponseDto> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const offset = (page - 1) * limit;
+
+    const { items, total } = await this.adminRepository.findWithPagination({
+      offset,
+      limit,
+    });
+    return {
+      items: items.map((a: any) => ({
+        id: a.id,
+        username: a.username,
+        role: a.role,
+        permissions: (a.permissions ?? []) as AdminPermission[],
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt,
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async updateAdminPermissions(
+    adminId: string,
+    dto: UpdateAdminPermissionsDto,
+  ): Promise<AdminUserResponseDto> {
+    const admin = await this.adminRepository.findById(adminId);
+    if (!admin) {
+      throw new BadRequestException('Admin not found');
+    }
+    if (admin.role === AdminRole.SUPER_ADMIN) {
+      throw new BadRequestException('Cannot modify SUPER_ADMIN permissions');
+    }
+    await this.adminRepository.updateAdmin(adminId, {
+      permissions: dto.permissions ?? [],
+    });
+    const updated = await this.adminRepository.findById(adminId);
+    return {
+      id: updated!.id,
+      username: updated!.username,
+      role: updated!.role,
+      permissions: (updated!.permissions ?? []) as AdminPermission[],
+      createdAt: updated!.createdAt,
+      updatedAt: updated!.updatedAt,
     };
   }
 
@@ -93,10 +173,12 @@ export class AdminService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.generateTokens({
+    const tokenAdmin: any = {
       id: admin.id,
       username: admin.username,
-    });
+      role: admin.role,
+    };
+    const tokens = await this.generateTokens(tokenAdmin);
 
     await this.adminRepository.updateAdmin(admin.id, {
       accessToken: tokens.accessToken,
@@ -108,10 +190,12 @@ export class AdminService {
       message: 'Login successful',
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      admin: {
+      admin: ({
         id: admin.id,
         username: admin.username,
-      },
+        role: admin.role,
+        permissions: admin.permissions ?? [],
+      } as any),
     };
   }
 

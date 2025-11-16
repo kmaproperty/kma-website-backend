@@ -1,5 +1,6 @@
 import { Entity, Column } from 'typeorm';
 import { BaseEntity } from '../../common/database/base.entity';
+import { AdminRole } from '../enum/admin-role.enum';
 
 @Entity('admins')
 export class Admin extends BaseEntity {
@@ -27,5 +28,18 @@ export class Admin extends BaseEntity {
     nullable: true,
   })
   refreshToken: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: AdminRole,
+    default: AdminRole.ADMIN,
+  })
+  role: AdminRole;
+
+  @Column({
+    type: 'simple-array',
+    nullable: true,
+  })
+  permissions: string[] | null;
 }
 

@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AdminService } from './admin.service';
@@ -28,6 +29,11 @@ import {
   BootstrapAdminResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
+import { AdminAuthGuard } from './guards/admin-auth.guard';
+import { AdminPermissionsGuard } from './guards/admin-permissions.guard';
+import { RequireAdminPermissions } from './decorators/admin-permissions.decorator';
+import { AdminPermission } from './enum/admin-permission.enum';
+import { CreateAdminUserDto, AdminUserResponseDto, AdminUserListResponseDto, UpdateAdminPermissionsDto } from './dto/admin-users.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -59,7 +65,8 @@ export class AdminController {
   }
 
   @Get('properties')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'List all property listings with pagination' })
   @ApiResponse({
@@ -74,7 +81,8 @@ export class AdminController {
   }
 
   @Post('properties/:id/approve')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Approve a property listing with optional comment' })
   async approveProperty(
@@ -93,7 +101,8 @@ export class AdminController {
   }
 
   @Post('properties/:id/reject')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Reject a property listing with comment' })
   async rejectProperty(
@@ -109,6 +118,44 @@ export class AdminController {
       dto,
       req.admin.id,
     );
+  }
+
+  // User management endpoints
+  @Post('admins')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create an admin user with role and permissions' })
+  @ApiResponse({ status: 201, description: 'Admin user created', type: AdminUserResponseDto })
+  async createAdminUser(@Body() dto: CreateAdminUserDto): Promise<AdminUserResponseDto> {
+    return this.adminService.createAdminUser(dto);
+  }
+
+  @Get('admins')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List admin users' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Page number (1-based)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20, description: 'Items per page (max 100)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of admin users', type: AdminUserListResponseDto })
+  async listAdminUsers(
+    @Query() query: { page?: number; limit?: number },
+  ): Promise<AdminUserListResponseDto> {
+    return this.adminService.listAdminUsers(query);
+  }
+
+  @Post('admins/:id/permissions')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update an admin user permissions' })
+  @ApiResponse({ status: 200, description: 'Admin user permissions updated', type: AdminUserResponseDto })
+  async updateAdminPermissions(
+    @Param('id') adminId: string,
+    @Body() dto: UpdateAdminPermissionsDto,
+  ): Promise<AdminUserResponseDto> {
+    return this.adminService.updateAdminPermissions(adminId, dto);
   }
 }
 
