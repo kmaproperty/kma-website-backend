@@ -60,6 +60,11 @@ export class PropertyService {
     completionStep: number,
     totalSteps: number = this.DEFAULT_TOTAL_STEPS,
   ): number {
+    // Explicitly return 0 when completionStep is 0
+    if (completionStep === 0) {
+      return 0;
+    }
+
     if (totalSteps <= 0) {
       return 0;
     }
@@ -2209,7 +2214,7 @@ export class PropertyService {
       adminReviewedBy: null,
       adminReviewedAt: null,
       status: 'draft',
-      completionStep: PropertyCompletionStep.STEP_1,
+      completionStep: 0,
     };
 
     await this.propertyRepository.updateProperty(propertyId, resetData);
