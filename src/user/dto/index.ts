@@ -12,3 +12,4 @@ export * from './refresh-token.dto';
 export * from './logout.dto';
 export * from './dashboard.dto';
 export * from './upgrade-channel-partner.dto';
+export * from './docusign.dto';

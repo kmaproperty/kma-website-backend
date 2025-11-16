@@ -31,6 +31,8 @@ import {
   RefreshTokenResponseDto,
   LogoutResponseDto,
   DashboardResponseDto,
+  StartDocusignDto,
+  StartDocusignResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 
@@ -52,6 +54,77 @@ export class UserController {
     return await this.userService.sendOtpForSignup(sendOtpDto);
   }
 
+  @Post('channel-partner/docusign/start')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Start DocuSign embedded signing for channel partner agreement' })
+  @ApiResponse({
+    status: 200,
+    description: 'DocuSign recipient view URL created',
+    type: StartDocusignResponseDto,
+  })
+  async startChannelPartnerDocusign(
+    @Body() dto: StartDocusignDto,
+    @Req() req: Request,
+  ): Promise<StartDocusignResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.startChannelPartnerDocusign(dto, req.user.id);
+  }
+
+  @Post('channel-partner/docusign/webhook')
+  @ApiOperation({ summary: 'DocuSign Connect webhook (envelope status updates)' })
+  @ApiResponse({ status: 200, description: 'Acknowledged' })
+  async docusignWebhook(@Body() body: any): Promise<{ ok: boolean }> {
+    // Accept both JSON and Connect payloads; we expect envelopeId and status
+    try {
+      const envelopeId =
+        body?.envelopeId ||
+        body?.envelopeSummary?.envelopeId ||
+        body?.envelope?.envelopeId ||
+        body?.data?.envelopeId;
+      const status =
+        body?.status ||
+        body?.envelopeStatus ||
+        body?.envelopeSummary?.status ||
+        body?.envelope?.status ||
+        body?.data?.status;
+      if (envelopeId && status) {
+        // Shallow import here to avoid circular: call service method through userService (exposing repository via service is not ideal; kept simple)
+        const repo: any = (this.userService as any)['agreementRepository'];
+        if (repo && repo.updateByEnvelope) {
+          await repo.updateByEnvelope(envelopeId, {
+            status,
+            completedAt: status === 'completed' ? new Date() : null,
+          });
+        }
+      }
+    } catch {
+      // swallow and still ack; DocuSign expects 200
+    }
+    return { ok: true };
+  }
+
+  @Get('channel-partner/docusign/status')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get latest DocuSign agreement status for current user' })
+  @ApiResponse({ status: 200, description: 'Agreement status', schema: {
+    example: { status: 'completed', envelopeId: '...', completedAt: '2025-01-01T10:00:00.000Z' },
+  }})
+  async getDocusignStatus(@Req() req: Request) {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    const repo: any = (this.userService as any)['agreementRepository'];
+    const latest = repo ? await repo.findLatestByUser(req.user.id) : null;
+    return latest
+      ? {
+          envelopeId: latest.envelopeId,
+          status: latest.status,
+          completedAt: latest.completedAt,
+        }
+      : { status: 'not_started' };
+  }
   @Post('upgrade-channel-partner')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Upgrade OWNER to CHANNEL_PARTNER with valid code' })

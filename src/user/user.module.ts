@@ -6,6 +6,7 @@ import { User } from './entities/user.entity';
 import { Otp } from './entities/otp.entity';
 import { ChannelPartnerCode } from './entities/channel-partner-code.entity';
 import { Lead } from './entities/lead.entity';
+import { ChannelPartnerAgreement } from './entities/channel-partner-agreement.entity';
 import { UserRoleHistory } from './entities/user-role-history.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
@@ -13,6 +14,7 @@ import { ChannelPartnerCodeRepository } from './repositories/channel-partner-cod
 import { Property } from '../property/entities/property.entity';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { LeadRepository } from './repositories/lead.repository';
+import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
 import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
@@ -21,8 +23,9 @@ import { ChannelPartnerCodeController } from './channel-partner-code.controller'
 import { LoggerService } from '../logger/logger.service';
 import { ErrorHandlerService } from '../common/errorHandler/error-handler.service';
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
+import { DocusignService } from './services/docusign.service';
 
-const entities = [User, Otp, ChannelPartnerCode, Lead, UserRoleHistory, Property];
+const entities = [User, Otp, ChannelPartnerCode, Lead, UserRoleHistory, ChannelPartnerAgreement, Property];
 const repositories = [
   UserRepository,
   OtpRepository,
@@ -30,6 +33,7 @@ const repositories = [
   PropertyRepository,
   LeadRepository,
   UserRoleHistoryRepository,
+  ChannelPartnerAgreementRepository,
 ];
 
 @Module({
@@ -56,6 +60,7 @@ const repositories = [
   providers: [
     UserService,
     ChannelPartnerCodeService,
+    DocusignService,
     LoggerService,
     ErrorHandlerService,
     AuthMiddleware,
