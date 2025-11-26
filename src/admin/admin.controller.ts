@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -25,6 +27,7 @@ import {
   AdminPropertyListResponseDto,
   AdminRejectPropertyDto,
   AdminReviewPropertyDto,
+  AdminUpdatePropertyDto,
   BootstrapAdminDto,
   BootstrapAdminResponseDto,
 } from './dto';
@@ -118,6 +121,49 @@ export class AdminController {
       dto,
       req.admin.id,
     );
+  }
+
+  @Patch('properties/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Edit any property fields as an admin' })
+  @ApiResponse({
+    status: 200,
+    description: 'Property updated successfully',
+  })
+  async updateProperty(
+    @Param('id') propertyId: string,
+    @Body() dto: AdminUpdatePropertyDto,
+    @Req() req: Request,
+  ) {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.updatePropertyDetails(
+      propertyId,
+      dto,
+      req.admin.id,
+    );
+  }
+
+  @Delete('properties/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Soft delete a property listing' })
+  @ApiResponse({
+    status: 200,
+    description: 'Property deleted successfully',
+  })
+  async deleteProperty(
+    @Param('id') propertyId: string,
+    @Req() req: Request,
+  ) {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.deleteProperty(propertyId, req.admin.id);
   }
 
   // User management endpoints

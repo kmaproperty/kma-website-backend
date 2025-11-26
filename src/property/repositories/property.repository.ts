@@ -12,19 +12,20 @@ export class PropertyRepository {
 
   async findAll(): Promise<Property[]> {
     return await this.propertyRepository.find({
+      where: { isDeleted: false },
       order: { createdAt: 'DESC' },
     });
   }
 
   async findById(id: string): Promise<Property | null> {
     return await this.propertyRepository.findOne({
-      where: { id },
+      where: { id, isDeleted: false },
     });
   }
 
   async findByIdWithRelations(id: string): Promise<Property | null> {
     return await this.propertyRepository.findOne({
-      where: { id },
+      where: { id, isDeleted: false },
       relations: [
         'listingType',
         'category',
@@ -40,14 +41,14 @@ export class PropertyRepository {
 
   async findByUserId(userId: string): Promise<Property[]> {
     return await this.propertyRepository.find({
-      where: { userId },
+      where: { userId, isDeleted: false },
       order: { createdAt: 'DESC' },
     });
   }
 
   async countByUserId(userId: string): Promise<number> {
     return await this.propertyRepository.count({
-      where: { userId },
+      where: { userId, isDeleted: false },
     });
   }
 
@@ -73,6 +74,7 @@ export class PropertyRepository {
       .leftJoinAndSelect('property.society', 'society')
       .leftJoinAndSelect('property.locality', 'locality')
       .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .where('property.isDeleted = false')
       .orderBy('property.createdAt', 'DESC')
       .skip(offset)
       .take(limit);
@@ -151,7 +153,8 @@ export class PropertyRepository {
       .leftJoinAndSelect('property.locality', 'locality')
       .leftJoinAndSelect('property.bhkType', 'bhkType')
       .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
-      .where('property.userId = :userId', { userId });
+      .where('property.userId = :userId', { userId })
+      .andWhere('property.isDeleted = false');
 
     if (filters.categoryIds?.length) {
       qb.andWhere('property.categoryId IN (:...categoryIds)', {
@@ -243,7 +246,7 @@ export class PropertyRepository {
 
   async findByIdWithUser(id: string): Promise<Property | null> {
     return this.propertyRepository.findOne({
-      where: { id },
+      where: { id, isDeleted: false },
       relations: ['user'],
     });
   }

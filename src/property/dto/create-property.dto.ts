@@ -489,12 +489,30 @@ export class CreatePropertyStep1Dto {
   @ApiProperty({ 
     description: 'Property status', 
     example: 'draft',
-    enum: ['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'],
+    enum: [
+      'draft',
+      'pending_review',
+      'approved',
+      'rejected',
+      'active',
+      'inactive',
+      'sold',
+      'rented',
+    ],
     required: false,
     default: 'draft'
   })
   @IsOptional()
-  @IsEnum(['draft', 'pending_review', 'active', 'inactive', 'sold', 'rented'])
+  @IsEnum([
+    'draft',
+    'pending_review',
+    'approved',
+    'rejected',
+    'active',
+    'inactive',
+    'sold',
+    'rented',
+  ])
   status?: string;
 
   @ApiProperty({ 

@@ -9,10 +9,12 @@ import { AdminRepository } from './repositories/admin.repository';
 import { Property } from '../property/entities/property.entity';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
+import { PropertyModule } from '../property/property.module';
 
 @Module({
   imports: [
     ConfigModule,
+    PropertyModule,
     TypeOrmModule.forFeature([Admin, Property]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
