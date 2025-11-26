@@ -109,4 +109,37 @@ export class SocietyRepository {
   ): Promise<void> {
     await this.societyRepository.update(id, updateData);
   }
+
+  async deleteSociety(id: string): Promise<void> {
+    await this.societyRepository.softDelete(id);
+  }
+
+  async findPaginated(options: {
+    page: number;
+    limit: number;
+    search?: string;
+    cityId?: string;
+  }): Promise<{ items: MasterSociety[]; total: number }> {
+    const { page, limit, search, cityId } = options;
+    const qb = this.societyRepository
+      .createQueryBuilder('society')
+      .leftJoinAndSelect('society.city', 'city')
+      .orderBy('society.name', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (cityId) {
+      qb.andWhere('society.cityId = :cityId', { cityId });
+    }
+
+    if (search) {
+      qb.andWhere(
+        '(society.name ILIKE :search OR society.localityName ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
 }

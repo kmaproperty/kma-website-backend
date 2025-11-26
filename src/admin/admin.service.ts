@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -11,6 +15,15 @@ import {
   AdminReviewPropertyDto,
   AdminRejectPropertyDto,
   AdminUpdatePropertyDto,
+  AdminCityListQueryDto,
+  AdminCityResponseDto,
+  AdminCreateCityDto,
+  AdminUpdateCityDto,
+  AdminSocietyListQueryDto,
+  AdminSocietyResponseDto,
+  AdminCreateSocietyDto,
+  AdminUpdateSocietyDto,
+  CitySummary,
   BootstrapAdminDto,
   BootstrapAdminResponseDto,
   CreateAdminUserDto,
@@ -20,10 +33,14 @@ import {
   AdminUserListQueryDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
+import { CityRepository } from '../property/repositories/city.repository';
+import { SocietyRepository } from '../property/repositories/society.repository';
 import { PropertyService } from '../property/property.service';
 import { AdminRole } from './enum/admin-role.enum';
 import { AdminPermission } from './enum/admin-permission.enum';
 import { Property } from '../property/entities/property.entity';
+import { MasterCity } from '../property/entities/master-city.entity';
+import { MasterSociety } from '../property/entities/master-society.entity';
 import { CreatePropertyStep1Dto } from '../property/dto/create-property.dto';
 import { CreatePropertyStep2Dto } from '../property/dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from '../property/dto/create-property-step3.dto';
@@ -154,6 +171,8 @@ export class AdminService {
   constructor(
     private readonly adminRepository: AdminRepository,
     private readonly propertyRepository: PropertyRepository,
+    private readonly cityRepository: CityRepository,
+    private readonly societyRepository: SocietyRepository,
     private readonly propertyService: PropertyService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -294,6 +313,240 @@ export class AdminService {
       permissions: (updated!.permissions ?? []) as AdminPermission[],
       createdAt: updated!.createdAt,
       updatedAt: updated!.updatedAt,
+    };
+  }
+
+  async listCities(
+    query: AdminCityListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminCityResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+    const { items, total } = await this.cityRepository.findPaginated({
+      page,
+      limit,
+      search,
+    });
+
+    const data = items.map((city) => this.toCityResponse(city));
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getCity(
+    cityId: string,
+  ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
+    const city = await this.ensureCityExists(cityId);
+    return {
+      success: true,
+      data: this.toCityResponse(city),
+    };
+  }
+
+  async createCity(
+    dto: AdminCreateCityDto,
+  ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
+    const normalizedCode = this.normalizeCityCode(dto.code);
+    const existing = await this.cityRepository.findByCode(normalizedCode);
+    if (existing) {
+      throw new BadRequestException(
+        `City code "${normalizedCode}" already exists`,
+      );
+    }
+
+    const city = await this.cityRepository.createCity({
+      name: dto.name.trim(),
+      code: normalizedCode,
+      state: dto.state?.trim() ?? null,
+      latitude: dto.latitude ?? null,
+      longitude: dto.longitude ?? null,
+    });
+
+    return {
+      success: true,
+      data: this.toCityResponse(city),
+    };
+  }
+
+  async updateCity(
+    cityId: string,
+    dto: AdminUpdateCityDto,
+  ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
+    const city = await this.ensureCityExists(cityId);
+
+    let normalizedCode: string | undefined;
+    if (dto.code) {
+      normalizedCode = this.normalizeCityCode(dto.code);
+      if (normalizedCode !== city.code) {
+        const duplicate = await this.cityRepository.findByCode(normalizedCode);
+        if (duplicate && duplicate.id !== cityId) {
+          throw new BadRequestException(
+            `City code "${normalizedCode}" already exists`,
+          );
+        }
+      }
+    }
+
+    await this.cityRepository.updateCity(cityId, {
+      ...dto,
+      name: dto.name?.trim() ?? dto.name,
+      code: normalizedCode ?? dto.code ?? city.code,
+      state: dto.state?.trim() ?? dto.state,
+    });
+
+    const updated = await this.ensureCityExists(cityId);
+    return {
+      success: true,
+      data: this.toCityResponse(updated),
+    };
+  }
+
+  async deleteCity(
+    cityId: string,
+  ): Promise<{ success: boolean; message: string; cityId: string }> {
+    await this.ensureCityExists(cityId);
+    const societies = await this.societyRepository.findByCityId(cityId);
+    if (societies.length > 0) {
+      throw new BadRequestException(
+        'Cannot delete city while societies exist. Delete or reassign societies first.',
+      );
+    }
+
+    await this.cityRepository.deleteCity(cityId);
+    return {
+      success: true,
+      message: 'City deleted successfully',
+      cityId,
+    };
+  }
+
+  async listSocieties(
+    query: AdminSocietyListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminSocietyResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.societyRepository.findPaginated({
+      page,
+      limit,
+      search,
+      cityId: query?.cityId,
+    });
+
+    const cityCache = new Map<string, CitySummary | null>();
+    const data: AdminSocietyResponseDto[] = [];
+    for (const society of items) {
+      const citySummary = await this.getCitySummaryForSociety(
+        society,
+        cityCache,
+      );
+      data.push(this.toSocietyResponse(society, citySummary));
+    }
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getSociety(
+    societyId: string,
+  ): Promise<{ success: boolean; data: AdminSocietyResponseDto }> {
+    const society = await this.ensureSocietyExists(societyId);
+    const citySummary = await this.getCitySummaryForSociety(
+      society,
+      new Map<string, CitySummary | null>(),
+    );
+    return {
+      success: true,
+      data: this.toSocietyResponse(society, citySummary),
+    };
+  }
+
+  async createSociety(
+    dto: AdminCreateSocietyDto,
+  ): Promise<{ success: boolean; data: AdminSocietyResponseDto }> {
+    const city = await this.ensureCityExists(dto.cityId);
+    const society = await this.societyRepository.createSociety({
+      name: dto.name.trim(),
+      cityId: dto.cityId,
+      localityName: dto.localityName?.trim() ?? null,
+      address: dto.address?.trim() ?? null,
+      latitude: dto.latitude ?? null,
+      longitude: dto.longitude ?? null,
+      pincode: dto.pincode?.trim() ?? null,
+      isVerified: dto.isVerified ?? false,
+    });
+
+    return {
+      success: true,
+      data: this.toSocietyResponse(society, this.toCitySummary(city)),
+    };
+  }
+
+  async updateSociety(
+    societyId: string,
+    dto: AdminUpdateSocietyDto,
+  ): Promise<{ success: boolean; data: AdminSocietyResponseDto }> {
+    const society = await this.ensureSocietyExists(societyId);
+    let citySummary: CitySummary | null = null;
+
+    if (dto.cityId) {
+      const newCity = await this.ensureCityExists(dto.cityId);
+      citySummary = this.toCitySummary(newCity);
+    }
+
+    await this.societyRepository.updateSociety(societyId, {
+      ...dto,
+      name: dto.name?.trim() ?? dto.name,
+      localityName: dto.localityName?.trim() ?? dto.localityName,
+      address: dto.address?.trim() ?? dto.address,
+      pincode: dto.pincode?.trim() ?? dto.pincode,
+    });
+
+    const updated = await this.ensureSocietyExists(societyId);
+    const summary =
+      citySummary ??
+      (await this.getCitySummaryForSociety(
+        updated,
+        new Map<string, CitySummary | null>(),
+      ));
+    return {
+      success: true,
+      data: this.toSocietyResponse(updated, summary),
+    };
+  }
+
+  async deleteSociety(
+    societyId: string,
+  ): Promise<{ success: boolean; message: string; societyId: string }> {
+    await this.ensureSocietyExists(societyId);
+    await this.societyRepository.deleteSociety(societyId);
+    return {
+      success: true,
+      message: 'Society deleted successfully',
+      societyId,
     };
   }
 
@@ -702,6 +955,107 @@ export class AdminService {
       }
       return acc;
     }, {});
+  }
+
+  private normalizeCityCode(code: string): string {
+    return code.trim().toLowerCase().replace(/\s+/g, '-');
+  }
+
+  private toCityResponse(city: MasterCity): AdminCityResponseDto {
+    return {
+      id: city.id,
+      name: city.name,
+      code: city.code,
+      state: city.state ?? null,
+      latitude:
+        city.latitude === null || city.latitude === undefined
+          ? null
+          : Number(city.latitude),
+      longitude:
+        city.longitude === null || city.longitude === undefined
+          ? null
+          : Number(city.longitude),
+      createdAt: city.createdAt,
+      updatedAt: city.updatedAt,
+    };
+  }
+
+  private toCitySummary(city: MasterCity | null): CitySummary | null {
+    if (!city) {
+      return null;
+    }
+    return {
+      id: city.id,
+      name: city.name,
+      code: city.code,
+    };
+  }
+
+  private toSocietyResponse(
+    society: MasterSociety,
+    citySummary: CitySummary | null,
+  ): AdminSocietyResponseDto {
+    return {
+      id: society.id,
+      name: society.name,
+      cityId: society.cityId,
+      localityName: society.localityName ?? null,
+      address: society.address ?? null,
+      latitude:
+        society.latitude === null || society.latitude === undefined
+          ? null
+          : Number(society.latitude),
+      longitude:
+        society.longitude === null || society.longitude === undefined
+          ? null
+          : Number(society.longitude),
+      pincode: society.pincode ?? null,
+      isVerified: society.isVerified ?? false,
+      createdByUserId: society.createdByUserId ?? null,
+      createdAt: society.createdAt,
+      updatedAt: society.updatedAt,
+      city: citySummary,
+    };
+  }
+
+  private async getCitySummaryForSociety(
+    society: MasterSociety,
+    cache: Map<string, CitySummary | null>,
+  ): Promise<CitySummary | null> {
+    if (society.city) {
+      return this.toCitySummary(society.city as MasterCity);
+    }
+
+    if (!society.cityId) {
+      return null;
+    }
+
+    if (cache.has(society.cityId)) {
+      return cache.get(society.cityId) ?? null;
+    }
+
+    const city = await this.cityRepository.findById(society.cityId);
+    const summary = this.toCitySummary(city);
+    cache.set(society.cityId, summary);
+    return summary;
+  }
+
+  private async ensureCityExists(cityId: string): Promise<MasterCity> {
+    const city = await this.cityRepository.findById(cityId);
+    if (!city) {
+      throw new BadRequestException(`City with ID ${cityId} not found`);
+    }
+    return city;
+  }
+
+  private async ensureSocietyExists(
+    societyId: string,
+  ): Promise<MasterSociety> {
+    const society = await this.societyRepository.findById(societyId);
+    if (!society) {
+      throw new BadRequestException(`Society with ID ${societyId} not found`);
+    }
+    return society;
   }
 }
 

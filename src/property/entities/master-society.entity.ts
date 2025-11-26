@@ -15,23 +15,23 @@ export class MasterSociety extends BaseEntity {
   city: MasterCity;
 
   @Column({ type: 'varchar', length: 200, nullable: true })
-  localityName: string;
+  localityName: string | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
-  address: string;
+  address: string | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
-  latitude: number;
+  latitude: number | null;
 
   @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
-  longitude: number;
+  longitude: number | null;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  pincode: string;
+  pincode: string | null;
 
   @Column({ type: 'boolean', default: false })
   isVerified: boolean;
 
   @Column({ type: 'uuid', nullable: true })
-  createdByUserId: string;
+  createdByUserId: string | null;
 }

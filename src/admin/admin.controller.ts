@@ -28,6 +28,14 @@ import {
   AdminRejectPropertyDto,
   AdminReviewPropertyDto,
   AdminUpdatePropertyDto,
+  AdminCityListQueryDto,
+  AdminCityResponseDto,
+  AdminCreateCityDto,
+  AdminUpdateCityDto,
+  AdminSocietyListQueryDto,
+  AdminSocietyResponseDto,
+  AdminCreateSocietyDto,
+  AdminUpdateSocietyDto,
   BootstrapAdminDto,
   BootstrapAdminResponseDto,
 } from './dto';
@@ -164,6 +172,137 @@ export class AdminController {
       throw new UnauthorizedException('Admin context missing');
     }
     return this.adminService.deleteProperty(propertyId, req.admin.id);
+  }
+
+  // City management
+  @Get('cities')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List cities with optional search' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of cities',
+    type: [AdminCityResponseDto],
+  })
+  async listCities(
+    @Query() query: AdminCityListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminCityResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.adminService.listCities(query);
+  }
+
+  @Get('cities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get city detail' })
+  async getCity(
+    @Param('id') cityId: string,
+  ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
+    return this.adminService.getCity(cityId);
+  }
+
+  @Post('cities')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a city' })
+  async createCity(
+    @Body() dto: AdminCreateCityDto,
+  ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
+    return this.adminService.createCity(dto);
+  }
+
+  @Patch('cities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a city' })
+  async updateCity(
+    @Param('id') cityId: string,
+    @Body() dto: AdminUpdateCityDto,
+  ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
+    return this.adminService.updateCity(cityId, dto);
+  }
+
+  @Delete('cities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a city' })
+  async deleteCity(
+    @Param('id') cityId: string,
+  ): Promise<{ success: boolean; message: string; cityId: string }> {
+    return this.adminService.deleteCity(cityId);
+  }
+
+  // Society management
+  @Get('societies')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List societies with optional filters' })
+  async listSocieties(
+    @Query() query: AdminSocietyListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminSocietyResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.adminService.listSocieties(query);
+  }
+
+  @Get('societies/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get society detail' })
+  async getSociety(
+    @Param('id') societyId: string,
+  ): Promise<{ success: boolean; data: AdminSocietyResponseDto }> {
+    return this.adminService.getSociety(societyId);
+  }
+
+  @Post('societies')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a society' })
+  async createSociety(
+    @Body() dto: AdminCreateSocietyDto,
+  ): Promise<{ success: boolean; data: AdminSocietyResponseDto }> {
+    return this.adminService.createSociety(dto);
+  }
+
+  @Patch('societies/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a society' })
+  async updateSociety(
+    @Param('id') societyId: string,
+    @Body() dto: AdminUpdateSocietyDto,
+  ): Promise<{ success: boolean; data: AdminSocietyResponseDto }> {
+    return this.adminService.updateSociety(societyId, dto);
+  }
+
+  @Delete('societies/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a society' })
+  async deleteSociety(
+    @Param('id') societyId: string,
+  ): Promise<{ success: boolean; message: string; societyId: string }> {
+    return this.adminService.deleteSociety(societyId);
   }
 
   // User management endpoints

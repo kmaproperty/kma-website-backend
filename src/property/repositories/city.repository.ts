@@ -40,4 +40,35 @@ export class CityRepository {
     const city = this.cityRepository.create(cityData);
     return await this.cityRepository.save(city);
   }
+
+  async findPaginated(options: {
+    page: number;
+    limit: number;
+    search?: string;
+  }): Promise<{ items: MasterCity[]; total: number }> {
+    const { page, limit, search } = options;
+    const qb = this.cityRepository
+      .createQueryBuilder('city')
+      .orderBy('city.name', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (search) {
+      qb.where('city.name ILIKE :search', { search: `%${search}%` });
+    }
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
+
+  async updateCity(
+    id: string,
+    updateData: Partial<MasterCity>,
+  ): Promise<void> {
+    await this.cityRepository.update(id, updateData);
+  }
+
+  async deleteCity(id: string): Promise<void> {
+    await this.cityRepository.softDelete(id);
+  }
 }

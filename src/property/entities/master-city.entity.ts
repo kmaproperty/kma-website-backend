@@ -10,11 +10,11 @@ export class MasterCity extends BaseEntity {
   code: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  state: string;
+  state: string | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
-  latitude: number;
+  latitude: number | null;
 
   @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
-  longitude: number;
+  longitude: number | null;
 }

@@ -67,7 +67,12 @@ import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
     GooglePlacesService,
     JwtAuthGuard,
   ],
-  exports: [PropertyService, MasterDataSeederService],
+  exports: [
+    PropertyService,
+    MasterDataSeederService,
+    CityRepository,
+    SocietyRepository,
+  ],
 })
 export class PropertyModule implements OnModuleInit {
   private readonly logger = new Logger(PropertyModule.name);
