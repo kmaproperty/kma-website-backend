@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AdminService } from './admin.service';
+import { LeadService } from './services/lead.service';
 import {
   AdminLoginDto,
   AdminLoginResponseDto,
@@ -38,6 +39,14 @@ import {
   AdminUpdateSocietyDto,
   BootstrapAdminDto,
   BootstrapAdminResponseDto,
+  AdminLeadListQueryDto,
+  AdminLeadListResponseDto,
+  CreateLeadDto,
+  UpdateLeadDto,
+  AddLeadNoteDto,
+  UpdateLeadStatusDto,
+  LeadPropertyContactDto,
+  LeadResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -49,7 +58,10 @@ import { CreateAdminUserDto, AdminUserResponseDto, AdminUserListResponseDto, Upd
 @ApiTags('Admin')
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly leadService: LeadService,
+  ) {}
 
   @Post('bootstrap')
   @ApiOperation({ summary: 'Bootstrap admin credentials (one-time operation)' })
@@ -341,6 +353,164 @@ export class AdminController {
     @Body() dto: UpdateAdminPermissionsDto,
   ): Promise<AdminUserResponseDto> {
     return this.adminService.updateAdminPermissions(adminId, dto);
+  }
+
+  // Lead management endpoints
+  @Get('leads')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List leads with filters and pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of leads',
+    type: AdminLeadListResponseDto,
+  })
+  async listLeads(
+    @Query() query: AdminLeadListQueryDto,
+  ): Promise<AdminLeadListResponseDto> {
+    return this.leadService.listLeads(query);
+  }
+
+  @Get('leads/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get lead details by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lead details',
+    type: LeadResponseDto,
+  })
+  async getLead(@Param('id') leadId: string): Promise<LeadResponseDto> {
+    return this.leadService.getLeadById(leadId);
+  }
+
+  @Post('leads')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a new lead' })
+  @ApiResponse({
+    status: 201,
+    description: 'Lead created successfully',
+    type: LeadResponseDto,
+  })
+  async createLead(@Body() dto: CreateLeadDto): Promise<LeadResponseDto> {
+    return this.leadService.createLead(dto);
+  }
+
+  @Patch('leads/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a lead' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lead updated successfully',
+    type: LeadResponseDto,
+  })
+  async updateLead(
+    @Param('id') leadId: string,
+    @Body() dto: UpdateLeadDto,
+  ): Promise<LeadResponseDto> {
+    return this.leadService.updateLead(leadId, dto);
+  }
+
+  @Post('leads/:id/status')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update lead status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lead status updated successfully',
+    type: LeadResponseDto,
+  })
+  async updateLeadStatus(
+    @Param('id') leadId: string,
+    @Body() dto: UpdateLeadStatusDto,
+  ): Promise<LeadResponseDto> {
+    return this.leadService.updateLeadStatus(leadId, dto);
+  }
+
+  @Post('leads/:id/notes')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Add a note to a lead' })
+  @ApiResponse({
+    status: 201,
+    description: 'Note added successfully',
+  })
+  async addNoteToLead(
+    @Param('id') leadId: string,
+    @Body() dto: AddLeadNoteDto,
+    @Req() req: Request,
+  ) {
+    const adminId = req.admin?.id;
+    return this.leadService.addNoteToLead(leadId, dto, adminId);
+  }
+
+  @Post('leads/:id/property-contacts')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Add a property contact to a lead' })
+  @ApiResponse({
+    status: 201,
+    description: 'Property contact added successfully',
+  })
+  async addPropertyContact(
+    @Param('id') leadId: string,
+    @Body() dto: LeadPropertyContactDto,
+  ) {
+    return this.leadService.addPropertyContact(leadId, dto);
+  }
+
+  @Delete('leads/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a lead' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lead deleted successfully',
+  })
+  async deleteLead(@Param('id') leadId: string): Promise<{ success: boolean; message: string }> {
+    await this.leadService.deleteLead(leadId);
+    return { success: true, message: 'Lead deleted successfully' };
+  }
+
+  @Post('leads/sync-status')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Sync lead statuses' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lead statuses synced successfully',
+  })
+  async syncLeadStatus() {
+    return this.leadService.syncLeadStatus();
+  }
+
+  @Get('leads/export')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Export leads' })
+  @ApiResponse({
+    status: 200,
+    description: 'Leads exported successfully',
+  })
+  async exportLeads(@Query() query: AdminLeadListQueryDto) {
+    const leads = await this.leadService.exportLeads(query);
+    return {
+      success: true,
+      data: leads,
+      total: leads.length,
+    };
   }
 }
 

@@ -24,6 +24,7 @@ import { LoggerService } from '../logger/logger.service';
 import { ErrorHandlerService } from '../common/errorHandler/error-handler.service';
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { DocusignService } from './services/docusign.service';
+import { AdminModule } from '../admin/admin.module';
 
 const entities = [User, Otp, ChannelPartnerCode, Lead, UserRoleHistory, ChannelPartnerAgreement, Property];
 const repositories = [
@@ -39,6 +40,7 @@ const repositories = [
 @Module({
   imports: [
     TypeOrmModule.forFeature(entities),
+    AdminModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {

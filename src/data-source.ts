@@ -14,6 +14,9 @@ import { MasterBuiltUpArea } from './property/entities/master-built-up-area.enti
 import { UnitConfiguration } from './property/entities/unit-configuration.entity';
 import { Property } from './property/entities/property.entity';
 import { ContactUs } from './contact-us/entities/contact-us.entity';
+import { Lead } from './admin/entities/lead.entity';
+import { LeadNote } from './admin/entities/lead-note.entity';
+import { LeadPropertyContact } from './admin/entities/lead-property-contact.entity';
 
 // Load environment variables
 config();
@@ -44,6 +47,9 @@ export const AppDataSource = new DataSource({
     UnitConfiguration,
     Property,
     ContactUs,
+    Lead,
+    LeadNote,
+    LeadPropertyContact,
   ],
   migrations: ['src/migration/*.ts'],
   subscribers: [],

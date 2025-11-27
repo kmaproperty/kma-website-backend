@@ -5,6 +5,7 @@ import {
   Get,
   Req,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,6 +16,7 @@ import {
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UserService } from './user.service';
+import { LeadService } from '../admin/services/lead.service';
 import { ApiResponseDto, ApiResponse as ApiResponseType } from '../common/dto';
 import {
   SendOtpDto,
@@ -35,11 +37,18 @@ import {
   StartDocusignResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
+import {
+  UserLeadListQueryDto,
+  UserLeadListResponseDto,
+} from '../property/dto/lead-listing.dto';
 
 @ApiTags('User Management')
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly leadService: LeadService,
+  ) {}
 
   @Post('signup/send-otp')
   @ApiOperation({ summary: 'Send OTP for signup (phone must be new)' })
@@ -300,5 +309,31 @@ export class UserController {
   getCities(): ApiResponseType<string[]> {
     const cities = this.userService.getCities();
     return ApiResponseDto.success(cities, 'Cities fetched successfully');
+  }
+
+  @Get('leads')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'List leads for user properties',
+    description:
+      'Retrieves leads that have contacted properties posted by the authenticated user (owner/channel partner). Users can only see leads for their own properties.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Leads retrieved successfully',
+    type: UserLeadListResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'User not authenticated',
+  })
+  async listLeads(
+    @Query() query: UserLeadListQueryDto,
+    @Req() req: Request,
+  ): Promise<UserLeadListResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.leadService.listLeadsForUser(req.user.id, query);
   }
 }

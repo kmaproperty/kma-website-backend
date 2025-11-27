@@ -20,6 +20,8 @@ import {
 import { ApiParam } from '@nestjs/swagger';
 import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
+import { LeadService } from '../admin/services/lead.service';
+import { Public } from '../common/decorators/public.decorator';
 import { CreatePropertyStep1Dto } from './dto/create-property.dto';
 import { CreatePropertyStep2Dto } from './dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from './dto/create-property-step3.dto';
@@ -50,13 +52,44 @@ import {
   LocationSearchQueryDto,
 } from './dto/property-query.dto';
 import { OwnerPropertyListingQueryDto } from './dto/owner-property-listing-query.dto';
+import {
+  CreatePropertyLeadDto,
+  CreatePropertyLeadResponseDto,
+} from './dto/create-property-lead.dto';
 
 @ApiTags('Property')
 @Controller('property')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class PropertyController {
-  constructor(private readonly propertyService: PropertyService) {}
+  constructor(
+    private readonly propertyService: PropertyService,
+    private readonly leadService: LeadService,
+  ) {}
+
+  @Post('contact')
+  @Public()
+  @ApiOperation({
+    summary: 'Create lead from property contact form',
+    description:
+      'Public endpoint to create a lead when a user (logged in or not) fills out the contact form on a property page. If a lead with the same phone number exists, it will be updated.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Lead created/updated successfully',
+    type: CreatePropertyLeadResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Property not found',
+  })
+  async createLeadFromPropertyContact(
+    @Body() dto: CreatePropertyLeadDto,
+    @Req() req: Request,
+  ): Promise<CreatePropertyLeadResponseDto> {
+    const userId = req.user?.id;
+    return await this.leadService.createLeadFromPropertyContact(dto, userId);
+  }
 
   @Get('master/property-types')
   @ApiOperation({

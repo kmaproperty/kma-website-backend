@@ -4,4 +4,5 @@ export * from './admin-property.dto';
 export * from './admin-users.dto';
 export * from './admin-update-property.dto';
 export * from './admin-location.dto';
+export * from './admin-lead.dto';
 
