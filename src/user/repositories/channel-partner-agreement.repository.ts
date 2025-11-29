@@ -7,31 +7,54 @@ import { ChannelPartnerAgreement } from '../entities/channel-partner-agreement.e
 export class ChannelPartnerAgreementRepository {
   constructor(
     @InjectRepository(ChannelPartnerAgreement)
-    private readonly repository: Repository<ChannelPartnerAgreement>,
+    private readonly agreementRepository: Repository<ChannelPartnerAgreement>,
   ) {}
 
-  async createAgreement(data: Partial<ChannelPartnerAgreement>) {
-    const rec = this.repository.create(data);
-    return this.repository.save(rec);
+  async create(
+    agreementData: Partial<ChannelPartnerAgreement>,
+  ): Promise<ChannelPartnerAgreement> {
+    const agreement = this.agreementRepository.create(agreementData);
+    return await this.agreementRepository.save(agreement);
   }
 
-  async findByEnvelope(envelopeId: string) {
-    return this.repository.findOne({ where: { envelopeId } });
+  async findById(id: string): Promise<ChannelPartnerAgreement | null> {
+    return await this.agreementRepository.findOne({ where: { id } });
   }
 
-  async findLatestByUser(userId: string) {
-    return this.repository.findOne({
+  async findByEnvelopeId(
+    envelopeId: string,
+  ): Promise<ChannelPartnerAgreement | null> {
+    return await this.agreementRepository.findOne({
+      where: { envelopeId },
+    });
+  }
+
+  async findByUserId(
+    userId: string,
+  ): Promise<ChannelPartnerAgreement[]> {
+    return await this.agreementRepository.find({
       where: { userId },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async updateByEnvelope(
+  async update(
+    id: string,
+    updateData: Partial<ChannelPartnerAgreement>,
+  ): Promise<ChannelPartnerAgreement | null> {
+    await this.agreementRepository.update(id, updateData);
+    return await this.findById(id);
+  }
+
+  async updateByEnvelopeId(
     envelopeId: string,
-    data: Partial<ChannelPartnerAgreement>,
-  ) {
-    await this.repository.update({ envelopeId }, data);
+    updateData: Partial<ChannelPartnerAgreement>,
+  ): Promise<ChannelPartnerAgreement | null> {
+    const agreement = await this.findByEnvelopeId(envelopeId);
+    if (!agreement) {
+      return null;
+    }
+    return await this.update(agreement.id, updateData);
   }
 }
-
 

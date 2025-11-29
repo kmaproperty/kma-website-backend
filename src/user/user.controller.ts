@@ -6,6 +6,10 @@ import {
   Req,
   BadRequestException,
   Query,
+  Param,
+  HttpCode,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +21,8 @@ import {
 import { Request } from 'express';
 import { UserService } from './user.service';
 import { LeadService } from '../admin/services/lead.service';
+import { DocuSignService } from './services/docusign.service';
+import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
 import { ApiResponseDto, ApiResponse as ApiResponseType } from '../common/dto';
 import {
   SendOtpDto,
@@ -33,8 +39,13 @@ import {
   RefreshTokenResponseDto,
   LogoutResponseDto,
   DashboardResponseDto,
-  StartDocusignDto,
-  StartDocusignResponseDto,
+  CreateEnvelopeDto,
+  CreateEnvelopeResponseDto,
+  GetAgreementResponseDto,
+  ListAgreementsResponseDto,
+  CreateFixedAgreementEnvelopeDto,
+  UpdateEnvelopeStatusDto,
+  UpdateEnvelopeStatusResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import {
@@ -45,9 +56,13 @@ import {
 @ApiTags('User Management')
 @Controller('users')
 export class UserController {
+  private readonly logger = new Logger(UserController.name);
+
   constructor(
     private readonly userService: UserService,
     private readonly leadService: LeadService,
+    private readonly docuSignService: DocuSignService,
+    private readonly agreementRepository: ChannelPartnerAgreementRepository,
   ) {}
 
   @Post('signup/send-otp')
@@ -63,77 +78,6 @@ export class UserController {
     return await this.userService.sendOtpForSignup(sendOtpDto);
   }
 
-  @Post('channel-partner/docusign/start')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Start DocuSign embedded signing for channel partner agreement' })
-  @ApiResponse({
-    status: 200,
-    description: 'DocuSign recipient view URL created',
-    type: StartDocusignResponseDto,
-  })
-  async startChannelPartnerDocusign(
-    @Body() dto: StartDocusignDto,
-    @Req() req: Request,
-  ): Promise<StartDocusignResponseDto> {
-    if (!req.user?.id) {
-      throw new BadRequestException('User not authenticated');
-    }
-    return await this.userService.startChannelPartnerDocusign(dto, req.user.id);
-  }
-
-  @Post('channel-partner/docusign/webhook')
-  @ApiOperation({ summary: 'DocuSign Connect webhook (envelope status updates)' })
-  @ApiResponse({ status: 200, description: 'Acknowledged' })
-  async docusignWebhook(@Body() body: any): Promise<{ ok: boolean }> {
-    // Accept both JSON and Connect payloads; we expect envelopeId and status
-    try {
-      const envelopeId =
-        body?.envelopeId ||
-        body?.envelopeSummary?.envelopeId ||
-        body?.envelope?.envelopeId ||
-        body?.data?.envelopeId;
-      const status =
-        body?.status ||
-        body?.envelopeStatus ||
-        body?.envelopeSummary?.status ||
-        body?.envelope?.status ||
-        body?.data?.status;
-      if (envelopeId && status) {
-        // Shallow import here to avoid circular: call service method through userService (exposing repository via service is not ideal; kept simple)
-        const repo: any = (this.userService as any)['agreementRepository'];
-        if (repo && repo.updateByEnvelope) {
-          await repo.updateByEnvelope(envelopeId, {
-            status,
-            completedAt: status === 'completed' ? new Date() : null,
-          });
-        }
-      }
-    } catch {
-      // swallow and still ack; DocuSign expects 200
-    }
-    return { ok: true };
-  }
-
-  @Get('channel-partner/docusign/status')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get latest DocuSign agreement status for current user' })
-  @ApiResponse({ status: 200, description: 'Agreement status', schema: {
-    example: { status: 'completed', envelopeId: '...', completedAt: '2025-01-01T10:00:00.000Z' },
-  }})
-  async getDocusignStatus(@Req() req: Request) {
-    if (!req.user?.id) {
-      throw new BadRequestException('User not authenticated');
-    }
-    const repo: any = (this.userService as any)['agreementRepository'];
-    const latest = repo ? await repo.findLatestByUser(req.user.id) : null;
-    return latest
-      ? {
-          envelopeId: latest.envelopeId,
-          status: latest.status,
-          completedAt: latest.completedAt,
-        }
-      : { status: 'not_started' };
-  }
   @Post('upgrade-channel-partner')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Upgrade OWNER to CHANNEL_PARTNER with valid code' })
@@ -335,5 +279,241 @@ export class UserController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.leadService.listLeadsForUser(req.user.id, query);
+  }
+
+  @Post('docusign/create-envelope')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create DocuSign envelope for channel partner agreement' })
+  @ApiResponse({
+    status: 201,
+    description: 'Envelope created successfully',
+    type: CreateEnvelopeResponseDto,
+  })
+  async createEnvelope(
+    @Body() createEnvelopeDto: CreateEnvelopeDto,
+    @Req() req: Request,
+  ): Promise<CreateEnvelopeResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const returnUrl = createEnvelopeDto.returnUrl || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/signature-complete`;
+    
+    const { envelopeId, url } = await this.docuSignService.createEnvelope(
+      req.user.id,
+      createEnvelopeDto.recipientEmail,
+      createEnvelopeDto.recipientName,
+      createEnvelopeDto.documentBase64,
+      createEnvelopeDto.documentName,
+      returnUrl,
+    );
+
+    return {
+      success: true,
+      message: 'Envelope created successfully',
+      envelopeId,
+      url,
+    };
+  }
+
+  @Post('docusign/channel-partner-agreement')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Create DocuSign envelope for the fixed Channel Partner Agreement document',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Channel Partner Agreement envelope created successfully',
+    type: CreateEnvelopeResponseDto,
+  })
+  async createChannelPartnerAgreementEnvelope(
+    @Body() body: CreateFixedAgreementEnvelopeDto,
+    @Req() req: Request,
+  ): Promise<CreateEnvelopeResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const user = await this.userService.getUserById(req.user.id);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (!user.email || !user.name) {
+      throw new BadRequestException(
+        'User must have name and email set before signing the agreement',
+      );
+    }
+
+    const returnUrl =
+      body.returnUrl ||
+      `${process.env.FRONTEND_URL || 'http://localhost:3000'}/signature-complete`;
+
+    const { envelopeId, url } =
+      await this.docuSignService.createChannelPartnerAgreementEnvelope(
+        user.id,
+        user.email,
+        user.name,
+        returnUrl,
+      );
+
+    return {
+      success: true,
+      message: 'Channel Partner Agreement envelope created successfully',
+      envelopeId,
+      url,
+    };
+  }
+
+  @Get('docusign/agreements')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get all agreements for the authenticated user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Agreements retrieved successfully',
+    type: ListAgreementsResponseDto,
+  })
+  async getAgreements(@Req() req: Request): Promise<ListAgreementsResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const agreements = await this.agreementRepository.findByUserId(req.user.id);
+    
+    return {
+      success: true,
+      message: 'Agreements retrieved successfully',
+      data: agreements.map((agreement) => ({
+        id: agreement.id,
+        userId: agreement.userId,
+        envelopeId: agreement.envelopeId,
+        status: agreement.status,
+        completedAt: agreement.completedAt,
+        returnUrl: agreement.returnUrl,
+        createdAt: agreement.createdAt,
+        updatedAt: agreement.updatedAt,
+      })),
+    };
+  }
+
+  @Get('docusign/agreements/:envelopeId')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get agreement by envelope ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Agreement retrieved successfully',
+    type: GetAgreementResponseDto,
+  })
+  async getAgreement(
+    @Param('envelopeId') envelopeId: string,
+    @Req() req: Request,
+  ): Promise<GetAgreementResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const agreement = await this.agreementRepository.findByEnvelopeId(envelopeId);
+    
+    if (!agreement) {
+      throw new BadRequestException('Agreement not found');
+    }
+
+    if (agreement.userId !== req.user.id) {
+      throw new BadRequestException('Unauthorized to access this agreement');
+    }
+
+    return {
+      success: true,
+      message: 'Agreement retrieved successfully',
+      data: {
+        id: agreement.id,
+        userId: agreement.userId,
+        envelopeId: agreement.envelopeId,
+        status: agreement.status,
+        completedAt: agreement.completedAt,
+        returnUrl: agreement.returnUrl,
+        createdAt: agreement.createdAt,
+        updatedAt: agreement.updatedAt,
+      },
+    };
+  }
+
+  @Post('docusign/update-status')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update envelope status from DocuSign' })
+  @ApiResponse({
+    status: 200,
+    description: 'Envelope status updated successfully',
+    type: UpdateEnvelopeStatusResponseDto,
+  })
+  async updateEnvelopeStatus(
+    @Body() updateStatusDto: UpdateEnvelopeStatusDto,
+    @Req() req: Request,
+  ): Promise<UpdateEnvelopeStatusResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const agreement = await this.agreementRepository.findByEnvelopeId(
+      updateStatusDto.envelopeId,
+    );
+
+    if (!agreement) {
+      throw new BadRequestException('Agreement not found');
+    }
+
+    if (agreement.userId !== req.user.id) {
+      throw new BadRequestException('Unauthorized to update this agreement');
+    }
+
+    const updatedAgreement = await this.docuSignService.updateAgreementStatus(
+      updateStatusDto.envelopeId,
+    );
+
+    if (!updatedAgreement) {
+      throw new BadRequestException('Failed to update agreement status');
+    }
+
+    return {
+      success: true,
+      message: 'Envelope status updated successfully',
+      data: {
+        id: updatedAgreement.id,
+        userId: updatedAgreement.userId,
+        envelopeId: updatedAgreement.envelopeId,
+        status: updatedAgreement.status,
+        completedAt: updatedAgreement.completedAt,
+        returnUrl: updatedAgreement.returnUrl,
+        createdAt: updatedAgreement.createdAt,
+        updatedAt: updatedAgreement.updatedAt,
+      },
+    };
+  }
+
+  @Post('docusign/webhook')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'DocuSign webhook endpoint for envelope status updates' })
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook processed successfully',
+  })
+  async handleDocuSignWebhook(@Body() webhookData: any): Promise<{ success: boolean }> {
+    try {
+      // DocuSign webhook format varies, but typically includes envelope data
+      const envelopeId = webhookData?.data?.envelopeId || webhookData?.envelopeId;
+      const status = webhookData?.data?.status || webhookData?.status;
+
+      if (!envelopeId) {
+        this.logger.warn('Webhook received without envelope ID');
+        return { success: false };
+      }
+
+      await this.docuSignService.handleWebhook(envelopeId, status);
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Error handling DocuSign webhook', error);
+      return { success: false };
+    }
   }
 }

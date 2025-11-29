@@ -40,6 +40,7 @@ export class TokenVerificationMiddleware implements NestMiddleware {
         throw new UnauthorizedException('Invalid token type');
       }
 
+      console.log('decodedToken', decodedToken);
       // Populate token data in request
       req.tokenData = {
         sub: decodedToken.sub,

@@ -5,36 +5,36 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from './entities/user.entity';
 import { Otp } from './entities/otp.entity';
 import { ChannelPartnerCode } from './entities/channel-partner-code.entity';
-import { Lead } from './entities/lead.entity';
 import { ChannelPartnerAgreement } from './entities/channel-partner-agreement.entity';
+import { Lead } from './entities/lead.entity';
 import { UserRoleHistory } from './entities/user-role-history.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
+import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
 import { Property } from '../property/entities/property.entity';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { LeadRepository } from './repositories/lead.repository';
-import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
 import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
+import { DocuSignService } from './services/docusign.service';
 import { UserController } from './user.controller';
 import { ChannelPartnerCodeController } from './channel-partner-code.controller';
 import { LoggerService } from '../logger/logger.service';
 import { ErrorHandlerService } from '../common/errorHandler/error-handler.service';
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
-import { DocusignService } from './services/docusign.service';
 import { AdminModule } from '../admin/admin.module';
 
-const entities = [User, Otp, ChannelPartnerCode, Lead, UserRoleHistory, ChannelPartnerAgreement, Property];
+const entities = [User, Otp, ChannelPartnerCode, ChannelPartnerAgreement, Lead, UserRoleHistory, Property];
 const repositories = [
   UserRepository,
   OtpRepository,
   ChannelPartnerCodeRepository,
+  ChannelPartnerAgreementRepository,
   PropertyRepository,
   LeadRepository,
   UserRoleHistoryRepository,
-  ChannelPartnerAgreementRepository,
 ];
 
 @Module({
@@ -62,7 +62,7 @@ const repositories = [
   providers: [
     UserService,
     ChannelPartnerCodeService,
-    DocusignService,
+    DocuSignService,
     LoggerService,
     ErrorHandlerService,
     AuthMiddleware,
@@ -90,11 +90,24 @@ export class UserModule implements NestModule {
         'users/profile',
         'users/dashboard',
         'users/logout',
+        'users/docusign/create-envelope',
+        'users/docusign/agreements',
+        'users/docusign/update-status',
+        'users/docusign/channel-partner-agreement',
       );
 
     // Apply auth middleware to profile and logout endpoints
     consumer
       .apply(AuthMiddleware)
-      .forRoutes('users/profile', 'users/upgrade-channel-partner', 'users/dashboard', 'users/logout');
+      .forRoutes(
+        'users/profile',
+        'users/upgrade-channel-partner',
+        'users/dashboard',
+        'users/logout',
+        'users/docusign/create-envelope',
+        'users/docusign/agreements',
+        'users/docusign/update-status',
+        'users/docusign/channel-partner-agreement',
+      );
   }
 }

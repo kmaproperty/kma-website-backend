@@ -25,12 +25,11 @@ import {
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
-import { DashboardResponseDto, StartDocusignDto, StartDocusignResponseDto } from './dto';
+import { DashboardResponseDto } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import { LeadRepository } from './repositories/lead.repository';
 import { LeadType } from './entities/lead.entity';
 import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
-import { DocusignService } from './services/docusign.service';
 
 @Injectable()
 export class UserService {
@@ -47,7 +46,6 @@ export class UserService {
     private readonly propertyRepository: PropertyRepository,
     private readonly leadRepository: LeadRepository,
     private readonly userRoleHistoryRepository: UserRoleHistoryRepository,
-    private readonly docusignService: DocusignService,
   ) {}
 
   /**
@@ -125,33 +123,6 @@ export class UserService {
       success: true,
       message: 'Upgraded to CHANNEL_PARTNER successfully',
     };
-  }
-
-  /**
-   * Start DocuSign embedded signing flow for Channel Partner agreement
-   */
-  async startChannelPartnerDocusign(
-    dto: StartDocusignDto,
-    userId: string,
-  ): Promise<StartDocusignResponseDto> {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-    const name = dto.name || user.name || 'Channel Partner';
-    const email = dto.email || user.email;
-    if (!email) {
-      throw new BadRequestException(
-        'Email is required for DocuSign signing. Please provide email.',
-      );
-    }
-    const result = await this.docusignService.createEmbeddedSigningEnvelope({
-      user,
-      name,
-      email,
-      returnUrl: dto.returnUrl,
-    });
-    return { envelopeId: result.envelopeId, url: result.url };
   }
 
   /**

@@ -1,104 +1,408 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import axios from 'axios';
-import { User } from '../entities/user.entity';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as docusign from 'docusign-esign';
 import { ChannelPartnerAgreementRepository } from '../repositories/channel-partner-agreement.repository';
-
-interface DocusignConfig {
-  baseUrl: string;
-  accountId: string;
-  accessToken: string;
-  templateId: string;
-}
+import { ChannelPartnerAgreement, AgreementStatus } from '../entities/channel-partner-agreement.entity';
 
 @Injectable()
-export class DocusignService {
-  constructor(private readonly agreementRepository: ChannelPartnerAgreementRepository) {}
-  private getConfig(): DocusignConfig {
-    const baseUrl = process.env.DOCUSIGN_BASE_URL || 'https://demo.docusign.net/restapi';
-    const accountId = process.env.DOCUSIGN_ACCOUNT_ID || '';
-    const accessToken = process.env.DOCUSIGN_ACCESS_TOKEN || '';
-    const templateId = process.env.DOCUSIGN_TEMPLATE_ID || '';
-    if (!accountId || !accessToken || !templateId) {
+export class DocuSignService {
+  private readonly logger = new Logger(DocuSignService.name);
+  private apiClient: docusign.ApiClient;
+  private accountId: string;
+  private basePath: string;
+  private accessToken: string | null = null;
+  private tokenExpiresAt: Date | null = null;
+  private isAuthenticating: Promise<void> | null = null;
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly agreementRepository: ChannelPartnerAgreementRepository,
+  ) {
+    this.initializeApiClient();
+  }
+
+  /**
+   * Load the fixed Channel Partner Agreement PDF as base64.
+   * The file path is configured via DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH.
+   */
+  private getChannelPartnerAgreementDocument(): {
+    documentBase64: string;
+    documentName: string;
+  } {
+    const configuredPath = this.configService.get<string>(
+      'DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH',
+    );
+    console.log('configuredPath', configuredPath);
+
+    // Default to "<project-root>/resume.pdf" if no env var is provided
+    const absolutePath = configuredPath
+      ? path.isAbsolute(configuredPath)
+        ? configuredPath
+        : path.join(process.cwd(), configuredPath)
+      : path.join(process.cwd(), 'resume.pdf');
+
+    if (!fs.existsSync(absolutePath)) {
       throw new BadRequestException(
-        'DocuSign configuration missing. Please set DOCUSIGN_ACCOUNT_ID, DOCUSIGN_ACCESS_TOKEN, DOCUSIGN_TEMPLATE_ID',
+        `Channel Partner Agreement file not found at path: ${absolutePath}`,
       );
     }
-    return { baseUrl, accountId, accessToken, templateId };
+
+    const fileBuffer = fs.readFileSync(absolutePath);
+    const documentBase64 = fileBuffer.toString('base64');
+    const documentName = path.basename(absolutePath);
+
+    console.log('documentBase64', documentBase64);
+    console.log('documentName', documentName);
+
+    return { documentBase64, documentName };
   }
 
-  async createEmbeddedSigningEnvelope(params: {
-    user: User;
-    name: string;
-    email: string;
-    returnUrl: string;
-  }): Promise<{ envelopeId: string; url: string }> {
-    const { baseUrl, accountId, accessToken, templateId } = this.getConfig();
-    const clientUserId = params.user.id;
+  private initializeApiClient() {
+    const integratorKey = this.configService.get<string>('DOCUSIGN_INTEGRATOR_KEY');
+    const userId = this.configService.get<string>('DOCUSIGN_USER_ID');
+    const accountId = this.configService.get<string>('DOCUSIGN_ACCOUNT_ID');
+    const basePath = this.configService.get<string>('DOCUSIGN_BASE_PATH') || 'https://demo.docusign.net/restapi';
 
-    // 1. Create envelope from template with recipient as embedded signer
-    const envelopeDefinition = {
-      templateId,
-      templateRoles: [
-        {
-          roleName: 'signer',
-          name: params.name,
-          email: params.email,
-          clientUserId,
-        },
-      ],
-      status: 'sent',
-    };
-
-    const createEnvelopeResp = await axios.post(
-      `${baseUrl}/v2.1/accounts/${accountId}/envelopes`,
-      envelopeDefinition,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      },
-    );
-
-    const envelopeId = createEnvelopeResp.data?.envelopeId as string;
-    if (!envelopeId) {
-      throw new BadRequestException('Failed to create DocuSign envelope');
+    if (!integratorKey || !userId || !accountId) {
+      this.logger.warn(
+        'DocuSign credentials not fully configured. Some features may not work.',
+      );
+      return;
     }
 
-    // 2. Create recipient view (embedded signing URL)
-    const recipientViewReq = {
-      returnUrl: params.returnUrl,
-      authenticationMethod: 'none',
-      email: params.email,
-      userName: params.name,
-      clientUserId,
-    };
-    const viewResp = await axios.post(
-      `${baseUrl}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`,
-      recipientViewReq,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      },
-    );
+    this.apiClient = new docusign.ApiClient();
+    this.apiClient.setBasePath(basePath);
+    this.accountId = accountId;
+    this.basePath = basePath;
+  }
 
-    const url = viewResp.data?.url as string;
-    if (!url) {
-      throw new BadRequestException('Failed to create DocuSign recipient view');
+  /**
+   * Load the DocuSign RSA private key either from an env var (DOCUSIGN_PRIVATE_KEY)
+   * or from a PEM file (DOCUSIGN_PRIVATE_KEY_PATH, relative to project root if not absolute).
+   */
+  private getPrivateKeyPem(): string {
+    const inlineKey = this.configService.get<string>('DOCUSIGN_PRIVATE_KEY');
+    if (inlineKey && inlineKey.trim().length > 0) {
+      return inlineKey;
     }
 
-    // Save agreement record
-    await this.agreementRepository.createAgreement({
-      userId: params.user.id,
-      envelopeId,
-      status: 'sent',
-      returnUrl: params.returnUrl,
-    });
+    const keyPath = this.configService.get<string>('DOCUSIGN_PRIVATE_KEY_PATH');
+    if (!keyPath) {
+      throw new BadRequestException(
+        'DocuSign private key not configured. Set DOCUSIGN_PRIVATE_KEY or DOCUSIGN_PRIVATE_KEY_PATH.',
+      );
+    }
 
-    return { envelopeId, url };
+    const absolutePath = path.isAbsolute(keyPath)
+      ? keyPath
+      : path.join(process.cwd(), keyPath);
+
+    if (!fs.existsSync(absolutePath)) {
+      throw new BadRequestException(
+        `DocuSign private key file not found at path: ${absolutePath}`,
+      );
+    }
+
+    const pem = fs.readFileSync(absolutePath, 'utf8');
+    if (!pem.includes('BEGIN') || !pem.includes('PRIVATE KEY')) {
+      throw new BadRequestException(
+        `DocuSign private key file at ${absolutePath} does not look like a valid PEM private key`,
+      );
+    }
+
+    return pem;
+  }
+
+  private async ensureAuthenticated(): Promise<void> {
+    // Check if token is still valid (with 5 minute buffer)
+    if (
+      this.accessToken &&
+      this.tokenExpiresAt &&
+      this.tokenExpiresAt > new Date(Date.now() + 5 * 60 * 1000)
+    ) {
+      return;
+    }
+
+    // If already authenticating, wait for it
+    if (this.isAuthenticating) {
+      return await this.isAuthenticating;
+    }
+
+    // Start authentication
+    this.isAuthenticating = this.authenticate();
+    try {
+      await this.isAuthenticating;
+    } finally {
+      this.isAuthenticating = null;
+    }
+  }
+
+  private async authenticate(): Promise<void> {
+    const integratorKey = this.configService.get<string>('DOCUSIGN_INTEGRATOR_KEY');
+    const userId = this.configService.get<string>('DOCUSIGN_USER_ID');
+    const privateKeyPem = this.getPrivateKeyPem();
+
+    if (!integratorKey || !userId || !this.apiClient) {
+      throw new BadRequestException('DocuSign is not properly configured');
+    }
+
+    try {
+      const scopes = ['signature', 'impersonation'];
+      const rsaKey = Buffer.from(privateKeyPem, 'utf8');
+
+      const response = await this.apiClient.requestJWTUserToken(
+        integratorKey,
+        userId,
+        scopes,
+        rsaKey,
+        3600,
+      );
+
+      this.accessToken = response.body.access_token;
+      const expiresIn = response.body.expires_in || 3600;
+      this.tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
+
+      this.apiClient.addDefaultHeader('Authorization', `Bearer ${this.accessToken}`);
+      this.logger.log('DocuSign authentication successful');
+    } catch (error) {
+      this.logger.error('DocuSign authentication failed', error);
+      throw new BadRequestException(
+        `DocuSign authentication failed: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Create an envelope for the fixed Channel Partner Agreement document.
+   * The document is loaded from DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH.
+   */
+  async createChannelPartnerAgreementEnvelope(
+    userId: string,
+    recipientEmail: string,
+    recipientName: string,
+    returnUrl: string,
+  ): Promise<{ envelopeId: string; url: string }> {
+    const { documentBase64, documentName } =
+      this.getChannelPartnerAgreementDocument();
+
+    return this.createEnvelope(
+      userId,
+      recipientEmail,
+      recipientName,
+      documentBase64,
+      documentName,
+      returnUrl,
+    );
+  }
+
+  async createEnvelope(
+    userId: string,
+    recipientEmail: string,
+    recipientName: string,
+    documentBase64: string,
+    documentName: string,
+    returnUrl: string,
+  ): Promise<{ envelopeId: string; url: string }> {
+    try {
+      if (!this.apiClient) {
+        throw new BadRequestException('DocuSign is not properly configured');
+      }
+      console.log('documentBase64', documentBase64);
+      console.log('documentName', documentName);
+      console.log('recipientEmail', recipientEmail);
+      console.log('recipientName', recipientName);
+      console.log('returnUrl', returnUrl);
+
+      await this.ensureAuthenticated();
+
+      const envelopesApi = new docusign.EnvelopesApi(this.apiClient);
+
+      console.log('envelopesApi', envelopesApi);
+
+      // Create document
+      const document = docusign.Document.constructFromObject({
+        documentBase64: documentBase64,
+        name: documentName,
+        fileExtension: 'pdf',
+        documentId: '1',
+      });
+
+      console.log('document', document);
+
+      // Create signer
+      const signer = docusign.Signer.constructFromObject({
+        email: recipientEmail,
+        name: recipientName,
+        recipientId: '1',
+        routingOrder: '1',
+        // Required for embedded signing (Recipient View)
+        clientUserId: userId,
+      });
+      console.log('document', document);
+
+      // Create sign here tab
+      const signHere = docusign.SignHere.constructFromObject({
+        documentId: '1',
+        pageNumber: '1',
+        recipientId: '1',
+        tabLabel: 'SignHereTab',
+        xPosition: '195',
+        yPosition: '147',
+      });
+
+      const tabs = docusign.Tabs.constructFromObject({
+        signHereTabs: [signHere],
+      });
+
+      signer.tabs = tabs;
+
+      // Create recipients
+      const recipients = docusign.Recipients.constructFromObject({
+        signers: [signer],
+      });
+
+      // Create envelope
+      const envelope = docusign.EnvelopeDefinition.constructFromObject({
+        emailSubject: 'Please sign the Channel Partner Agreement',
+        documents: [document],
+        recipients: recipients,
+        status: 'sent',
+      });
+
+      // Create and send envelope
+      const results = await envelopesApi.createEnvelope(this.accountId, {
+        envelopeDefinition: envelope,
+      });
+
+      const envelopeId = results.envelopeId;
+
+      // Get signing URL
+      const viewRequest = docusign.RecipientViewRequest.constructFromObject({
+        authenticationMethod: 'none',
+        email: recipientEmail,
+        userName: recipientName,
+        recipientId: '1',
+        clientUserId: userId,
+        returnUrl: returnUrl,
+      });
+
+      const viewResults = await envelopesApi.createRecipientView(
+        this.accountId,
+        envelopeId,
+        { recipientViewRequest: viewRequest },
+      );
+
+      // Save agreement to database
+      await this.agreementRepository.create({
+        userId,
+        envelopeId,
+        status: AgreementStatus.SENT,
+        returnUrl,
+      });
+
+      return {
+        envelopeId,
+        url: viewResults.url,
+      };
+    } catch (error) {
+      this.logger.error('Error creating DocuSign envelope', error);
+      throw new BadRequestException(
+        `Failed to create DocuSign envelope: ${error.message}`,
+      );
+    }
+  }
+
+  async getEnvelopeStatus(envelopeId: string): Promise<AgreementStatus> {
+    try {
+      if (!this.apiClient) {
+        throw new BadRequestException('DocuSign is not properly configured');
+      }
+
+      await this.ensureAuthenticated();
+
+      const envelopesApi = new docusign.EnvelopesApi(this.apiClient);
+      const envelope = await envelopesApi.getEnvelope(this.accountId, envelopeId);
+
+      const status = envelope.status?.toLowerCase();
+
+      // Map DocuSign status to our AgreementStatus enum
+      switch (status) {
+        case 'sent':
+          return AgreementStatus.SENT;
+        case 'delivered':
+          return AgreementStatus.DELIVERED;
+        case 'signed':
+          return AgreementStatus.SIGNED;
+        case 'completed':
+          return AgreementStatus.COMPLETED;
+        case 'declined':
+          return AgreementStatus.DECLINED;
+        case 'voided':
+          return AgreementStatus.VOIDED;
+        default:
+          return AgreementStatus.SENT;
+      }
+    } catch (error) {
+      this.logger.error('Error getting envelope status', error);
+      throw new BadRequestException(
+        `Failed to get envelope status: ${error.message}`,
+      );
+    }
+  }
+
+  async updateAgreementStatus(envelopeId: string): Promise<ChannelPartnerAgreement | null> {
+    try {
+      const status = await this.getEnvelopeStatus(envelopeId);
+      const updateData: Partial<ChannelPartnerAgreement> = {
+        status,
+      };
+
+      if (status === AgreementStatus.COMPLETED) {
+        updateData.completedAt = new Date();
+      }
+
+      return await this.agreementRepository.updateByEnvelopeId(
+        envelopeId,
+        updateData,
+      );
+    } catch (error) {
+      this.logger.error('Error updating agreement status', error);
+      return null;
+    }
+  }
+
+  async getEnvelopeDocuments(envelopeId: string): Promise<Buffer> {
+    try {
+      if (!this.apiClient) {
+        throw new BadRequestException('DocuSign is not properly configured');
+      }
+
+      await this.ensureAuthenticated();
+
+      const envelopesApi = new docusign.EnvelopesApi(this.apiClient);
+      const results = await envelopesApi.getDocument(
+        this.accountId,
+        envelopeId,
+        'combined',
+      );
+
+      return Buffer.from(results, 'base64');
+    } catch (error) {
+      this.logger.error('Error getting envelope documents', error);
+      throw new BadRequestException(
+        `Failed to get envelope documents: ${error.message}`,
+      );
+    }
+  }
+
+  async handleWebhook(
+    envelopeId: string,
+    status: string,
+  ): Promise<ChannelPartnerAgreement | null> {
+    this.logger.log(`Webhook received for envelope ${envelopeId} with status ${status}`);
+    return await this.updateAgreementStatus(envelopeId);
   }
 }
-
 
