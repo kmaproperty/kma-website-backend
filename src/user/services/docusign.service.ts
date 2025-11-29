@@ -175,7 +175,191 @@ export class DocuSignService {
   }
 
   /**
+   * Get the template ID from configuration.
+   * If DOCUSIGN_TEMPLATE_ID is set, use template-based signing.
+   * Otherwise, fall back to document-based signing.
+   */
+  private getTemplateId(): string | null {
+    return this.configService.get<string>('DOCUSIGN_TEMPLATE_ID') || null;
+  }
+
+  /**
+   * Create a DocuSign template from the Channel Partner Agreement PDF.
+   * This is a one-time setup method. After creating the template, save the template ID
+   * to DOCUSIGN_TEMPLATE_ID environment variable.
+   * 
+   * @param templateName - Name for the template (default: "Channel Partner Agreement Template")
+   * @returns Template ID that can be used for future envelope creation
+   */
+  async createTemplate(
+    templateName: string = 'Channel Partner Agreement Template',
+  ): Promise<{ templateId: string }> {
+    try {
+      if (!this.apiClient) {
+        throw new BadRequestException('DocuSign is not properly configured');
+      }
+
+      await this.ensureAuthenticated();
+
+      const { documentBase64, documentName } =
+        this.getChannelPartnerAgreementDocument();
+
+      const templatesApi = new docusign.TemplatesApi(this.apiClient);
+
+      // Create document for template
+      const document = docusign.Document.constructFromObject({
+        documentBase64: documentBase64,
+        name: documentName,
+        fileExtension: 'pdf',
+        documentId: '1',
+      });
+
+      // Create signer role (template uses roles, not actual recipients)
+      const signer = docusign.Signer.constructFromObject({
+        roleName: 'Signer',
+        recipientId: '1',
+        routingOrder: '1',
+      });
+
+      // Create sign here tab
+      const signHere = docusign.SignHere.constructFromObject({
+        documentId: '1',
+        pageNumber: '1',
+        recipientId: '1',
+        tabLabel: 'SignHereTab',
+        xPosition: '195',
+        yPosition: '147',
+      });
+
+      const tabs = docusign.Tabs.constructFromObject({
+        signHereTabs: [signHere],
+      });
+
+      signer.tabs = tabs;
+
+      // Create recipients
+      const recipients = docusign.Recipients.constructFromObject({
+        signers: [signer],
+      });
+
+      // Create template definition
+      const template = docusign.EnvelopeTemplate.constructFromObject({
+        name: templateName,
+        description: 'Template for Channel Partner Agreement',
+        documents: [document],
+        recipients: recipients,
+        emailSubject: 'Please sign the Channel Partner Agreement',
+      });
+
+      // Create the template
+      const result = await templatesApi.createTemplate(this.accountId, {
+        envelopeTemplate: template,
+      });
+
+      const templateId = result.templateId;
+      this.logger.log(
+        `Template created successfully with ID: ${templateId}. Save this ID to DOCUSIGN_TEMPLATE_ID environment variable.`,
+      );
+
+      return { templateId };
+    } catch (error) {
+      this.logger.error('Error creating DocuSign template', error);
+      throw new BadRequestException(
+        `Failed to create DocuSign template: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Create an envelope from a DocuSign template.
+   * This is more efficient than uploading the document each time.
+   * 
+   * @param templateId - The DocuSign template ID
+   * @param userId - User ID for embedded signing
+   * @param recipientEmail - Recipient email address
+   * @param recipientName - Recipient name
+   * @param returnUrl - URL to redirect after signing
+   * @returns Envelope ID and signing URL
+   */
+  async createEnvelopeFromTemplate(
+    templateId: string,
+    userId: string,
+    recipientEmail: string,
+    recipientName: string,
+    returnUrl: string,
+  ): Promise<{ envelopeId: string; url: string }> {
+    try {
+      if (!this.apiClient) {
+        throw new BadRequestException('DocuSign is not properly configured');
+      }
+
+      await this.ensureAuthenticated();
+
+      const envelopesApi = new docusign.EnvelopesApi(this.apiClient);
+
+      // Create signer with role assignment
+      const signer = docusign.TemplateRole.constructFromObject({
+        email: recipientEmail,
+        name: recipientName,
+        roleName: 'Signer',
+        // Required for embedded signing (Recipient View)
+        clientUserId: userId,
+      });
+
+      // Create envelope from template
+      const envelope = docusign.EnvelopeDefinition.constructFromObject({
+        templateId: templateId,
+        templateRoles: [signer],
+        status: 'sent',
+        emailSubject: 'Please sign the Channel Partner Agreement',
+      });
+
+      // Create and send envelope
+      const results = await envelopesApi.createEnvelope(this.accountId, {
+        envelopeDefinition: envelope,
+      });
+
+      const envelopeId = results.envelopeId;
+
+      // Get signing URL
+      const viewRequest = docusign.RecipientViewRequest.constructFromObject({
+        authenticationMethod: 'none',
+        email: recipientEmail,
+        userName: recipientName,
+        recipientId: '1',
+        clientUserId: userId,
+        returnUrl: returnUrl,
+      });
+
+      const viewResults = await envelopesApi.createRecipientView(
+        this.accountId,
+        envelopeId,
+        { recipientViewRequest: viewRequest },
+      );
+
+      // Save agreement to database
+      await this.agreementRepository.create({
+        userId,
+        envelopeId,
+        status: AgreementStatus.SENT,
+        returnUrl,
+      });
+
+      return {
+        envelopeId,
+        url: viewResults.url,
+      };
+    } catch (error) {
+      this.logger.error('Error creating DocuSign envelope from template', error);
+      throw new BadRequestException(
+        `Failed to create DocuSign envelope from template: ${error.message}`,
+      );
+    }
+  }
+
+  /**
    * Create an envelope for the fixed Channel Partner Agreement document.
+   * Uses template if DOCUSIGN_TEMPLATE_ID is configured, otherwise falls back to document upload.
    * The document is loaded from DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH.
    */
   async createChannelPartnerAgreementEnvelope(
@@ -184,17 +368,34 @@ export class DocuSignService {
     recipientName: string,
     returnUrl: string,
   ): Promise<{ envelopeId: string; url: string }> {
-    const { documentBase64, documentName } =
-      this.getChannelPartnerAgreementDocument();
+    // Check if template ID is configured
+    const templateId = this.getTemplateId();
+    
+    if (templateId) {
+      // Use template-based signing (more efficient)
+      this.logger.log(`Using template ${templateId} for envelope creation`);
+      return this.createEnvelopeFromTemplate(
+        templateId,
+        userId,
+        recipientEmail,
+        recipientName,
+        returnUrl,
+      );
+    } else {
+      // Fall back to document-based signing
+      this.logger.log('No template ID configured, using document upload');
+      const { documentBase64, documentName } =
+        this.getChannelPartnerAgreementDocument();
 
-    return this.createEnvelope(
-      userId,
-      recipientEmail,
-      recipientName,
-      documentBase64,
-      documentName,
-      returnUrl,
-    );
+      return this.createEnvelope(
+        userId,
+        recipientEmail,
+        recipientName,
+        documentBase64,
+        documentName,
+        returnUrl,
+      );
+    }
   }
 
   async createEnvelope(

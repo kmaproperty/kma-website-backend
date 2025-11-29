@@ -220,3 +220,40 @@ export class DocuSignWebhookDto {
   status: string;
 }
 
+export class CreateTemplateDto {
+  @ApiProperty({
+    description: 'Template name',
+    example: 'Channel Partner Agreement Template',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  templateName?: string;
+}
+
+export class CreateTemplateResponseDto {
+  @ApiProperty({
+    description: 'Success status',
+    example: true,
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'Response message',
+    example: 'Template created successfully',
+  })
+  message: string;
+
+  @ApiProperty({
+    description: 'Template ID from DocuSign',
+    example: 'abc123-def456-ghi789',
+  })
+  templateId: string;
+
+  @ApiProperty({
+    description: 'Instructions for using the template',
+    example: 'Save this template ID to DOCUSIGN_TEMPLATE_ID environment variable',
+  })
+  instructions: string;
+}
+

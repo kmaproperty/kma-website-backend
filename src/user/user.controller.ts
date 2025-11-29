@@ -46,6 +46,8 @@ import {
   CreateFixedAgreementEnvelopeDto,
   UpdateEnvelopeStatusDto,
   UpdateEnvelopeStatusResponseDto,
+  CreateTemplateDto,
+  CreateTemplateResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import {
@@ -363,6 +365,46 @@ export class UserController {
       message: 'Channel Partner Agreement envelope created successfully',
       envelopeId,
       url,
+    };
+  }
+
+  @Post('docusign/create-template')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Create a DocuSign template from the Channel Partner Agreement PDF (one-time setup)',
+    description:
+      'This endpoint creates a template in DocuSign from the PDF configured in DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH. ' +
+      'After creating the template, save the returned template ID to the DOCUSIGN_TEMPLATE_ID environment variable. ' +
+      'Once configured, all future envelope creations will use this template instead of uploading the PDF each time.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Template created successfully',
+    type: CreateTemplateResponseDto,
+  })
+  async createTemplate(
+    @Body() body: CreateTemplateDto,
+    @Req() req: Request,
+  ): Promise<CreateTemplateResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const templateName =
+      body.templateName || 'Channel Partner Agreement Template';
+
+    const { templateId } = await this.docuSignService.createTemplate(
+      templateName,
+    );
+
+    return {
+      success: true,
+      message: 'Template created successfully',
+      templateId,
+      instructions:
+        'Save this template ID to DOCUSIGN_TEMPLATE_ID environment variable. ' +
+        'Once configured, all future envelope creations will automatically use this template.',
     };
   }
 
