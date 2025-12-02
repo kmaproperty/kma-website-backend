@@ -74,6 +74,8 @@ import { AdminModule } from '../admin/admin.module';
     MasterDataSeederService,
     CityRepository,
     SocietyRepository,
+    BhkTypeRepository,
+    LocalityRepository,
   ],
 })
 export class PropertyModule implements OnModuleInit {

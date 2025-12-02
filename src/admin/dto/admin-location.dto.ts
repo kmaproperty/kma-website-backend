@@ -283,4 +283,258 @@ export class AdminCreateSocietyDto {
 
 export class AdminUpdateSocietyDto extends PartialType(AdminCreateSocietyDto) {}
 
+// BHK Type management DTOs
+export class AdminBhkListQueryDto {
+  @ApiPropertyOptional({
+    description: 'Filter BHK types by property type id',
+    example: '1f8b0e9e-8d6c-4d1f-8e6e-3858c5c2e6c4',
+  })
+  @IsOptional()
+  @IsUUID()
+  propertyTypeId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter BHK types by society id',
+    example: '1f8b0e9e-8d6c-4d1f-8e6e-3858c5c2e6c4',
+  })
+  @IsOptional()
+  @IsUUID()
+  societyId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter BHK types by locality id',
+    example: '1f8b0e9e-8d6c-4d1f-8e6e-3858c5c2e6c4',
+  })
+  @IsOptional()
+  @IsUUID()
+  localityId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search BHK types by name (case insensitive)',
+    example: '2 BHK',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({
+    description: 'Items per page (max 100)',
+    example: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 20;
+}
+
+export class AdminBhkResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  code: string;
+
+  @ApiProperty()
+  sortOrder: number;
+
+  @ApiProperty()
+  propertyTypeId: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  societyId: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  localityId: string | null;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+}
+
+export class AdminCreateBhkDto {
+  @ApiProperty({
+    description: 'BHK type name',
+    example: '2 BHK',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  name: string;
+
+  @ApiProperty({
+    description: 'Unique BHK type code',
+    example: '2bhk',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code: string;
+
+  @ApiProperty({
+    description: 'Sort order for display',
+    example: 1,
+  })
+  @IsInt()
+  @Min(0)
+  sortOrder: number;
+
+  @ApiProperty({
+    description: 'Property type ID the BHK type belongs to',
+    example: '1f8b0e9e-8d6c-4d1f-8e6e-3858c5c2e6c4',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  propertyTypeId: string;
+
+  @ApiPropertyOptional({
+    description: 'Society ID (optional)',
+    example: '1f8b0e9e-8d6c-4d1f-8e6e-3858c5c2e6c4',
+  })
+  @IsOptional()
+  @IsUUID()
+  societyId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Locality ID (optional)',
+    example: '1f8b0e9e-8d6c-4d1f-8e6e-3858c5c2e6c4',
+  })
+  @IsOptional()
+  @IsUUID()
+  localityId?: string;
+}
+
+export class AdminUpdateBhkDto extends PartialType(AdminCreateBhkDto) {}
+
+// Locality management DTOs
+export class AdminLocalityListQueryDto {
+  @ApiPropertyOptional({
+    description: 'Filter localities by city id',
+    example: '1f8b0e9e-8d6c-4d1f-8e6e-3858c5c2e6c4',
+  })
+  @IsOptional()
+  @IsUUID()
+  cityId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search localities by name or sector (case insensitive)',
+    example: 'Sector 5',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({
+    description: 'Items per page (max 100)',
+    example: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 20;
+}
+
+export class AdminLocalityResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  sector: string | null;
+
+  @ApiProperty()
+  cityId: string;
+
+  @ApiPropertyOptional({ nullable: true, type: Number })
+  latitude: number | null;
+
+  @ApiPropertyOptional({ nullable: true, type: Number })
+  longitude: number | null;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+
+  @ApiPropertyOptional({
+    description: 'City details for quick reference',
+    nullable: true,
+    type: () => CitySummary,
+  })
+  city?: CitySummary | null;
+}
+
+export class AdminCreateLocalityDto {
+  @ApiProperty({
+    description: 'Locality name',
+    example: 'Sector 5',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  name: string;
+
+  @ApiPropertyOptional({
+    description: 'Sector name',
+    example: 'Sector 5',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  sector?: string;
+
+  @ApiProperty({
+    description: 'City ID the locality belongs to',
+    example: '1f8b0e9e-8d6c-4d1f-8e6e-3858c5c2e6c4',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  cityId: string;
+
+  @ApiPropertyOptional({
+    description: 'Latitude',
+    example: 28.4700,
+    type: Number,
+  })
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Longitude',
+    example: 77.0800,
+    type: Number,
+  })
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
+}
+
+export class AdminUpdateLocalityDto extends PartialType(AdminCreateLocalityDto) {}
+
 

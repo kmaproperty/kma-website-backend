@@ -94,4 +94,53 @@ export class BhkTypeRepository {
       order: { sortOrder: 'ASC' },
     });
   }
+
+  async updateBhkType(
+    id: string,
+    updateData: Partial<MasterBhkType>,
+  ): Promise<void> {
+    await this.bhkTypeRepository.update(id, updateData);
+  }
+
+  async deleteBhkType(id: string): Promise<void> {
+    await this.bhkTypeRepository.softDelete(id);
+  }
+
+  async findPaginated(options: {
+    page: number;
+    limit: number;
+    search?: string;
+    propertyTypeId?: string;
+    societyId?: string;
+    localityId?: string;
+  }): Promise<{ items: MasterBhkType[]; total: number }> {
+    const { page, limit, search, propertyTypeId, societyId, localityId } = options;
+    const qb = this.bhkTypeRepository
+      .createQueryBuilder('bhk')
+      .leftJoinAndSelect('bhk.propertyType', 'propertyType')
+      .leftJoinAndSelect('bhk.society', 'society')
+      .leftJoinAndSelect('bhk.locality', 'locality')
+      .orderBy('bhk.sortOrder', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (propertyTypeId) {
+      qb.andWhere('bhk.propertyTypeId = :propertyTypeId', { propertyTypeId });
+    }
+
+    if (societyId) {
+      qb.andWhere('bhk.societyId = :societyId', { societyId });
+    }
+
+    if (localityId) {
+      qb.andWhere('bhk.localityId = :localityId', { localityId });
+    }
+
+    if (search) {
+      qb.andWhere('bhk.name ILIKE :search', { search: `%${search}%` });
+    }
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
 }

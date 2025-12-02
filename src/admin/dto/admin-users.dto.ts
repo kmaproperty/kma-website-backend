@@ -79,4 +79,12 @@ export class AdminUserListResponseDto {
   limit: number;
 }
 
+export class AdminPermissionsResponseDto {
+  @ApiProperty({ enum: AdminPermission, isArray: true, description: 'List of all available admin permissions' })
+  permissions: AdminPermission[];
+
+  @ApiProperty({ description: 'Total number of permissions' })
+  total: number;
+}
+
 

@@ -23,6 +23,14 @@ import {
   AdminSocietyResponseDto,
   AdminCreateSocietyDto,
   AdminUpdateSocietyDto,
+  AdminBhkListQueryDto,
+  AdminBhkResponseDto,
+  AdminCreateBhkDto,
+  AdminUpdateBhkDto,
+  AdminLocalityListQueryDto,
+  AdminLocalityResponseDto,
+  AdminCreateLocalityDto,
+  AdminUpdateLocalityDto,
   CitySummary,
   BootstrapAdminDto,
   BootstrapAdminResponseDto,
@@ -31,16 +39,21 @@ import {
   AdminUserResponseDto,
   AdminUserListResponseDto,
   AdminUserListQueryDto,
+  AdminPermissionsResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
 import { SocietyRepository } from '../property/repositories/society.repository';
+import { BhkTypeRepository } from '../property/repositories/bhk-type.repository';
+import { LocalityRepository } from '../property/repositories/locality.repository';
 import { PropertyService } from '../property/property.service';
 import { AdminRole } from './enum/admin-role.enum';
 import { AdminPermission } from './enum/admin-permission.enum';
 import { Property } from '../property/entities/property.entity';
 import { MasterCity } from '../property/entities/master-city.entity';
 import { MasterSociety } from '../property/entities/master-society.entity';
+import { MasterBhkType } from '../property/entities/master-bhk-type.entity';
+import { MasterLocality } from '../property/entities/master-locality.entity';
 import { CreatePropertyStep1Dto } from '../property/dto/create-property.dto';
 import { CreatePropertyStep2Dto } from '../property/dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from '../property/dto/create-property-step3.dto';
@@ -173,6 +186,8 @@ export class AdminService {
     private readonly propertyRepository: PropertyRepository,
     private readonly cityRepository: CityRepository,
     private readonly societyRepository: SocietyRepository,
+    private readonly bhkTypeRepository: BhkTypeRepository,
+    private readonly localityRepository: LocalityRepository,
     private readonly propertyService: PropertyService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -313,6 +328,14 @@ export class AdminService {
       permissions: (updated!.permissions ?? []) as AdminPermission[],
       createdAt: updated!.createdAt,
       updatedAt: updated!.updatedAt,
+    };
+  }
+
+  async listPermissions(): Promise<AdminPermissionsResponseDto> {
+    const permissions = Object.values(AdminPermission);
+    return {
+      permissions,
+      total: permissions.length,
     };
   }
 
@@ -547,6 +570,237 @@ export class AdminService {
       success: true,
       message: 'Society deleted successfully',
       societyId,
+    };
+  }
+
+  // BHK Type management
+  async listBhks(
+    query: AdminBhkListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminBhkResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.bhkTypeRepository.findPaginated({
+      page,
+      limit,
+      search,
+      propertyTypeId: query?.propertyTypeId,
+      societyId: query?.societyId,
+      localityId: query?.localityId,
+    });
+
+    const data = items.map((bhk) => this.toBhkResponse(bhk));
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getBhk(
+    bhkId: string,
+  ): Promise<{ success: boolean; data: AdminBhkResponseDto }> {
+    const bhk = await this.ensureBhkExists(bhkId);
+    return {
+      success: true,
+      data: this.toBhkResponse(bhk),
+    };
+  }
+
+  async createBhk(
+    dto: AdminCreateBhkDto,
+  ): Promise<{ success: boolean; data: AdminBhkResponseDto }> {
+    // Validate property type exists (we'll check via a BHK query or just let DB constraint handle it)
+    // For now, we'll let the database foreign key constraint handle validation
+    
+    // Check if code already exists for the same property type
+    const existing = await this.bhkTypeRepository.findByCode(dto.code);
+    if (existing && existing.propertyTypeId === dto.propertyTypeId) {
+      throw new BadRequestException(
+        `BHK type with code "${dto.code}" already exists for this property type`,
+      );
+    }
+
+    const bhk = await this.bhkTypeRepository.createBhkType({
+      name: dto.name.trim(),
+      code: dto.code.trim(),
+      sortOrder: dto.sortOrder,
+      propertyTypeId: dto.propertyTypeId,
+      societyId: dto.societyId ?? null,
+      localityId: dto.localityId ?? null,
+    });
+
+    return {
+      success: true,
+      data: this.toBhkResponse(bhk),
+    };
+  }
+
+  async updateBhk(
+    bhkId: string,
+    dto: AdminUpdateBhkDto,
+  ): Promise<{ success: boolean; data: AdminBhkResponseDto }> {
+    const bhk = await this.ensureBhkExists(bhkId);
+
+    // If code is being updated, check for duplicates
+    if (dto.code && dto.code !== bhk.code) {
+      const existing = await this.bhkTypeRepository.findByCode(dto.code);
+      const propertyTypeId = dto.propertyTypeId ?? bhk.propertyTypeId;
+      if (existing && existing.id !== bhkId && existing.propertyTypeId === propertyTypeId) {
+        throw new BadRequestException(
+          `BHK type with code "${dto.code}" already exists for this property type`,
+        );
+      }
+    }
+
+    await this.bhkTypeRepository.updateBhkType(bhkId, {
+      ...dto,
+      name: dto.name?.trim() ?? dto.name,
+      code: dto.code?.trim() ?? dto.code,
+    });
+
+    const updated = await this.ensureBhkExists(bhkId);
+    return {
+      success: true,
+      data: this.toBhkResponse(updated),
+    };
+  }
+
+  async deleteBhk(
+    bhkId: string,
+  ): Promise<{ success: boolean; message: string; bhkId: string }> {
+    await this.ensureBhkExists(bhkId);
+    await this.bhkTypeRepository.deleteBhkType(bhkId);
+    return {
+      success: true,
+      message: 'BHK type deleted successfully',
+      bhkId,
+    };
+  }
+
+  // Locality management
+  async listLocalities(
+    query: AdminLocalityListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminLocalityResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.localityRepository.findPaginated({
+      page,
+      limit,
+      search,
+      cityId: query?.cityId,
+    });
+
+    const cityCache = new Map<string, CitySummary | null>();
+    const data: AdminLocalityResponseDto[] = [];
+    for (const locality of items) {
+      const citySummary = await this.getCitySummaryForLocality(
+        locality,
+        cityCache,
+      );
+      data.push(this.toLocalityResponse(locality, citySummary));
+    }
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getLocality(
+    localityId: string,
+  ): Promise<{ success: boolean; data: AdminLocalityResponseDto }> {
+    const locality = await this.ensureLocalityExists(localityId);
+    const citySummary = await this.getCitySummaryForLocality(
+      locality,
+      new Map<string, CitySummary | null>(),
+    );
+    return {
+      success: true,
+      data: this.toLocalityResponse(locality, citySummary),
+    };
+  }
+
+  async createLocality(
+    dto: AdminCreateLocalityDto,
+  ): Promise<{ success: boolean; data: AdminLocalityResponseDto }> {
+    const city = await this.ensureCityExists(dto.cityId);
+    const locality = await this.localityRepository.createLocality({
+      name: dto.name.trim(),
+      sector: dto.sector?.trim() ?? (null as any),
+      cityId: dto.cityId,
+      latitude: dto.latitude ?? (null as any),
+      longitude: dto.longitude ?? (null as any),
+    });
+
+    return {
+      success: true,
+      data: this.toLocalityResponse(locality, this.toCitySummary(city)),
+    };
+  }
+
+  async updateLocality(
+    localityId: string,
+    dto: AdminUpdateLocalityDto,
+  ): Promise<{ success: boolean; data: AdminLocalityResponseDto }> {
+    const locality = await this.ensureLocalityExists(localityId);
+    let citySummary: CitySummary | null = null;
+
+    if (dto.cityId) {
+      const newCity = await this.ensureCityExists(dto.cityId);
+      citySummary = this.toCitySummary(newCity);
+    }
+
+    await this.localityRepository.updateLocality(localityId, {
+      ...dto,
+      name: dto.name?.trim() ?? dto.name ?? undefined,
+      sector: dto.sector?.trim() ?? dto.sector ?? undefined,
+      latitude: dto.latitude ?? undefined,
+      longitude: dto.longitude ?? undefined,
+    });
+
+    const updated = await this.ensureLocalityExists(localityId);
+    const summary =
+      citySummary ??
+      (await this.getCitySummaryForLocality(
+        updated,
+        new Map<string, CitySummary | null>(),
+      ));
+    return {
+      success: true,
+      data: this.toLocalityResponse(updated, summary),
+    };
+  }
+
+  async deleteLocality(
+    localityId: string,
+  ): Promise<{ success: boolean; message: string; localityId: string }> {
+    await this.ensureLocalityExists(localityId);
+    await this.localityRepository.deleteLocality(localityId);
+    return {
+      success: true,
+      message: 'Locality deleted successfully',
+      localityId,
     };
   }
 
@@ -1056,6 +1310,83 @@ export class AdminService {
       throw new BadRequestException(`Society with ID ${societyId} not found`);
     }
     return society;
+  }
+
+  private toBhkResponse(bhk: MasterBhkType): AdminBhkResponseDto {
+    return {
+      id: bhk.id,
+      name: bhk.name,
+      code: bhk.code,
+      sortOrder: bhk.sortOrder,
+      propertyTypeId: bhk.propertyTypeId,
+      societyId: bhk.societyId ?? null,
+      localityId: bhk.localityId ?? null,
+      createdAt: bhk.createdAt,
+      updatedAt: bhk.updatedAt,
+    };
+  }
+
+  private async ensureBhkExists(bhkId: string): Promise<MasterBhkType> {
+    const bhk = await this.bhkTypeRepository.findById(bhkId);
+    if (!bhk) {
+      throw new BadRequestException(`BHK type with ID ${bhkId} not found`);
+    }
+    return bhk;
+  }
+
+  private toLocalityResponse(
+    locality: MasterLocality,
+    citySummary: CitySummary | null,
+  ): AdminLocalityResponseDto {
+    return {
+      id: locality.id,
+      name: locality.name,
+      sector: locality.sector ?? null,
+      cityId: locality.cityId,
+      latitude:
+        locality.latitude === null || locality.latitude === undefined
+          ? null
+          : Number(locality.latitude),
+      longitude:
+        locality.longitude === null || locality.longitude === undefined
+          ? null
+          : Number(locality.longitude),
+      createdAt: locality.createdAt,
+      updatedAt: locality.updatedAt,
+      city: citySummary,
+    };
+  }
+
+  private async getCitySummaryForLocality(
+    locality: MasterLocality,
+    cache: Map<string, CitySummary | null>,
+  ): Promise<CitySummary | null> {
+    if (locality.city) {
+      return this.toCitySummary(locality.city as MasterCity);
+    }
+
+    if (!locality.cityId) {
+      return null;
+    }
+
+    if (cache.has(locality.cityId)) {
+      return cache.get(locality.cityId) ?? null;
+    }
+
+    const city = await this.cityRepository.findById(locality.cityId);
+    const summary = this.toCitySummary(city);
+    cache.set(locality.cityId, summary);
+    return summary;
+  }
+
+  private async ensureLocalityExists(
+    localityId: string,
+  ): Promise<MasterLocality> {
+    const locality = await this.localityRepository.findById(localityId);
+    if (!locality) {
+      throw new BadRequestException(`Locality with ID ${localityId} not found`);
+    }
+    return locality;
   }
 }
 

@@ -79,4 +79,44 @@ export class LocalityRepository {
     const locality = this.localityRepository.create(localityData);
     return await this.localityRepository.save(locality);
   }
+
+  async updateLocality(
+    id: string,
+    updateData: Partial<MasterLocality>,
+  ): Promise<void> {
+    await this.localityRepository.update(id, updateData);
+  }
+
+  async deleteLocality(id: string): Promise<void> {
+    await this.localityRepository.softDelete(id);
+  }
+
+  async findPaginated(options: {
+    page: number;
+    limit: number;
+    search?: string;
+    cityId?: string;
+  }): Promise<{ items: MasterLocality[]; total: number }> {
+    const { page, limit, search, cityId } = options;
+    const qb = this.localityRepository
+      .createQueryBuilder('locality')
+      .leftJoinAndSelect('locality.city', 'city')
+      .orderBy('locality.name', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (cityId) {
+      qb.andWhere('locality.cityId = :cityId', { cityId });
+    }
+
+    if (search) {
+      qb.andWhere(
+        '(locality.name ILIKE :search OR locality.sector ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
 }

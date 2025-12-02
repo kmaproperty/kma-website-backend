@@ -37,15 +37,18 @@ import {
   AdminSocietyResponseDto,
   AdminCreateSocietyDto,
   AdminUpdateSocietyDto,
+  AdminBhkListQueryDto,
+  AdminBhkResponseDto,
+  AdminCreateBhkDto,
+  AdminUpdateBhkDto,
+  AdminLocalityListQueryDto,
+  AdminLocalityResponseDto,
+  AdminCreateLocalityDto,
+  AdminUpdateLocalityDto,
   BootstrapAdminDto,
   BootstrapAdminResponseDto,
   AdminLeadListQueryDto,
   AdminLeadListResponseDto,
-  CreateLeadDto,
-  UpdateLeadDto,
-  AddLeadNoteDto,
-  UpdateLeadStatusDto,
-  LeadPropertyContactDto,
   LeadResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
@@ -53,7 +56,7 @@ import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { AdminPermissionsGuard } from './guards/admin-permissions.guard';
 import { RequireAdminPermissions } from './decorators/admin-permissions.decorator';
 import { AdminPermission } from './enum/admin-permission.enum';
-import { CreateAdminUserDto, AdminUserResponseDto, AdminUserListResponseDto, UpdateAdminPermissionsDto } from './dto/admin-users.dto';
+import { CreateAdminUserDto, AdminUserResponseDto, AdminUserListResponseDto, UpdateAdminPermissionsDto, AdminPermissionsResponseDto } from './dto/admin-users.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -189,7 +192,7 @@ export class AdminController {
   // City management
   @Get('cities')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'List cities with optional search' })
   @ApiResponse({
@@ -211,7 +214,7 @@ export class AdminController {
 
   @Get('cities/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get city detail' })
   async getCity(
@@ -222,7 +225,7 @@ export class AdminController {
 
   @Post('cities')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a city' })
   async createCity(
@@ -233,7 +236,7 @@ export class AdminController {
 
   @Patch('cities/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a city' })
   async updateCity(
@@ -245,7 +248,7 @@ export class AdminController {
 
   @Delete('cities/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete a city' })
   async deleteCity(
@@ -257,7 +260,7 @@ export class AdminController {
   // Society management
   @Get('societies')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'List societies with optional filters' })
   async listSocieties(
@@ -274,7 +277,7 @@ export class AdminController {
 
   @Get('societies/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get society detail' })
   async getSociety(
@@ -285,7 +288,7 @@ export class AdminController {
 
   @Post('societies')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a society' })
   async createSociety(
@@ -296,7 +299,7 @@ export class AdminController {
 
   @Patch('societies/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a society' })
   async updateSociety(
@@ -308,13 +311,187 @@ export class AdminController {
 
   @Delete('societies/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete a society' })
   async deleteSociety(
     @Param('id') societyId: string,
   ): Promise<{ success: boolean; message: string; societyId: string }> {
     return this.adminService.deleteSociety(societyId);
+  }
+
+  // BHK Type management
+  @Get('bhks')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List BHK types with optional filters' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of BHK types',
+    type: [AdminBhkResponseDto],
+  })
+  async listBhks(
+    @Query() query: AdminBhkListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminBhkResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.adminService.listBhks(query);
+  }
+
+  @Get('bhks/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get BHK type detail' })
+  @ApiResponse({
+    status: 200,
+    description: 'BHK type details',
+    type: AdminBhkResponseDto,
+  })
+  async getBhk(
+    @Param('id') bhkId: string,
+  ): Promise<{ success: boolean; data: AdminBhkResponseDto }> {
+    return this.adminService.getBhk(bhkId);
+  }
+
+  @Post('bhks')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a BHK type' })
+  @ApiResponse({
+    status: 201,
+    description: 'BHK type created successfully',
+    type: AdminBhkResponseDto,
+  })
+  async createBhk(
+    @Body() dto: AdminCreateBhkDto,
+  ): Promise<{ success: boolean; data: AdminBhkResponseDto }> {
+    return this.adminService.createBhk(dto);
+  }
+
+  @Patch('bhks/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a BHK type' })
+  @ApiResponse({
+    status: 200,
+    description: 'BHK type updated successfully',
+    type: AdminBhkResponseDto,
+  })
+  async updateBhk(
+    @Param('id') bhkId: string,
+    @Body() dto: AdminUpdateBhkDto,
+  ): Promise<{ success: boolean; data: AdminBhkResponseDto }> {
+    return this.adminService.updateBhk(bhkId, dto);
+  }
+
+  @Delete('bhks/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a BHK type' })
+  @ApiResponse({
+    status: 200,
+    description: 'BHK type deleted successfully',
+  })
+  async deleteBhk(
+    @Param('id') bhkId: string,
+  ): Promise<{ success: boolean; message: string; bhkId: string }> {
+    return this.adminService.deleteBhk(bhkId);
+  }
+
+  // Locality management
+  @Get('localities')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List localities with optional filters' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of localities',
+    type: [AdminLocalityResponseDto],
+  })
+  async listLocalities(
+    @Query() query: AdminLocalityListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminLocalityResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.adminService.listLocalities(query);
+  }
+
+  @Get('localities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get locality detail' })
+  @ApiResponse({
+    status: 200,
+    description: 'Locality details',
+    type: AdminLocalityResponseDto,
+  })
+  async getLocality(
+    @Param('id') localityId: string,
+  ): Promise<{ success: boolean; data: AdminLocalityResponseDto }> {
+    return this.adminService.getLocality(localityId);
+  }
+
+  @Post('localities')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a locality' })
+  @ApiResponse({
+    status: 201,
+    description: 'Locality created successfully',
+    type: AdminLocalityResponseDto,
+  })
+  async createLocality(
+    @Body() dto: AdminCreateLocalityDto,
+  ): Promise<{ success: boolean; data: AdminLocalityResponseDto }> {
+    return this.adminService.createLocality(dto);
+  }
+
+  @Patch('localities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a locality' })
+  @ApiResponse({
+    status: 200,
+    description: 'Locality updated successfully',
+    type: AdminLocalityResponseDto,
+  })
+  async updateLocality(
+    @Param('id') localityId: string,
+    @Body() dto: AdminUpdateLocalityDto,
+  ): Promise<{ success: boolean; data: AdminLocalityResponseDto }> {
+    return this.adminService.updateLocality(localityId, dto);
+  }
+
+  @Delete('localities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a locality' })
+  @ApiResponse({
+    status: 200,
+    description: 'Locality deleted successfully',
+  })
+  async deleteLocality(
+    @Param('id') localityId: string,
+  ): Promise<{ success: boolean; message: string; localityId: string }> {
+    return this.adminService.deleteLocality(localityId);
   }
 
   // User management endpoints
@@ -355,10 +532,24 @@ export class AdminController {
     return this.adminService.updateAdminPermissions(adminId, dto);
   }
 
+  @Get('permissions')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.ADMIN_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List all available admin permissions' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'List of all available admin permissions', 
+    type: AdminPermissionsResponseDto 
+  })
+  async listPermissions(): Promise<AdminPermissionsResponseDto> {
+    return this.adminService.listPermissions();
+  }
+
   // Lead management endpoints
   @Get('leads')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'List leads with filters and pagination' })
   @ApiResponse({
@@ -374,7 +565,7 @@ export class AdminController {
 
   @Get('leads/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get lead details by ID' })
   @ApiResponse({
@@ -386,91 +577,9 @@ export class AdminController {
     return this.leadService.getLeadById(leadId);
   }
 
-  @Post('leads')
-  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Create a new lead' })
-  @ApiResponse({
-    status: 201,
-    description: 'Lead created successfully',
-    type: LeadResponseDto,
-  })
-  async createLead(@Body() dto: CreateLeadDto): Promise<LeadResponseDto> {
-    return this.leadService.createLead(dto);
-  }
-
-  @Patch('leads/:id')
-  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update a lead' })
-  @ApiResponse({
-    status: 200,
-    description: 'Lead updated successfully',
-    type: LeadResponseDto,
-  })
-  async updateLead(
-    @Param('id') leadId: string,
-    @Body() dto: UpdateLeadDto,
-  ): Promise<LeadResponseDto> {
-    return this.leadService.updateLead(leadId, dto);
-  }
-
-  @Post('leads/:id/status')
-  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update lead status' })
-  @ApiResponse({
-    status: 200,
-    description: 'Lead status updated successfully',
-    type: LeadResponseDto,
-  })
-  async updateLeadStatus(
-    @Param('id') leadId: string,
-    @Body() dto: UpdateLeadStatusDto,
-  ): Promise<LeadResponseDto> {
-    return this.leadService.updateLeadStatus(leadId, dto);
-  }
-
-  @Post('leads/:id/notes')
-  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Add a note to a lead' })
-  @ApiResponse({
-    status: 201,
-    description: 'Note added successfully',
-  })
-  async addNoteToLead(
-    @Param('id') leadId: string,
-    @Body() dto: AddLeadNoteDto,
-    @Req() req: Request,
-  ) {
-    const adminId = req.admin?.id;
-    return this.leadService.addNoteToLead(leadId, dto, adminId);
-  }
-
-  @Post('leads/:id/property-contacts')
-  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Add a property contact to a lead' })
-  @ApiResponse({
-    status: 201,
-    description: 'Property contact added successfully',
-  })
-  async addPropertyContact(
-    @Param('id') leadId: string,
-    @Body() dto: LeadPropertyContactDto,
-  ) {
-    return this.leadService.addPropertyContact(leadId, dto);
-  }
-
   @Delete('leads/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete a lead' })
   @ApiResponse({
@@ -482,22 +591,9 @@ export class AdminController {
     return { success: true, message: 'Lead deleted successfully' };
   }
 
-  @Post('leads/sync-status')
-  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Sync lead statuses' })
-  @ApiResponse({
-    status: 200,
-    description: 'Lead statuses synced successfully',
-  })
-  async syncLeadStatus() {
-    return this.leadService.syncLeadStatus();
-  }
-
   @Get('leads/export')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Export leads' })
   @ApiResponse({
