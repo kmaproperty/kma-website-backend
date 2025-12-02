@@ -644,7 +644,7 @@ export class AdminController {
   // User listing endpoints (Owners and Channel Partners)
   @Get('owners')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.OWNER_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'List owners with filters and pagination' })
   @ApiResponse({
@@ -660,7 +660,7 @@ export class AdminController {
 
   @Get('channel-partners')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @RequireAdminPermissions(AdminPermission.CHANNEL_PARTNER_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'List channel partners with filters and pagination' })
   @ApiResponse({
