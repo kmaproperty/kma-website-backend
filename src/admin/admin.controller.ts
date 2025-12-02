@@ -45,6 +45,14 @@ import {
   AdminLocalityResponseDto,
   AdminCreateLocalityDto,
   AdminUpdateLocalityDto,
+  AdminChannelPartnerCodeListQueryDto,
+  AdminChannelPartnerCodeResponseDto,
+  AdminCreateChannelPartnerCodeDto,
+  AdminUpdateChannelPartnerCodeDto,
+  AdminOwnerListQueryDto,
+  AdminOwnerResponseDto,
+  AdminChannelPartnerResponseDto,
+  AdminOwnerListResponseDto,
   BootstrapAdminDto,
   BootstrapAdminResponseDto,
   AdminLeadListQueryDto,
@@ -494,6 +502,93 @@ export class AdminController {
     return this.adminService.deleteLocality(localityId);
   }
 
+  // Channel Partner Code management
+  @Get('channel-partner-codes')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List channel partner codes with optional search' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of channel partner codes',
+    type: [AdminChannelPartnerCodeResponseDto],
+  })
+  async listChannelPartnerCodes(
+    @Query() query: AdminChannelPartnerCodeListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminChannelPartnerCodeResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.adminService.listChannelPartnerCodes(query);
+  }
+
+  @Get('channel-partner-codes/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get channel partner code detail' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel partner code details',
+    type: AdminChannelPartnerCodeResponseDto,
+  })
+  async getChannelPartnerCode(
+    @Param('id') codeId: string,
+  ): Promise<{ success: boolean; data: AdminChannelPartnerCodeResponseDto }> {
+    return this.adminService.getChannelPartnerCode(codeId);
+  }
+
+  @Post('channel-partner-codes')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a channel partner code' })
+  @ApiResponse({
+    status: 201,
+    description: 'Channel partner code created successfully',
+    type: AdminChannelPartnerCodeResponseDto,
+  })
+  async createChannelPartnerCode(
+    @Body() dto: AdminCreateChannelPartnerCodeDto,
+  ): Promise<{ success: boolean; data: AdminChannelPartnerCodeResponseDto }> {
+    return this.adminService.createChannelPartnerCode(dto);
+  }
+
+  @Patch('channel-partner-codes/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a channel partner code' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel partner code updated successfully',
+    type: AdminChannelPartnerCodeResponseDto,
+  })
+  async updateChannelPartnerCode(
+    @Param('id') codeId: string,
+    @Body() dto: AdminUpdateChannelPartnerCodeDto,
+  ): Promise<{ success: boolean; data: AdminChannelPartnerCodeResponseDto }> {
+    return this.adminService.updateChannelPartnerCode(codeId, dto);
+  }
+
+  @Delete('channel-partner-codes/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a channel partner code' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel partner code deleted successfully',
+  })
+  async deleteChannelPartnerCode(
+    @Param('id') codeId: string,
+  ): Promise<{ success: boolean; message: string; codeId: string }> {
+    return this.adminService.deleteChannelPartnerCode(codeId);
+  }
+
   // User management endpoints
   @Post('admins')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
@@ -544,6 +639,39 @@ export class AdminController {
   })
   async listPermissions(): Promise<AdminPermissionsResponseDto> {
     return this.adminService.listPermissions();
+  }
+
+  // User listing endpoints (Owners and Channel Partners)
+  @Get('owners')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List owners with filters and pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of owners',
+    type: AdminOwnerListResponseDto,
+  })
+  async listOwners(
+    @Query() query: AdminOwnerListQueryDto,
+  ): Promise<AdminOwnerListResponseDto<AdminOwnerResponseDto>> {
+    return this.adminService.listOwners(query);
+  }
+
+  @Get('channel-partners')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List channel partners with filters and pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of channel partners',
+    type: AdminOwnerListResponseDto,
+  })
+  async listChannelPartners(
+    @Query() query: AdminOwnerListQueryDto,
+  ): Promise<AdminOwnerListResponseDto<AdminChannelPartnerResponseDto>> {
+    return this.adminService.listChannelPartners(query);
   }
 
   // Lead management endpoints

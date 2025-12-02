@@ -54,4 +54,45 @@ export class UserRepository {
     const result = await this.userRepository.delete(id);
     return (result.affected || 0) > 0;
   }
+
+  /**
+   * Find users with pagination and optional filters
+   */
+  async findPaginated(options: {
+    page: number;
+    limit: number;
+    role?: string;
+    search?: string;
+    isActive?: boolean;
+    phoneVerified?: boolean;
+  }): Promise<{ items: User[]; total: number }> {
+    const { page, limit, role, search, isActive, phoneVerified } = options;
+    const qb = this.userRepository
+      .createQueryBuilder('user')
+      .orderBy('user.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (role) {
+      qb.andWhere('user.role = :role', { role });
+    }
+
+    if (isActive !== undefined) {
+      qb.andWhere('user.isActive = :isActive', { isActive });
+    }
+
+    if (phoneVerified !== undefined) {
+      qb.andWhere('user.phoneVerified = :phoneVerified', { phoneVerified });
+    }
+
+    if (search) {
+      qb.andWhere(
+        '(user.name ILIKE :search OR user.phone ILIKE :search OR user.email ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
 }

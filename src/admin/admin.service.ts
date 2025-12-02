@@ -40,12 +40,22 @@ import {
   AdminUserListResponseDto,
   AdminUserListQueryDto,
   AdminPermissionsResponseDto,
+  AdminChannelPartnerCodeListQueryDto,
+  AdminChannelPartnerCodeResponseDto,
+  AdminCreateChannelPartnerCodeDto,
+  AdminUpdateChannelPartnerCodeDto,
+  AdminOwnerListQueryDto,
+  AdminOwnerResponseDto,
+  AdminChannelPartnerResponseDto,
+  AdminOwnerListResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
 import { SocietyRepository } from '../property/repositories/society.repository';
 import { BhkTypeRepository } from '../property/repositories/bhk-type.repository';
 import { LocalityRepository } from '../property/repositories/locality.repository';
+import { ChannelPartnerCodeRepository } from '../user/repositories/channel-partner-code.repository';
+import { UserRepository } from '../user/repositories/user.repository';
 import { PropertyService } from '../property/property.service';
 import { AdminRole } from './enum/admin-role.enum';
 import { AdminPermission } from './enum/admin-permission.enum';
@@ -54,6 +64,9 @@ import { MasterCity } from '../property/entities/master-city.entity';
 import { MasterSociety } from '../property/entities/master-society.entity';
 import { MasterBhkType } from '../property/entities/master-bhk-type.entity';
 import { MasterLocality } from '../property/entities/master-locality.entity';
+import { ChannelPartnerCode } from '../user/entities/channel-partner-code.entity';
+import { User } from '../user/entities/user.entity';
+import { UserRole } from '../user/enum/user-role.enum';
 import { CreatePropertyStep1Dto } from '../property/dto/create-property.dto';
 import { CreatePropertyStep2Dto } from '../property/dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from '../property/dto/create-property-step3.dto';
@@ -188,6 +201,8 @@ export class AdminService {
     private readonly societyRepository: SocietyRepository,
     private readonly bhkTypeRepository: BhkTypeRepository,
     private readonly localityRepository: LocalityRepository,
+    private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
+    private readonly userRepository: UserRepository,
     private readonly propertyService: PropertyService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -804,6 +819,159 @@ export class AdminService {
     };
   }
 
+  // Channel Partner Code management
+  async listChannelPartnerCodes(
+    query: AdminChannelPartnerCodeListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminChannelPartnerCodeResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.channelPartnerCodeRepository.findPaginated({
+      page,
+      limit,
+      search,
+    });
+
+    const data = items.map((code) => this.toChannelPartnerCodeResponse(code));
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getChannelPartnerCode(
+    codeId: string,
+  ): Promise<{ success: boolean; data: AdminChannelPartnerCodeResponseDto }> {
+    const code = await this.ensureChannelPartnerCodeExists(codeId);
+    return {
+      success: true,
+      data: this.toChannelPartnerCodeResponse(code),
+    };
+  }
+
+  async createChannelPartnerCode(
+    dto: AdminCreateChannelPartnerCodeDto,
+  ): Promise<{ success: boolean; data: AdminChannelPartnerCodeResponseDto }> {
+    // Check if code already exists
+    const existing = await this.channelPartnerCodeRepository.findByCode(dto.code.trim());
+    if (existing) {
+      throw new BadRequestException(
+        `Channel partner code "${dto.code.trim()}" already exists`,
+      );
+    }
+
+    const code = await this.channelPartnerCodeRepository.create({
+      code: dto.code.trim(),
+    });
+
+    return {
+      success: true,
+      data: this.toChannelPartnerCodeResponse(code),
+    };
+  }
+
+  async updateChannelPartnerCode(
+    codeId: string,
+    dto: AdminUpdateChannelPartnerCodeDto,
+  ): Promise<{ success: boolean; data: AdminChannelPartnerCodeResponseDto }> {
+    const code = await this.ensureChannelPartnerCodeExists(codeId);
+
+    // If code is being updated, check for duplicates
+    if (dto.code && dto.code.trim() !== code.code) {
+      const existing = await this.channelPartnerCodeRepository.findByCode(dto.code.trim());
+      if (existing && existing.id !== codeId) {
+        throw new BadRequestException(
+          `Channel partner code "${dto.code.trim()}" already exists`,
+        );
+      }
+    }
+
+    await this.channelPartnerCodeRepository.update(codeId, {
+      code: dto.code?.trim() ?? code.code,
+    });
+
+    const updated = await this.ensureChannelPartnerCodeExists(codeId);
+    return {
+      success: true,
+      data: this.toChannelPartnerCodeResponse(updated),
+    };
+  }
+
+  async deleteChannelPartnerCode(
+    codeId: string,
+  ): Promise<{ success: boolean; message: string; codeId: string }> {
+    await this.ensureChannelPartnerCodeExists(codeId);
+    await this.channelPartnerCodeRepository.delete(codeId);
+    return {
+      success: true,
+      message: 'Channel partner code deleted successfully',
+      codeId,
+    };
+  }
+
+  // User listing (Owners and Channel Partners)
+  async listOwners(
+    query: AdminOwnerListQueryDto,
+  ): Promise<AdminOwnerListResponseDto<AdminOwnerResponseDto>> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.userRepository.findPaginated({
+      page,
+      limit,
+      role: UserRole.OWNER,
+      search,
+      isActive: query?.isActive,
+      phoneVerified: query?.phoneVerified,
+    });
+
+    const data = items.map((user) => this.toOwnerResponse(user));
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async listChannelPartners(
+    query: AdminOwnerListQueryDto,
+  ): Promise<AdminOwnerListResponseDto<AdminChannelPartnerResponseDto>> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.userRepository.findPaginated({
+      page,
+      limit,
+      role: UserRole.CHANNEL_PARTNER,
+      search,
+      isActive: query?.isActive,
+      phoneVerified: query?.phoneVerified,
+    });
+
+    const data = items.map((user) => this.toChannelPartnerResponse(user));
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
   async login(dto: AdminLoginDto): Promise<AdminLoginResponseDto> {
     const admin = await this.adminRepository.findByUsername(dto.username);
     if (!admin) {
@@ -1387,6 +1555,66 @@ export class AdminService {
       throw new BadRequestException(`Locality with ID ${localityId} not found`);
     }
     return locality;
+  }
+
+  private toChannelPartnerCodeResponse(
+    code: ChannelPartnerCode,
+  ): AdminChannelPartnerCodeResponseDto {
+    return {
+      id: code.id,
+      code: code.code,
+      createdAt: code.createdAt,
+      updatedAt: code.updatedAt,
+    };
+  }
+
+  private async ensureChannelPartnerCodeExists(
+    codeId: string,
+  ): Promise<ChannelPartnerCode> {
+    const code = await this.channelPartnerCodeRepository.findById(codeId);
+    if (!code) {
+      throw new BadRequestException(
+        `Channel partner code with ID ${codeId} not found`,
+      );
+    }
+    return code;
+  }
+
+  private toOwnerResponse(user: User): AdminOwnerResponseDto {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      phoneVerified: user.phoneVerified,
+      intent: user.intent ?? null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
+  private toChannelPartnerResponse(
+    user: User,
+  ): AdminChannelPartnerResponseDto {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      phoneVerified: user.phoneVerified,
+      channelPartnerCode: user.channelPartnerCode,
+      firmName: user.firmName,
+      cities: user.cities,
+      businessSince: user.businessSince,
+      aboutYourSelf: user.aboutYourSelf,
+      intent: user.intent ?? null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 }
 

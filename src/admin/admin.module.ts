@@ -10,6 +10,7 @@ import { Property } from '../property/entities/property.entity';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { PropertyModule } from '../property/property.module';
+import { UserModule } from '../user/user.module';
 import { Lead } from './entities/lead.entity';
 import { LeadNote } from './entities/lead-note.entity';
 import { LeadPropertyContact } from './entities/lead-property-contact.entity';
@@ -22,6 +23,7 @@ import { LeadService } from './services/lead.service';
   imports: [
     ConfigModule,
     forwardRef(() => PropertyModule),
+    forwardRef(() => UserModule),
     TypeOrmModule.forFeature([
       Admin,
       Property,
