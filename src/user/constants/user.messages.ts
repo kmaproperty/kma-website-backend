@@ -52,6 +52,10 @@ export const USER_MESSAGES = {
     UNAUTHORIZED: 'User is not authorized to create CHANNEL_PARTNER account.',
     INVALID_CODE: 'Invalid channel partner code. Please provide a valid code.',
   },
+  END_USER: {
+    CREATED: 'End user account created successfully',
+    UNAUTHORIZED: 'User is not authorized to create END_USER account.',
+  },
   ERROR: {
     SOMETHING_WENT_WRONG: 'Something went wrong',
   },

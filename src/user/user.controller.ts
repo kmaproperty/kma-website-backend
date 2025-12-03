@@ -33,6 +33,8 @@ import {
   CreateOwnerResponseDto,
   CreateChannelPartnerDto,
   CreateChannelPartnerResponseDto,
+  CreateEndUserDto,
+  CreateEndUserResponseDto,
   ResendOtpDto,
   ResendOtpResponseDto,
   RefreshTokenDto,
@@ -68,7 +70,10 @@ export class UserController {
   ) {}
 
   @Post('signup/send-otp')
-  @ApiOperation({ summary: 'Send OTP for signup (phone must be new)' })
+  @ApiOperation({ 
+    summary: 'Send OTP for signup (phone must be new)',
+    description: 'Supports OWNER, CHANNEL_PARTNER, and END_USER roles. Use validate-otp with role parameter to specify user type.'
+  })
   @ApiResponse({
     status: 200,
     description: 'OTP sent successfully',
@@ -99,7 +104,10 @@ export class UserController {
   }
 
   @Post('login/send-otp')
-  @ApiOperation({ summary: 'Send OTP for login (phone must exist)' })
+  @ApiOperation({ 
+    summary: 'Send OTP for login (phone must exist)',
+    description: 'Supports OWNER, CHANNEL_PARTNER, and END_USER roles.'
+  })
   @ApiResponse({
     status: 200,
     description: 'OTP sent successfully',
@@ -111,20 +119,10 @@ export class UserController {
     return await this.userService.sendOtpForLogin(sendOtpDto);
   }
 
-  @Post('send-otp')
-  @ApiOperation({ summary: 'Send OTP to phone number' })
-  @ApiResponse({
-    status: 200,
-    description: 'OTP sent successfully',
-    type: SendOtpResponseDto,
-  })
-  async sendOtp(@Body() sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
-    return await this.userService.sendOtp(sendOtpDto);
-  }
-
   @Post('validate-otp')
   @ApiOperation({
     summary: 'Validate OTP and check if user needs additional details',
+    description: 'Supports OWNER, CHANNEL_PARTNER, and END_USER roles. Pass role parameter to specify user type. Defaults to OWNER if not provided.',
   })
   @ApiResponse({
     status: 200,
@@ -172,6 +170,23 @@ export class UserController {
       createChannelPartnerDto,
       req.tokenData,
     );
+  }
+
+  @Post('create-end-user')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create END_USER account (optional - add name and email)' })
+  @ApiResponse({
+    status: 201,
+    description: 'End user account created successfully',
+  })
+  async createEndUser(
+    @Body() createEndUserDto: CreateEndUserDto,
+    @Req() req: Request,
+  ): Promise<CreateEndUserResponseDto> {
+    if (!req.tokenData) {
+      throw new BadRequestException('Token data not found');
+    }
+    return await this.userService.createEndUser(createEndUserDto, req.tokenData);
   }
 
   @Get('/profile')

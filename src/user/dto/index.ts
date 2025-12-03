@@ -7,6 +7,7 @@ export * from './login.dto';
 export * from './channel-partner-code.dto';
 export * from './create-owner.dto';
 export * from './create-channel-partner.dto';
+export * from './create-end-user.dto';
 export * from './resend-otp.dto';
 export * from './refresh-token.dto';
 export * from './logout.dto';

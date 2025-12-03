@@ -31,8 +31,8 @@ export class ValidateOtpDto {
   otp: string;
 
   @ApiPropertyOptional({
-    description: 'User role for account creation',
-    example: 'OWNER',
+    description: 'User role for account creation. Options: OWNER, CHANNEL_PARTNER, END_USER. Defaults to OWNER if not provided.',
+    example: 'END_USER',
     enum: UserRole,
     required: false,
   })

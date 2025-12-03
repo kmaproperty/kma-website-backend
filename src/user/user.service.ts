@@ -17,6 +17,8 @@ import {
   CreateOwnerResponseDto,
   CreateChannelPartnerDto,
   CreateChannelPartnerResponseDto,
+  CreateEndUserDto,
+  CreateEndUserResponseDto,
   ResendOtpDto,
   ResendOtpResponseDto,
   RefreshTokenDto,
@@ -559,6 +561,78 @@ export class UserService {
     return {
       success: true,
       message: USER_MESSAGES.CHANNEL_PARTNER.CREATED,
+      userId: updatedUser.id,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name || '',
+        email: updatedUser.email || '',
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+      },
+    };
+  }
+
+  /**
+   * Create END_USER account
+   */
+  async createEndUser(
+    createEndUserDto: CreateEndUserDto,
+    tokenData: {
+      sub: string;
+      phone: string;
+      role: UserRole;
+      type: 'access_token' | 'refresh_token';
+    },
+  ): Promise<CreateEndUserResponseDto> {
+    const { name, email, phone } = createEndUserDto;
+
+    // Verify phone number matches token
+    if (tokenData.phone !== phone) {
+      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NUMBER_MISMATCH);
+    }
+
+    // Find user by phone
+    const existingUser = await this.userRepository.findByPhone(phone);
+    if (!existingUser) {
+      throw new BadRequestException(
+        USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP,
+      );
+    }
+
+    if (tokenData.role !== UserRole.END_USER) {
+      throw new BadRequestException(USER_MESSAGES.END_USER.UNAUTHORIZED);
+    }
+
+    // Check if phone is verified
+    if (!existingUser.phoneVerified) {
+      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NOT_VERIFIED);
+    }
+
+    // Check if email is already used by another user
+    if (email) {
+      const existingUserByEmail = await this.userRepository.findByEmail(email);
+      if (existingUserByEmail && existingUserByEmail.id !== existingUser.id) {
+        throw new BadRequestException(
+          USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+        );
+      }
+    }
+
+    // Update user with END_USER details
+    const updatedUser = await this.userRepository.update(existingUser.id, {
+      name,
+      email: email || null,
+      role: UserRole.END_USER,
+    });
+
+    if (!updatedUser) {
+      throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
+    }
+
+    return {
+      success: true,
+      message: USER_MESSAGES.END_USER.CREATED,
       userId: updatedUser.id,
       user: {
         id: updatedUser.id,
