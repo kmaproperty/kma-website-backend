@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
+import { UserRole } from '../enum/user-role.enum';
 
 @Injectable()
 export class UserRepository {
@@ -27,9 +28,31 @@ export class UserRepository {
 
   /**
    * Find user by phone number
+   * Note: With multiple users per phone, this returns the first match
+   * Use findByPhoneAndRole for specific role lookup
    */
   async findByPhone(phone: string): Promise<User | null> {
     return await this.userRepository.findOne({ where: { phone } });
+  }
+
+  /**
+   * Find user by phone number and role
+   * This is the preferred method when role is known
+   */
+  async findByPhoneAndRole(phone: string, role: UserRole): Promise<User | null> {
+    return await this.userRepository.findOne({ 
+      where: { phone, role } 
+    });
+  }
+
+  /**
+   * Find all users with the same phone number (different roles)
+   */
+  async findAllByPhone(phone: string): Promise<User[]> {
+    return await this.userRepository.find({ 
+      where: { phone },
+      order: { createdAt: 'ASC' }
+    });
   }
 
   /**

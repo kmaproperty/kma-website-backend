@@ -23,17 +23,6 @@ export class CreateEndUserDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
   @IsOptional()
   email?: string;
-
-  @ApiProperty({
-    description: 'End user phone number',
-    example: '9876543210',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @Matches(/^[1-9]\d{9}$/, {
-    message: 'Phone number must be a valid 10-digit number',
-  })
-  phone: string;
 }
 
 export class CreateEndUserResponseDto {

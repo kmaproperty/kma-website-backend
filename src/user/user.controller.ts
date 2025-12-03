@@ -122,7 +122,7 @@ export class UserController {
   @Post('validate-otp')
   @ApiOperation({
     summary: 'Validate OTP and check if user needs additional details',
-    description: 'Supports OWNER, CHANNEL_PARTNER, and END_USER roles. Pass role parameter to specify user type. Defaults to OWNER if not provided.',
+    description: 'Supports OWNER, CHANNEL_PARTNER, and END_USER roles. Role parameter is REQUIRED to identify which account to create/login. Same phone can have different accounts for different roles.',
   })
   @ApiResponse({
     status: 200,

@@ -225,28 +225,37 @@ export class UserService {
   }
 
   /**
-   * Send OTP for signup - phone must not exist
+   * Send OTP for signup - phone+role combination must not exist
    */
   async sendOtpForSignup(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
-    const { phone } = sendOtpDto;
+    const { phone, role } = sendOtpDto;
+    const userRole = role || UserRole.END_USER; // Default to END_USER for signup
 
-    const existingUser = await this.userRepository.findByPhone(phone);
+    const existingUser = await this.userRepository.findByPhoneAndRole(phone, userRole);
     if (existingUser) {
-      throw new BadRequestException(USER_MESSAGES.USER.ALREADY_EXISTS);
+      throw new BadRequestException(
+        `User with phone ${phone} and role ${userRole} already exists. Please login.`
+      );
     }
 
     return this.sendOtp(sendOtpDto);
   }
 
   /**
-   * Send OTP for login - phone must already exist
+   * Send OTP for login - phone+role combination must already exist
    */
   async sendOtpForLogin(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
-    const { phone } = sendOtpDto;
+    const { phone, role } = sendOtpDto;
 
-    const existingUser = await this.userRepository.findByPhone(phone);
+    if (!role) {
+      throw new BadRequestException('Role is required for login');
+    }
+
+    const existingUser = await this.userRepository.findByPhoneAndRole(phone, role);
     if (!existingUser) {
-      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+      throw new BadRequestException(
+        `User with phone ${phone} and role ${role} not found. Please signup first.`
+      );
     }
 
     return this.sendOtp(sendOtpDto);
@@ -260,6 +269,11 @@ export class UserService {
     validateOtpDto: ValidateOtpDto,
   ): Promise<ValidateOtpResponseDto> {
     const { phone, otp, role } = validateOtpDto;
+    
+    // Role is required for validateOtp
+    if (!role) {
+      throw new BadRequestException('Role is required for OTP validation');
+    }
 
     // Find the OTP record for this phone
     const otpRecord = await this.otpRepository.findActiveByPhone(phone);
@@ -302,9 +316,9 @@ export class UserService {
         { isUsed: true },
       );
 
-      // Check if user exists
+      // Check if user exists with this phone AND role
       const existingUser = await queryRunner.manager.findOne(User, {
-        where: { phone },
+        where: { phone, role },
       });
 
       let user: User;
@@ -325,10 +339,10 @@ export class UserService {
         }
         user = updatedUser;
       } else {
-        // User doesn't exist, create user with phone number and phone_verified = true
+        // User doesn't exist with this phone+role combination, create new user
         const userData: Partial<User> = {
           phone,
-          role: role || UserRole.OWNER,
+          role: role,
           isActive: true,
           phoneVerified: true,
           name: null,
@@ -415,15 +429,11 @@ export class UserService {
       type: 'access_token' | 'refresh_token';
     },
   ): Promise<CreateOwnerResponseDto> {
-    const { name, email, phone, intent, city } = createOwnerDto;
+    const { name, email, intent, city } = createOwnerDto;
+    const { sub: userId, phone } = tokenData;
 
-    // Verify phone number matches token
-    if (tokenData.phone !== phone) {
-      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NUMBER_MISMATCH);
-    }
-
-    // Find user by phone
-    const existingUser = await this.userRepository.findByPhone(phone);
+    // Find user by ID (from token) to ensure we're updating the correct user
+    const existingUser = await this.userRepository.findById(userId);
     if (!existingUser) {
       throw new BadRequestException(
         USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP,
@@ -507,8 +517,8 @@ export class UserService {
       throw new BadRequestException(USER_MESSAGES.USER.PHONE_NUMBER_MISMATCH);
     }
 
-    // Find user by phone
-    const existingUser = await this.userRepository.findByPhone(phone);
+    // Find user by phone and role
+    const existingUser = await this.userRepository.findByPhoneAndRole(phone, UserRole.CHANNEL_PARTNER);
     if (!existingUser) {
       throw new BadRequestException(
         USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP,
@@ -585,19 +595,17 @@ export class UserService {
       type: 'access_token' | 'refresh_token';
     },
   ): Promise<CreateEndUserResponseDto> {
-    const { name, email, phone } = createEndUserDto;
+    const { name, email } = createEndUserDto;
+    const { sub: userId, phone } = tokenData;
 
-    // Verify phone number matches token
-    if (tokenData.phone !== phone) {
-      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NUMBER_MISMATCH);
+    // Find user by ID (from token) to ensure we're updating the correct user
+    const existingUser = await this.userRepository.findById(userId);
+    if (!existingUser) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
     }
 
-    // Find user by phone
-    const existingUser = await this.userRepository.findByPhone(phone);
-    if (!existingUser) {
-      throw new BadRequestException(
-        USER_MESSAGES.USER.USER_NOT_FOUND_VERIFY_OTP,
-      );
+    if (existingUser.phone !== phone) {
+      throw new BadRequestException(USER_MESSAGES.USER.PHONE_NUMBER_MISMATCH);
     }
 
     if (tokenData.role !== UserRole.END_USER) {

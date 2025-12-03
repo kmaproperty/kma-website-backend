@@ -26,7 +26,6 @@ export class User extends BaseEntity {
     name: 'phone',
     type: 'varchar',
     length: 20,
-    unique: true,
   })
   phone: string;
 

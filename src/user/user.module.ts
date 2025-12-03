@@ -80,12 +80,13 @@ const repositories = [
 })
 export class UserModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // Apply token verification middleware to create-owner and create-channel-partner endpoints
+    // Apply token verification middleware to create-owner, create-channel-partner, and create-end-user endpoints
     consumer
       .apply(TokenVerificationMiddleware)
       .forRoutes(
         'users/create-owner',
         'users/create-channel-partner',
+        'users/create-end-user',
         'users/upgrade-channel-partner',
         'users/profile',
         'users/dashboard',
