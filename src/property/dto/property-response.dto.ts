@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Listing Type Response DTO
 export class ListingTypeResponseDto {
@@ -22,6 +22,48 @@ export class CategoryResponseDto {
 
   @ApiProperty({ description: 'Category code', example: 'residential' })
   code: string;
+}
+
+export class FurnishingResponseDto {
+  @ApiProperty({ description: 'Furnishing ID', example: 'uuid-string' })
+  id: string;
+
+  @ApiProperty({ description: 'Furnishing name', example: 'Water Purifier' })
+  name: string;
+
+  @ApiProperty({ description: 'Furnishing code', example: 'water-purifier' })
+  code: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Icon name or path', 
+    example: 'water-purifier-icon',
+    nullable: true 
+  })
+  icon: string | null;
+
+  @ApiProperty({ description: 'Sort order for display', example: 1 })
+  sortOrder: number;
+}
+
+export class AmenityResponseDto {
+  @ApiProperty({ description: 'Amenity ID', example: 'uuid-string' })
+  id: string;
+
+  @ApiProperty({ description: 'Amenity name', example: 'Swimming Pool' })
+  name: string;
+
+  @ApiProperty({ description: 'Amenity code', example: 'swimming-pool' })
+  code: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Icon name or path', 
+    example: 'swimming-pool-icon',
+    nullable: true 
+  })
+  icon: string | null;
+
+  @ApiProperty({ description: 'Sort order for display', example: 1 })
+  sortOrder: number;
 }
 
 // Base response DTOs

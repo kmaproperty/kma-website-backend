@@ -39,6 +39,8 @@ import {
   PropertyStep2ResponseDto,
   ListingTypeResponseDto,
   CategoryResponseDto,
+  FurnishingResponseDto,
+  AmenityResponseDto,
   LocationResponseDto,
   OwnerPropertyListingResponseDto,
   OwnerPropertyDetailResponseDto,
@@ -173,6 +175,36 @@ export class PropertyController {
   })
   async getCategories(): Promise<CategoryResponseDto[]> {
     return await this.propertyService.getAllCategories();
+  }
+
+  @Get('furnishings')
+  @ApiOperation({
+    summary: 'Get all active furnishings',
+    description:
+      'Returns all available active furnishings (e.g., Water Purifier, Fan, Fridge) sorted by sort order',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Furnishings retrieved successfully',
+    type: [FurnishingResponseDto],
+  })
+  async getFurnishings(): Promise<FurnishingResponseDto[]> {
+    return await this.propertyService.getAllFurnishings();
+  }
+
+  @Get('amenities')
+  @ApiOperation({
+    summary: 'Get all active amenities',
+    description:
+      'Returns all available active amenities (e.g., Swimming Pool, Gymnasium, Clubhouse) sorted by sort order',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Amenities retrieved successfully',
+    type: [AmenityResponseDto],
+  })
+  async getAmenities(): Promise<AmenityResponseDto[]> {
+    return await this.propertyService.getAllAmenities();
   }
 
   @Get('listings')

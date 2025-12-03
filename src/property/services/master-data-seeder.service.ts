@@ -8,6 +8,8 @@ import { MasterBhkType } from '../entities/master-bhk-type.entity';
 import { MasterBuiltUpArea } from '../entities/master-built-up-area.entity';
 import { MasterCity } from '../entities/master-city.entity';
 import { MasterSociety } from '../entities/master-society.entity';
+import { MasterFurnishing } from '../entities/master-furnishing.entity';
+import { MasterAmenity } from '../entities/master-amenity.entity';
 import { Property } from '../entities/property.entity';
 
 @Injectable()
@@ -29,6 +31,10 @@ export class MasterDataSeederService {
     private readonly cityRepository: Repository<MasterCity>,
     @InjectRepository(MasterSociety)
     private readonly societyRepository: Repository<MasterSociety>,
+    @InjectRepository(MasterFurnishing)
+    private readonly furnishingRepository: Repository<MasterFurnishing>,
+    @InjectRepository(MasterAmenity)
+    private readonly amenityRepository: Repository<MasterAmenity>,
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
   ) {}
@@ -128,6 +134,28 @@ export class MasterDataSeederService {
       this.logger.log(`Deleted ${listingTypesCount} property listing types`);
     }
 
+    // 10. Furnishings (independent)
+    const furnishingsCount = await this.furnishingRepository.count();
+    if (furnishingsCount > 0) {
+      await this.furnishingRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
+      this.logger.log(`Deleted ${furnishingsCount} furnishings`);
+    }
+
+    // 11. Amenities (independent)
+    const amenitiesCount = await this.amenityRepository.count();
+    if (amenitiesCount > 0) {
+      await this.amenityRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id IS NOT NULL')
+        .execute();
+      this.logger.log(`Deleted ${amenitiesCount} amenities`);
+    }
+
     this.logger.log('All master data deleted successfully');
   }
 
@@ -144,6 +172,8 @@ export class MasterDataSeederService {
     await this.seedBuiltUpAreas(); // After BHK types since built-up areas depend on them
     await this.seedCities();
     await this.seedSocieties(); // Societies now include localityName
+    await this.seedFurnishings();
+    await this.seedAmenities();
 
     this.logger.log('All master data seeded successfully');
   }
@@ -170,6 +200,8 @@ export class MasterDataSeederService {
         builtUpAreas: await this.builtUpAreaRepository.count(),
         cities: await this.cityRepository.count(),
         societies: await this.societyRepository.count(),
+        furnishings: await this.furnishingRepository.count(),
+        amenities: await this.amenityRepository.count(),
       };
 
       const duration = Date.now() - startTime;
@@ -183,6 +215,46 @@ export class MasterDataSeederService {
       };
     } catch (error) {
       this.logger.error('Error during reseeding:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete and reseed only furnishings
+   */
+  async reseedFurnishings(): Promise<{ message: string; details: any }> {
+    const startTime = Date.now();
+
+    try {
+      // Delete existing furnishings
+      const furnishingsBefore = await this.furnishingRepository.count();
+      if (furnishingsBefore > 0) {
+        await this.furnishingRepository
+          .createQueryBuilder()
+          .delete()
+          .where('id IS NOT NULL')
+          .execute();
+        this.logger.log(`Deleted ${furnishingsBefore} furnishings`);
+      }
+
+      // Seed furnishings
+      await this.seedFurnishings();
+
+      const furnishingsAfter = await this.furnishingRepository.count();
+      const duration = Date.now() - startTime;
+
+      return {
+        message: 'Furnishings reseeded successfully',
+        details: {
+          duration: `${duration}ms`,
+          counts: {
+            furnishingsBefore,
+            furnishingsAfter,
+          },
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error during furnishings reseeding:', error);
       throw error;
     }
   }
@@ -839,5 +911,184 @@ export class MasterDataSeederService {
       }
     }
     this.logger.log(`✓ Created ${created} societies`);
+  }
+
+  /**
+   * Seed furnishings master data
+   */
+  async seedFurnishings(): Promise<void> {
+    this.logger.log('Seeding furnishings...');
+
+    const furnishings = [
+      { name: 'Water Purifier', code: 'water-purifier', icon: 'water-purifier-icon', sortOrder: 1 },
+      { name: 'Fan', code: 'fan', icon: 'fan-icon', sortOrder: 2 },
+      { name: 'Fridge', code: 'fridge', icon: 'fridge-icon', sortOrder: 3 },
+      { name: 'Exhaust Fan', code: 'exhaust-fan', icon: 'exhaust-fan-icon', sortOrder: 4 },
+      { name: 'Dining Table', code: 'dining-table', icon: 'dining-table-icon', sortOrder: 5 },
+      { name: 'Geyser', code: 'geyser', icon: 'geyser-icon', sortOrder: 6 },
+      { name: 'Stove', code: 'stove', icon: 'stove-icon', sortOrder: 7 },
+      { name: 'Light', code: 'light', icon: 'light-icon', sortOrder: 8 },
+      { name: 'Curtains', code: 'curtains', icon: 'curtains-icon', sortOrder: 9 },
+      { name: 'Modular Kitchen', code: 'modular-kitchen', icon: 'modular-kitchen-icon', sortOrder: 10 },
+      { name: 'TV', code: 'tv', icon: 'tv-icon', sortOrder: 11 },
+      { name: 'Chimney', code: 'chimney', icon: 'chimney-icon', sortOrder: 12 },
+      { name: 'Bed', code: 'bed', icon: 'bed-icon', sortOrder: 13 },
+      { name: 'AC', code: 'ac', icon: 'ac-icon', sortOrder: 14 },
+      { name: 'Wardrobe', code: 'wardrobe', icon: 'wardrobe-icon', sortOrder: 15 },
+      { name: 'Sofa', code: 'sofa', icon: 'sofa-icon', sortOrder: 16 },
+      { name: 'Washing Machine', code: 'washing-machine', icon: 'washing-machine-icon', sortOrder: 17 },
+      { name: 'Microwave', code: 'microwave', icon: 'microwave-icon', sortOrder: 18 },
+    ];
+
+    let created = 0;
+    for (const furnishingData of furnishings) {
+      const existing = await this.furnishingRepository.findOne({
+        where: { code: furnishingData.code },
+      });
+
+      if (!existing) {
+        const furnishing = this.furnishingRepository.create({
+          ...furnishingData,
+          isActive: true,
+        });
+        await this.furnishingRepository.save(furnishing);
+        created++;
+      }
+    }
+    this.logger.log(`✓ Created ${created} furnishings`);
+  }
+
+  /**
+   * Seed amenities master data
+   */
+  async seedAmenities(): Promise<void> {
+    this.logger.log('Seeding amenities...');
+
+    const amenities = [
+      { name: 'Gymnasium', code: 'gymnasium', icon: 'gymnasium-icon', sortOrder: 1 },
+      { name: 'Swimming Pool', code: 'swimming-pool', icon: 'swimming-pool-icon', sortOrder: 2 },
+      { name: 'Badminton Court(s)', code: 'badminton-court', icon: 'badminton-court-icon', sortOrder: 3 },
+      { name: 'Tennis Court(s)', code: 'tennis-court', icon: 'tennis-court-icon', sortOrder: 4 },
+      { name: 'Squash Court', code: 'squash-court', icon: 'squash-court-icon', sortOrder: 5 },
+      { name: 'Kids\' Play Areas', code: 'kids-play-areas', icon: 'kids-play-areas-icon', sortOrder: 6 },
+      { name: 'Jogging / Cycle Track', code: 'jogging-cycle-track', icon: 'jogging-cycle-track-icon', sortOrder: 7 },
+      { name: 'Power Backup', code: 'power-backup', icon: 'power-backup-icon', sortOrder: 8 },
+      { name: 'Central AC', code: 'central-ac', icon: 'central-ac-icon', sortOrder: 9 },
+      { name: 'Central Wi-Fi', code: 'central-wifi', icon: 'central-wifi-icon', sortOrder: 10 },
+      { name: 'Attached Market', code: 'attached-market', icon: 'attached-market-icon', sortOrder: 11 },
+      { name: 'Restaurant', code: 'restaurant', icon: 'restaurant-icon', sortOrder: 12 },
+      { name: 'Home Automation', code: 'home-automation', icon: 'home-automation-icon', sortOrder: 13 },
+      { name: '24 x 7 Security', code: '24x7-security', icon: '24x7-security-icon', sortOrder: 14 },
+      { name: 'Clubhouse', code: 'clubhouse', icon: 'clubhouse-icon', sortOrder: 15 },
+      { name: 'Balcony', code: 'balcony', icon: 'balcony-icon', sortOrder: 16 },
+      { name: 'High Speed Elevators', code: 'high-speed-elevators', icon: 'high-speed-elevators-icon', sortOrder: 17 },
+      { name: 'Pre-School', code: 'pre-school', icon: 'pre-school-icon', sortOrder: 18 },
+      { name: 'Medical Facility', code: 'medical-facility', icon: 'medical-facility-icon', sortOrder: 19 },
+      { name: 'Day Care Center', code: 'day-care-center', icon: 'day-care-center-icon', sortOrder: 20 },
+      { name: 'Pet Area', code: 'pet-area', icon: 'pet-area-icon', sortOrder: 21 },
+      { name: 'Indoor Games', code: 'indoor-games', icon: 'indoor-games-icon', sortOrder: 22 },
+      { name: 'Conference Room', code: 'conference-room', icon: 'conference-room-icon', sortOrder: 23 },
+      { name: 'Large Green Area', code: 'large-green-area', icon: 'large-green-area-icon', sortOrder: 24 },
+      { name: 'Concierge Desk', code: 'concierge-desk', icon: 'concierge-desk-icon', sortOrder: 25 },
+      { name: 'Helipad', code: 'helipad', icon: 'helipad-icon', sortOrder: 26 },
+      { name: 'Golf Course', code: 'golf-course', icon: 'golf-course-icon', sortOrder: 27 },
+      { name: 'Multiplex', code: 'multiplex', icon: 'multiplex-icon', sortOrder: 28 },
+      { name: 'Visitor\'s Parking', code: 'visitors-parking', icon: 'visitors-parking-icon', sortOrder: 29 },
+      { name: 'Serviced Apartments', code: 'serviced-apartments', icon: 'serviced-apartments-icon', sortOrder: 30 },
+      { name: 'Service Elevators', code: 'service-elevators', icon: 'service-elevators-icon', sortOrder: 31 },
+      { name: 'High Street Retail', code: 'high-street-retail', icon: 'high-street-retail-icon', sortOrder: 32 },
+      { name: 'Hypermarket', code: 'hypermarket', icon: 'hypermarket-icon', sortOrder: 33 },
+      { name: 'ATM\'s', code: 'atms', icon: 'atms-icon', sortOrder: 34 },
+      { name: 'Food Court', code: 'food-court', icon: 'food-court-icon', sortOrder: 35 },
+      { name: 'Servant Quarter', code: 'servant-quarter', icon: 'servant-quarter-icon', sortOrder: 36 },
+      { name: 'Study Room', code: 'study-room', icon: 'study-room-icon', sortOrder: 37 },
+      { name: 'Private Pool', code: 'private-pool', icon: 'private-pool-icon', sortOrder: 38 },
+      { name: 'Private Gym', code: 'private-gym', icon: 'private-gym-icon', sortOrder: 39 },
+      { name: 'Private Jacuzzi', code: 'private-jacuzzi', icon: 'private-jacuzzi-icon', sortOrder: 40 },
+      { name: 'View of Water', code: 'view-of-water', icon: 'view-of-water-icon', sortOrder: 41 },
+      { name: 'View of Landmark', code: 'view-of-landmark', icon: 'view-of-landmark-icon', sortOrder: 42 },
+      { name: 'Built in Wardrobes', code: 'built-in-wardrobes', icon: 'built-in-wardrobes-icon', sortOrder: 43 },
+      { name: 'Walk-in Closet', code: 'walk-in-closet', icon: 'walk-in-closet-icon', sortOrder: 44 },
+      { name: 'Lobby in Building', code: 'lobby-in-building', icon: 'lobby-in-building-icon', sortOrder: 45 },
+      { name: 'Barbeque Area', code: 'barbeque-area', icon: 'barbeque-area-icon', sortOrder: 46 },
+      { name: 'Centrally Air-Conditioned', code: 'centrally-air-conditioned', icon: 'centrally-air-conditioned-icon', sortOrder: 47 },
+      { name: 'Central Heating', code: 'central-heating', icon: 'central-heating-icon', sortOrder: 48 },
+      { name: 'First Aid Medical Center', code: 'first-aid-medical-center', icon: 'first-aid-medical-center-icon', sortOrder: 49 },
+      { name: 'Tiles', code: 'tiles', icon: 'tiles-icon', sortOrder: 50 },
+      { name: 'Double Glazed Windows', code: 'double-glazed-windows', icon: 'double-glazed-windows-icon', sortOrder: 51 },
+      { name: 'Reception/Waiting Room', code: 'reception-waiting-room', icon: 'reception-waiting-room-icon', sortOrder: 52 },
+      { name: 'Intercom', code: 'intercom', icon: 'intercom-icon', sortOrder: 53 },
+      { name: 'Electricity Backup', code: 'electricity-backup', icon: 'electricity-backup-icon', sortOrder: 54 },
+      { name: 'Waste Disposal', code: 'waste-disposal', icon: 'waste-disposal-icon', sortOrder: 55 },
+      { name: 'CCTV Security', code: 'cctv-security', icon: 'cctv-security-icon', sortOrder: 56 },
+      { name: 'Maintenance Staff', code: 'maintenance-staff', icon: 'maintenance-staff-icon', sortOrder: 57 },
+      { name: 'Broadband Internet', code: 'broadband-internet', icon: 'broadband-internet-icon', sortOrder: 58 },
+      { name: 'Satellite/Cable TV', code: 'satellite-cable-tv', icon: 'satellite-cable-tv-icon', sortOrder: 59 },
+      { name: '24 Hours Concierge', code: '24-hours-concierge', icon: '24-hours-concierge-icon', sortOrder: 60 },
+      { name: 'Laundry Facility', code: 'laundry-facility', icon: 'laundry-facility-icon', sortOrder: 61 },
+      { name: 'Jacuzzi', code: 'jacuzzi', icon: 'jacuzzi-icon', sortOrder: 62 },
+      { name: 'Security Staff', code: 'security-staff', icon: 'security-staff-icon', sortOrder: 63 },
+      { name: 'Balcony or Terrace', code: 'balcony-or-terrace', icon: 'balcony-or-terrace-icon', sortOrder: 64 },
+      { name: 'Sauna', code: 'sauna', icon: 'sauna-icon', sortOrder: 65 },
+      { name: 'Cleaning Services', code: 'cleaning-services', icon: 'cleaning-services-icon', sortOrder: 66 },
+      { name: 'Facilities for Disabled', code: 'facilities-for-disabled', icon: 'facilities-for-disabled-icon', sortOrder: 67 },
+    ];
+
+    let created = 0;
+    for (const amenityData of amenities) {
+      const existing = await this.amenityRepository.findOne({
+        where: { code: amenityData.code },
+      });
+
+      if (!existing) {
+        const amenity = this.amenityRepository.create({
+          ...amenityData,
+          isActive: true,
+        });
+        await this.amenityRepository.save(amenity);
+        created++;
+      }
+    }
+    this.logger.log(`✓ Created ${created} amenities`);
+  }
+
+  /**
+   * Delete and reseed only amenities
+   */
+  async reseedAmenities(): Promise<{ message: string; details: any }> {
+    const startTime = Date.now();
+
+    try {
+      // Delete existing amenities
+      const amenitiesCount = await this.amenityRepository.count();
+      if (amenitiesCount > 0) {
+        await this.amenityRepository
+          .createQueryBuilder()
+          .delete()
+          .where('id IS NOT NULL')
+          .execute();
+        this.logger.log(`Deleted ${amenitiesCount} amenities`);
+      }
+
+      // Seed amenities
+      await this.seedAmenities();
+
+      const newCount = await this.amenityRepository.count();
+      const duration = Date.now() - startTime;
+
+      return {
+        message: 'Amenities reseeded successfully',
+        details: {
+          duration: `${duration}ms`,
+          counts: {
+            amenitiesBefore: amenitiesCount,
+            amenitiesAfter: newCount,
+          },
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error during amenities reseeding:', error);
+      throw error;
+    }
   }
 }

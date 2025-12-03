@@ -49,6 +49,14 @@ import {
   AdminChannelPartnerCodeResponseDto,
   AdminCreateChannelPartnerCodeDto,
   AdminUpdateChannelPartnerCodeDto,
+  AdminFurnishingListQueryDto,
+  AdminFurnishingResponseDto,
+  AdminCreateFurnishingDto,
+  AdminUpdateFurnishingDto,
+  AdminAmenityListQueryDto,
+  AdminAmenityResponseDto,
+  AdminCreateAmenityDto,
+  AdminUpdateAmenityDto,
   AdminOwnerListQueryDto,
   AdminOwnerResponseDto,
   AdminChannelPartnerResponseDto,
@@ -500,6 +508,180 @@ export class AdminController {
     @Param('id') localityId: string,
   ): Promise<{ success: boolean; message: string; localityId: string }> {
     return this.adminService.deleteLocality(localityId);
+  }
+
+  // Furnishing management
+  @Get('furnishings')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List furnishings with optional search' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of furnishings',
+    type: [AdminFurnishingResponseDto],
+  })
+  async listFurnishings(
+    @Query() query: AdminFurnishingListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminFurnishingResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.adminService.listFurnishings(query);
+  }
+
+  @Get('furnishings/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get furnishing detail' })
+  @ApiResponse({
+    status: 200,
+    description: 'Furnishing details',
+    type: AdminFurnishingResponseDto,
+  })
+  async getFurnishing(
+    @Param('id') furnishingId: string,
+  ): Promise<{ success: boolean; data: AdminFurnishingResponseDto }> {
+    return this.adminService.getFurnishing(furnishingId);
+  }
+
+  @Post('furnishings')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a furnishing' })
+  @ApiResponse({
+    status: 201,
+    description: 'Furnishing created successfully',
+    type: AdminFurnishingResponseDto,
+  })
+  async createFurnishing(
+    @Body() dto: AdminCreateFurnishingDto,
+  ): Promise<{ success: boolean; data: AdminFurnishingResponseDto }> {
+    return this.adminService.createFurnishing(dto);
+  }
+
+  @Patch('furnishings/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a furnishing' })
+  @ApiResponse({
+    status: 200,
+    description: 'Furnishing updated successfully',
+    type: AdminFurnishingResponseDto,
+  })
+  async updateFurnishing(
+    @Param('id') furnishingId: string,
+    @Body() dto: AdminUpdateFurnishingDto,
+  ): Promise<{ success: boolean; data: AdminFurnishingResponseDto }> {
+    return this.adminService.updateFurnishing(furnishingId, dto);
+  }
+
+  @Delete('furnishings/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a furnishing' })
+  @ApiResponse({
+    status: 200,
+    description: 'Furnishing deleted successfully',
+  })
+  async deleteFurnishing(
+    @Param('id') furnishingId: string,
+  ): Promise<{ success: boolean; message: string; furnishingId: string }> {
+    return this.adminService.deleteFurnishing(furnishingId);
+  }
+
+  // Amenity management
+  @Get('amenities')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List amenities with optional search' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of amenities',
+    type: [AdminAmenityResponseDto],
+  })
+  async listAmenities(
+    @Query() query: AdminAmenityListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminAmenityResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.adminService.listAmenities(query);
+  }
+
+  @Get('amenities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get amenity detail' })
+  @ApiResponse({
+    status: 200,
+    description: 'Amenity details',
+    type: AdminAmenityResponseDto,
+  })
+  async getAmenity(
+    @Param('id') amenityId: string,
+  ): Promise<{ success: boolean; data: AdminAmenityResponseDto }> {
+    return this.adminService.getAmenity(amenityId);
+  }
+
+  @Post('amenities')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create an amenity' })
+  @ApiResponse({
+    status: 201,
+    description: 'Amenity created successfully',
+    type: AdminAmenityResponseDto,
+  })
+  async createAmenity(
+    @Body() dto: AdminCreateAmenityDto,
+  ): Promise<{ success: boolean; data: AdminAmenityResponseDto }> {
+    return this.adminService.createAmenity(dto);
+  }
+
+  @Patch('amenities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update an amenity' })
+  @ApiResponse({
+    status: 200,
+    description: 'Amenity updated successfully',
+    type: AdminAmenityResponseDto,
+  })
+  async updateAmenity(
+    @Param('id') amenityId: string,
+    @Body() dto: AdminUpdateAmenityDto,
+  ): Promise<{ success: boolean; data: AdminAmenityResponseDto }> {
+    return this.adminService.updateAmenity(amenityId, dto);
+  }
+
+  @Delete('amenities/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete an amenity' })
+  @ApiResponse({
+    status: 200,
+    description: 'Amenity deleted successfully',
+  })
+  async deleteAmenity(
+    @Param('id') amenityId: string,
+  ): Promise<{ success: boolean; message: string; amenityId: string }> {
+    return this.adminService.deleteAmenity(amenityId);
   }
 
   // Channel Partner Code management

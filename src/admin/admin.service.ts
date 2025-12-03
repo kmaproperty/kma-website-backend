@@ -48,12 +48,22 @@ import {
   AdminOwnerResponseDto,
   AdminChannelPartnerResponseDto,
   AdminOwnerListResponseDto,
+  AdminFurnishingListQueryDto,
+  AdminFurnishingResponseDto,
+  AdminCreateFurnishingDto,
+  AdminUpdateFurnishingDto,
+  AdminAmenityListQueryDto,
+  AdminAmenityResponseDto,
+  AdminCreateAmenityDto,
+  AdminUpdateAmenityDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
 import { SocietyRepository } from '../property/repositories/society.repository';
 import { BhkTypeRepository } from '../property/repositories/bhk-type.repository';
 import { LocalityRepository } from '../property/repositories/locality.repository';
+import { FurnishingRepository } from '../property/repositories/furnishing.repository';
+import { AmenityRepository } from '../property/repositories/amenity.repository';
 import { ChannelPartnerCodeRepository } from '../user/repositories/channel-partner-code.repository';
 import { UserRepository } from '../user/repositories/user.repository';
 import { PropertyService } from '../property/property.service';
@@ -64,6 +74,8 @@ import { MasterCity } from '../property/entities/master-city.entity';
 import { MasterSociety } from '../property/entities/master-society.entity';
 import { MasterBhkType } from '../property/entities/master-bhk-type.entity';
 import { MasterLocality } from '../property/entities/master-locality.entity';
+import { MasterFurnishing } from '../property/entities/master-furnishing.entity';
+import { MasterAmenity } from '../property/entities/master-amenity.entity';
 import { ChannelPartnerCode } from '../user/entities/channel-partner-code.entity';
 import { User } from '../user/entities/user.entity';
 import { UserRole } from '../user/enum/user-role.enum';
@@ -201,6 +213,8 @@ export class AdminService {
     private readonly societyRepository: SocietyRepository,
     private readonly bhkTypeRepository: BhkTypeRepository,
     private readonly localityRepository: LocalityRepository,
+    private readonly furnishingRepository: FurnishingRepository,
+    private readonly amenityRepository: AmenityRepository,
     private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
     private readonly userRepository: UserRepository,
     private readonly propertyService: PropertyService,
@@ -1614,6 +1628,302 @@ export class AdminService {
       intent: user.intent ?? null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+    };
+  }
+
+  // Furnishing management
+  async listFurnishings(
+    query: AdminFurnishingListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminFurnishingResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.furnishingRepository.findPaginated({
+      page,
+      limit,
+      search,
+    });
+
+    const data = items.map((furnishing) => this.toFurnishingResponse(furnishing));
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getFurnishing(
+    furnishingId: string,
+  ): Promise<{ success: boolean; data: AdminFurnishingResponseDto }> {
+    const furnishing = await this.ensureFurnishingExists(furnishingId);
+    return {
+      success: true,
+      data: this.toFurnishingResponse(furnishing),
+    };
+  }
+
+  async createFurnishing(
+    dto: AdminCreateFurnishingDto,
+  ): Promise<{ success: boolean; data: AdminFurnishingResponseDto }> {
+    // Normalize code (lowercase, replace spaces with hyphens)
+    const normalizedCode = dto.code
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+
+    // Check if code already exists
+    const existing = await this.furnishingRepository.findByCode(normalizedCode);
+    if (existing) {
+      throw new BadRequestException(
+        `Furnishing with code "${normalizedCode}" already exists`,
+      );
+    }
+
+    const furnishing = await this.furnishingRepository.createFurnishing({
+      name: dto.name.trim(),
+      code: normalizedCode,
+      icon: dto.icon?.trim() ?? null,
+      sortOrder: dto.sortOrder ?? 0,
+      isActive: dto.isActive ?? true,
+    });
+
+    return {
+      success: true,
+      data: this.toFurnishingResponse(furnishing),
+    };
+  }
+
+  async updateFurnishing(
+    furnishingId: string,
+    dto: AdminUpdateFurnishingDto,
+  ): Promise<{ success: boolean; data: AdminFurnishingResponseDto }> {
+    const furnishing = await this.ensureFurnishingExists(furnishingId);
+
+    // If code is being updated, normalize and check for duplicates
+    let normalizedCode: string | undefined;
+    if (dto.code) {
+      normalizedCode = dto.code
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+      
+      if (normalizedCode !== furnishing.code) {
+        const existing = await this.furnishingRepository.findByCode(normalizedCode);
+        if (existing && existing.id !== furnishingId) {
+          throw new BadRequestException(
+            `Furnishing with code "${normalizedCode}" already exists`,
+          );
+        }
+      }
+    }
+
+    await this.furnishingRepository.updateFurnishing(furnishingId, {
+      ...dto,
+      name: dto.name?.trim() ?? dto.name,
+      code: normalizedCode ?? dto.code,
+      icon: dto.icon?.trim() ?? dto.icon,
+    });
+
+    const updated = await this.ensureFurnishingExists(furnishingId);
+    return {
+      success: true,
+      data: this.toFurnishingResponse(updated),
+    };
+  }
+
+  async deleteFurnishing(
+    furnishingId: string,
+  ): Promise<{ success: boolean; message: string; furnishingId: string }> {
+    await this.ensureFurnishingExists(furnishingId);
+    await this.furnishingRepository.deleteFurnishing(furnishingId);
+    return {
+      success: true,
+      message: 'Furnishing deleted successfully',
+      furnishingId,
+    };
+  }
+
+  private async ensureFurnishingExists(
+    furnishingId: string,
+  ): Promise<MasterFurnishing> {
+    const furnishing = await this.furnishingRepository.findById(furnishingId);
+    if (!furnishing) {
+      throw new BadRequestException(`Furnishing with ID "${furnishingId}" not found`);
+    }
+    return furnishing;
+  }
+
+  private toFurnishingResponse(
+    furnishing: MasterFurnishing,
+  ): AdminFurnishingResponseDto {
+    return {
+      id: furnishing.id,
+      name: furnishing.name,
+      code: furnishing.code,
+      icon: furnishing.icon ?? null,
+      sortOrder: furnishing.sortOrder,
+      isActive: furnishing.isActive,
+      createdAt: furnishing.createdAt,
+      updatedAt: furnishing.updatedAt,
+    };
+  }
+
+  // Amenity management
+  async listAmenities(
+    query: AdminAmenityListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminAmenityResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.amenityRepository.findPaginated({
+      page,
+      limit,
+      search,
+    });
+
+    const data = items.map((amenity) => this.toAmenityResponse(amenity));
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getAmenity(
+    amenityId: string,
+  ): Promise<{ success: boolean; data: AdminAmenityResponseDto }> {
+    const amenity = await this.ensureAmenityExists(amenityId);
+    return {
+      success: true,
+      data: this.toAmenityResponse(amenity),
+    };
+  }
+
+  async createAmenity(
+    dto: AdminCreateAmenityDto,
+  ): Promise<{ success: boolean; data: AdminAmenityResponseDto }> {
+    // Normalize code (lowercase, replace spaces with hyphens)
+    const normalizedCode = dto.code
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+
+    // Check if code already exists
+    const existing = await this.amenityRepository.findByCode(normalizedCode);
+    if (existing) {
+      throw new BadRequestException(
+        `Amenity with code "${normalizedCode}" already exists`,
+      );
+    }
+
+    const amenity = await this.amenityRepository.createAmenity({
+      name: dto.name.trim(),
+      code: normalizedCode,
+      icon: dto.icon?.trim() ?? null,
+      sortOrder: dto.sortOrder ?? 0,
+      isActive: dto.isActive ?? true,
+    });
+
+    return {
+      success: true,
+      data: this.toAmenityResponse(amenity),
+    };
+  }
+
+  async updateAmenity(
+    amenityId: string,
+    dto: AdminUpdateAmenityDto,
+  ): Promise<{ success: boolean; data: AdminAmenityResponseDto }> {
+    const amenity = await this.ensureAmenityExists(amenityId);
+
+    // If code is being updated, normalize and check for duplicates
+    let normalizedCode: string | undefined;
+    if (dto.code) {
+      normalizedCode = dto.code
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+      
+      if (normalizedCode !== amenity.code) {
+        const existing = await this.amenityRepository.findByCode(normalizedCode);
+        if (existing && existing.id !== amenityId) {
+          throw new BadRequestException(
+            `Amenity with code "${normalizedCode}" already exists`,
+          );
+        }
+      }
+    }
+
+    await this.amenityRepository.updateAmenity(amenityId, {
+      ...dto,
+      name: dto.name?.trim() ?? dto.name,
+      code: normalizedCode ?? dto.code,
+      icon: dto.icon?.trim() ?? dto.icon,
+    });
+
+    const updated = await this.ensureAmenityExists(amenityId);
+    return {
+      success: true,
+      data: this.toAmenityResponse(updated),
+    };
+  }
+
+  async deleteAmenity(
+    amenityId: string,
+  ): Promise<{ success: boolean; message: string; amenityId: string }> {
+    await this.ensureAmenityExists(amenityId);
+    await this.amenityRepository.deleteAmenity(amenityId);
+    return {
+      success: true,
+      message: 'Amenity deleted successfully',
+      amenityId,
+    };
+  }
+
+  private async ensureAmenityExists(
+    amenityId: string,
+  ): Promise<MasterAmenity> {
+    const amenity = await this.amenityRepository.findById(amenityId);
+    if (!amenity) {
+      throw new BadRequestException(`Amenity with ID "${amenityId}" not found`);
+    }
+    return amenity;
+  }
+
+  private toAmenityResponse(
+    amenity: MasterAmenity,
+  ): AdminAmenityResponseDto {
+    return {
+      id: amenity.id,
+      name: amenity.name,
+      code: amenity.code,
+      icon: amenity.icon ?? null,
+      sortOrder: amenity.sortOrder,
+      isActive: amenity.isActive,
+      createdAt: amenity.createdAt,
+      updatedAt: amenity.updatedAt,
     };
   }
 }

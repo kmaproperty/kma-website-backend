@@ -11,6 +11,8 @@ import { MasterSociety } from '../../property/entities/master-society.entity';
 import { MasterPropertyType } from '../../property/entities/master-property-type.entity';
 import { MasterBhkType } from '../../property/entities/master-bhk-type.entity';
 import { MasterBuiltUpArea } from '../../property/entities/master-built-up-area.entity';
+import { MasterFurnishing } from '../../property/entities/master-furnishing.entity';
+import { MasterAmenity } from '../../property/entities/master-amenity.entity';
 import { UnitConfiguration } from '../../property/entities/unit-configuration.entity';
 import { Property } from '../../property/entities/property.entity';
 import { ContactUs } from '../../contact-us/entities/contact-us.entity';
@@ -90,6 +92,8 @@ export class ConfigService implements TypeOrmOptionsFactory {
         MasterPropertyType,
         MasterBhkType,
         MasterBuiltUpArea,
+        MasterFurnishing,
+        MasterAmenity,
         UnitConfiguration,
         Property,
         Admin,

@@ -9,6 +9,8 @@ import { BuiltUpAreaRepository } from './repositories/built-up-area.repository';
 import { CityRepository } from './repositories/city.repository';
 import { SocietyRepository } from './repositories/society.repository';
 import { LocalityRepository } from './repositories/locality.repository';
+import { FurnishingRepository } from './repositories/furnishing.repository';
+import { AmenityRepository } from './repositories/amenity.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
@@ -47,6 +49,8 @@ export class PropertyService {
     private readonly cityRepository: CityRepository,
     private readonly societyRepository: SocietyRepository,
     private readonly localityRepository: LocalityRepository,
+    private readonly furnishingRepository: FurnishingRepository,
+    private readonly amenityRepository: AmenityRepository,
     private readonly propertyRepository: PropertyRepository,
     private readonly masterDataSeederService: MasterDataSeederService,
     private readonly googlePlacesService: GooglePlacesService,
@@ -1834,6 +1838,34 @@ export class PropertyService {
 
         return (a.name ?? '').localeCompare(b.name ?? '');
       });
+  }
+
+  /**
+   * Get all active furnishings
+   */
+  async getAllFurnishings(): Promise<any[]> {
+    const furnishings = await this.furnishingRepository.findAll();
+    return furnishings.map((furnishing) => ({
+      id: furnishing.id,
+      name: furnishing.name,
+      code: furnishing.code,
+      icon: furnishing.icon ?? null,
+      sortOrder: furnishing.sortOrder,
+    }));
+  }
+
+  /**
+   * Get all active amenities
+   */
+  async getAllAmenities(): Promise<any[]> {
+    const amenities = await this.amenityRepository.findAll();
+    return amenities.map((amenity) => ({
+      id: amenity.id,
+      name: amenity.name,
+      code: amenity.code,
+      icon: amenity.icon ?? null,
+      sortOrder: amenity.sortOrder,
+    }));
   }
 
   async updatePropertyStep3(

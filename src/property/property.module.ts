@@ -12,6 +12,8 @@ import { BuiltUpAreaRepository } from './repositories/built-up-area.repository';
 import { CityRepository } from './repositories/city.repository';
 import { SocietyRepository } from './repositories/society.repository';
 import { LocalityRepository } from './repositories/locality.repository';
+import { FurnishingRepository } from './repositories/furnishing.repository';
+import { AmenityRepository } from './repositories/amenity.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { MasterPropertyListingType } from './entities/master-property-listing-type.entity';
 import { MasterPropertyCategoryNew } from './entities/master-property-category-new.entity';
@@ -21,6 +23,8 @@ import { MasterLocality } from './entities/master-locality.entity';
 import { MasterPropertyType } from './entities/master-property-type.entity';
 import { MasterBhkType } from './entities/master-bhk-type.entity';
 import { MasterBuiltUpArea } from './entities/master-built-up-area.entity';
+import { MasterFurnishing } from './entities/master-furnishing.entity';
+import { MasterAmenity } from './entities/master-amenity.entity';
 import { UnitConfiguration } from './entities/unit-configuration.entity';
 import { Property } from './entities/property.entity';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
@@ -39,6 +43,8 @@ import { AdminModule } from '../admin/admin.module';
       MasterPropertyType,
       MasterBhkType,
       MasterBuiltUpArea,
+      MasterFurnishing,
+      MasterAmenity,
       UnitConfiguration,
       Property,
     ]),
@@ -64,6 +70,8 @@ import { AdminModule } from '../admin/admin.module';
     CityRepository,
     SocietyRepository,
     LocalityRepository,
+    FurnishingRepository,
+    AmenityRepository,
     PropertyRepository,
     MasterDataSeederService,
     GooglePlacesService,
@@ -76,6 +84,8 @@ import { AdminModule } from '../admin/admin.module';
     SocietyRepository,
     BhkTypeRepository,
     LocalityRepository,
+    FurnishingRepository,
+    AmenityRepository,
   ],
 })
 export class PropertyModule implements OnModuleInit {
