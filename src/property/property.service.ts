@@ -481,6 +481,20 @@ export class PropertyService {
   }
 
   /**
+   * Seed property types master data
+   */
+  async seedPropertyTypes(): Promise<void> {
+    return await this.masterDataSeederService.seedPropertyTypes();
+  }
+
+  /**
+   * Reseed property types (delete existing and insert fresh data)
+   */
+  async reseedPropertyTypes(): Promise<{ message: string; details: any }> {
+    return await this.masterDataSeederService.reseedPropertyTypes();
+  }
+
+  /**
    * Search cities - first from database, then from Google Places API
    */
   async searchCities(query: string, limit: number = 10): Promise<any[]> {

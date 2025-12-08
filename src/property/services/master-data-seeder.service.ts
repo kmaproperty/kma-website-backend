@@ -552,7 +552,10 @@ export class MasterDataSeederService {
     );
   }
 
-  private async seedPropertyTypes(): Promise<void> {
+  /**
+   * Seed property types master data
+   */
+  async seedPropertyTypes(): Promise<void> {
     this.logger.log('Seeding property types...');
     // Get listing types and categories first
     const saleType = await this.propertyListingTypeRepository.findOne({
@@ -766,6 +769,46 @@ export class MasterDataSeederService {
       }
     }
     this.logger.log(`✓ Created ${created} property types`);
+  }
+
+  /**
+   * Delete and reseed only property types
+   */
+  async reseedPropertyTypes(): Promise<{ message: string; details: any }> {
+    const startTime = Date.now();
+
+    try {
+      // Delete existing property types
+      const propertyTypesBefore = await this.propertyTypeRepository.count();
+      if (propertyTypesBefore > 0) {
+        await this.propertyTypeRepository
+          .createQueryBuilder()
+          .delete()
+          .where('id IS NOT NULL')
+          .execute();
+        this.logger.log(`Deleted ${propertyTypesBefore} property types`);
+      }
+
+      // Seed property types
+      await this.seedPropertyTypes();
+
+      const propertyTypesAfter = await this.propertyTypeRepository.count();
+      const duration = Date.now() - startTime;
+
+      return {
+        message: 'Property types reseeded successfully',
+        details: {
+          duration: `${duration}ms`,
+          counts: {
+            propertyTypesBefore,
+            propertyTypesAfter,
+          },
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error during property types reseeding:', error);
+      throw error;
+    }
   }
 
   private async seedPropertyCategories(): Promise<void> {

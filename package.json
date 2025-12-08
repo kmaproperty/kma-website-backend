@@ -19,6 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:master-data": "node scripts/run-seeder.js",
+    "seed:property-types": "node scripts/seed-property-types.js",
     "verify:master-data": "node scripts/verify-seeder.js",
     "migrate:remove-property-fields": "node scripts/run-property-migration.js",
     "migrate:force-remove-property-fields": "node scripts/run-force-migration.js",
