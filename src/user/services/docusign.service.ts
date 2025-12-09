@@ -34,27 +34,59 @@ export class DocuSignService {
     const configuredPath = this.configService.get<string>(
       'DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH',
     );
-    console.log('configuredPath', configuredPath);
+    this.logger.log(`Configured path: ${configuredPath || 'not set'}`);
 
-    // Default to "<project-root>/resume.pdf" if no env var is provided
-    const absolutePath = configuredPath
-      ? path.isAbsolute(configuredPath)
-        ? configuredPath
-        : path.join(process.cwd(), configuredPath)
-      : path.join(process.cwd(), 'resume.pdf');
+    // Get project root
+    const projectRoot = process.cwd();
+    this.logger.log(`Project root (process.cwd()): ${projectRoot}`);
 
-    if (!fs.existsSync(absolutePath)) {
-      throw new BadRequestException(
-        `Channel Partner Agreement file not found at path: ${absolutePath}`,
-      );
+    // Try multiple possible paths
+    const possiblePaths: string[] = [];
+
+    if (configuredPath) {
+      if (path.isAbsolute(configuredPath)) {
+        // If it's an absolute path, try it first
+        possiblePaths.push(configuredPath);
+        
+        // Also check if it's a "simple" absolute path like "/filename.pdf"
+        // which might be a misconfiguration - try it as relative too
+        const pathParts = configuredPath.split(path.sep).filter(p => p);
+        if (pathParts.length === 1) {
+          // Looks like "/filename.pdf" - probably meant to be relative
+          this.logger.warn(`Absolute path "${configuredPath}" looks like it might be misconfigured. Also trying as relative path.`);
+          possiblePaths.push(path.join(projectRoot, pathParts[0]));
+        }
+      } else {
+        // If it's relative, try from project root
+        possiblePaths.push(path.join(projectRoot, configuredPath));
+      }
+    } else {
+      // Default to resume.pdf in project root
+      possiblePaths.push(path.join(projectRoot, 'resume.pdf'));
     }
+
+    // Try to find the file
+    let absolutePath: string | null = null;
+    for (const tryPath of possiblePaths) {
+      this.logger.log(`Trying path: ${tryPath}`);
+      if (fs.existsSync(tryPath)) {
+        absolutePath = tryPath;
+        break;
+      }
+    }
+
+    if (!absolutePath) {
+      const errorMessage = `Channel Partner Agreement file not found. Tried paths: ${possiblePaths.join(', ')}. ` +
+        `Please ensure DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH is set correctly or place the file at: ${path.join(projectRoot, 'resume.pdf')}`;
+      this.logger.error(errorMessage);
+      throw new BadRequestException(errorMessage);
+    }
+
+    this.logger.log(`Found document at: ${absolutePath}`);
 
     const fileBuffer = fs.readFileSync(absolutePath);
     const documentBase64 = fileBuffer.toString('base64');
     const documentName = path.basename(absolutePath);
-
-    console.log('documentBase64', documentBase64);
-    console.log('documentName', documentName);
 
     return { documentBase64, documentName };
   }
@@ -554,22 +586,56 @@ export class DocuSignService {
   }
 
   async updateAgreementStatus(envelopeId: string): Promise<ChannelPartnerAgreement | null> {
+    this.logger.log('Updating agreement status', { envelopeId });
+
     try {
+      this.logger.debug('Fetching envelope status from DocuSign', { envelopeId });
       const status = await this.getEnvelopeStatus(envelopeId);
+      
+      this.logger.log('Envelope status retrieved', {
+        envelopeId,
+        status,
+      });
+
       const updateData: Partial<ChannelPartnerAgreement> = {
         status,
       };
 
       if (status === AgreementStatus.COMPLETED) {
         updateData.completedAt = new Date();
+        this.logger.log('Agreement marked as completed', {
+          envelopeId,
+          completedAt: updateData.completedAt,
+        });
       }
 
-      return await this.agreementRepository.updateByEnvelopeId(
+      this.logger.debug('Updating agreement in database', {
+        envelopeId,
+        updateData,
+      });
+
+      const updatedAgreement = await this.agreementRepository.updateByEnvelopeId(
         envelopeId,
         updateData,
       );
+
+      if (updatedAgreement) {
+        this.logger.log('Agreement updated in database', {
+          envelopeId,
+          agreementId: updatedAgreement.id,
+          status: updatedAgreement.status,
+        });
+      } else {
+        this.logger.warn('No agreement found with envelope ID', { envelopeId });
+      }
+
+      return updatedAgreement;
     } catch (error) {
-      this.logger.error('Error updating agreement status', error);
+      this.logger.error('Error updating agreement status', {
+        envelopeId,
+        error: error.message,
+        stack: error.stack,
+      });
       return null;
     }
   }
@@ -602,8 +668,38 @@ export class DocuSignService {
     envelopeId: string,
     status: string,
   ): Promise<ChannelPartnerAgreement | null> {
-    this.logger.log(`Webhook received for envelope ${envelopeId} with status ${status}`);
-    return await this.updateAgreementStatus(envelopeId);
+    this.logger.log('Processing webhook in DocuSignService', {
+      envelopeId,
+      receivedStatus: status,
+    });
+
+    try {
+      const result = await this.updateAgreementStatus(envelopeId);
+      
+      if (result) {
+        this.logger.log('Agreement status updated successfully', {
+          envelopeId,
+          agreementId: result.id,
+          newStatus: result.status,
+          previousStatus: status,
+        });
+      } else {
+        this.logger.warn('No agreement found or updated for envelope', {
+          envelopeId,
+          receivedStatus: status,
+        });
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error in handleWebhook', {
+        envelopeId,
+        receivedStatus: status,
+        error: error.message,
+        stack: error.stack,
+      });
+      throw error;
+    }
   }
 }
 

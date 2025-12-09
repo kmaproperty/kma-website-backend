@@ -555,22 +555,143 @@ export class UserController {
     status: 200,
     description: 'Webhook processed successfully',
   })
-  async handleDocuSignWebhook(@Body() webhookData: any): Promise<{ success: boolean }> {
+  async handleDocuSignWebhook(
+    @Body() webhookData: any,
+    @Req() req: Request,
+  ): Promise<{ success: boolean }> {
+    // CRITICAL: Return response immediately with minimal processing
+    // DocuSign requires a response within ~5 seconds or it closes the connection
+    // Store request metadata for async processing
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || 'unknown';
+    const contentType = req.get('content-type');
+    
+    // Quick extraction of envelope ID (minimal processing)
+    let envelopeId: string | null = null;
+    let eventType: string | null = null;
+    
     try {
-      // DocuSign webhook format varies, but typically includes envelope data
-      const envelopeId = webhookData?.data?.envelopeId || webhookData?.envelopeId;
-      const status = webhookData?.data?.status || webhookData?.status;
-
-      if (!envelopeId) {
-        this.logger.warn('Webhook received without envelope ID');
-        return { success: false };
+      // Handle the actual DocuSign Connect format:
+      // { event: 'recipient-completed', data: { envelopeId: '...' }, ... }
+      if (webhookData?.data?.envelopeId) {
+        envelopeId = webhookData.data.envelopeId;
+        eventType = webhookData.event;
+      } else if (webhookData?.envelopeId) {
+        envelopeId = webhookData.envelopeId;
+        eventType = webhookData.event;
+      } else if (Array.isArray(webhookData) && webhookData.length > 0) {
+        const firstEvent = webhookData[0];
+        envelopeId = firstEvent?.data?.envelopeId || firstEvent?.envelopeId;
+        eventType = firstEvent?.event;
       }
-
-      await this.docuSignService.handleWebhook(envelopeId, status);
-      return { success: true };
-    } catch (error) {
-      this.logger.error('Error handling DocuSign webhook', error);
-      return { success: false };
+    } catch (parseError) {
+      // Silently catch parse errors - we'll log them async
     }
+
+    // Return success immediately - process everything else asynchronously
+    const response = { success: true };
+
+    // Process everything asynchronously AFTER response is sent
+    // Use process.nextTick to ensure response is sent first
+    process.nextTick(async () => {
+      const startTime = Date.now();
+      const payloadStr = JSON.stringify(webhookData);
+      
+      try {
+        this.logger.log('DocuSign webhook received (async processing)', {
+          clientIp,
+          userAgent,
+          contentType,
+          payloadKeys: Object.keys(webhookData || {}),
+          payloadPreview: payloadStr.substring(0, 1000),
+          payloadSize: payloadStr.length,
+        });
+
+        // Re-parse with full logging
+        let finalEnvelopeId: string | null = null;
+        let finalEventType: string | null = null;
+        let finalStatus: string | null = null;
+
+        if (Array.isArray(webhookData)) {
+          this.logger.log('Webhook payload is an array', { eventCount: webhookData.length });
+          if (webhookData.length > 0) {
+            const firstEvent = webhookData[0];
+            finalEnvelopeId = firstEvent?.envelopeId || firstEvent?.data?.envelopeId;
+            finalEventType = firstEvent?.event;
+            finalStatus = firstEvent?.data?.status || firstEvent?.status;
+          }
+        } else if (webhookData) {
+          // Handle single event object - actual DocuSign format
+          finalEnvelopeId = webhookData.envelopeId || webhookData?.data?.envelopeId;
+          finalEventType = webhookData.event;
+          finalStatus = webhookData?.data?.status || webhookData.status;
+        }
+
+        this.logger.debug('Extracted webhook data', {
+          envelopeId: finalEnvelopeId,
+          eventType: finalEventType,
+          status: finalStatus,
+          isArray: Array.isArray(webhookData),
+          structure: {
+            hasEnvelopeId: !!webhookData?.envelopeId,
+            hasData: !!webhookData?.data,
+            hasEvent: !!webhookData?.event,
+            topLevelKeys: Object.keys(webhookData || {}),
+          },
+        });
+
+        if (!finalEnvelopeId) {
+          this.logger.warn('Webhook received without envelope ID', {
+            clientIp,
+            payloadStructure: {
+              isArray: Array.isArray(webhookData),
+              hasData: !!webhookData?.data,
+              hasEnvelopeId: !!webhookData?.envelopeId,
+              hasEvent: !!webhookData?.event,
+              topLevelKeys: Object.keys(webhookData || {}),
+            },
+            fullPayload: payloadStr.substring(0, 2000),
+          });
+          return;
+        }
+
+        this.logger.log('Processing webhook asynchronously', {
+          envelopeId: finalEnvelopeId,
+          eventType: finalEventType,
+          status: finalStatus,
+        });
+
+        const processStartTime = Date.now();
+        const result = await this.docuSignService.handleWebhook(
+          finalEnvelopeId,
+          finalStatus || finalEventType || 'unknown',
+        );
+
+        const processDuration = Date.now() - processStartTime;
+        this.logger.log('Webhook processed successfully (async)', {
+          envelopeId: finalEnvelopeId,
+          eventType: finalEventType,
+          status: finalStatus,
+          processDurationMs: processDuration,
+          totalDurationMs: Date.now() - startTime,
+          agreementUpdated: !!result,
+          agreementId: result?.id,
+        });
+    } catch (error) {
+        const duration = Date.now() - startTime;
+        this.logger.error('Error processing webhook asynchronously', {
+          error: error.message,
+          stack: error.stack,
+          envelopeId,
+          eventType,
+          clientIp,
+          durationMs: duration,
+          payloadPreview: payloadStr.substring(0, 1000),
+        });
+      }
+    });
+
+    // Return immediately - this is critical for DocuSign
+    return response;
   }
 }

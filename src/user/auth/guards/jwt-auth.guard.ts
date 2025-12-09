@@ -81,15 +81,33 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
+    // Try multiple header name variations (API Gateway might normalize headers)
     const authHeader =
       request.headers['authorization'] ||
-      request.headers['Authorization'];
+      request.headers['Authorization'] ||
+      request.headers['x-authorization'] ||
+      request.headers['X-Authorization'] ||
+      (request.headers as any)['x-api-key']; // Some API Gateways use this
 
-    if (!authHeader || typeof authHeader !== 'string') {
+    if (!authHeader) {
       return undefined;
     }
 
-    const [type, token] = authHeader.split(' ');
-    return type === 'Bearer' ? token : undefined;
+    // Handle both string and array cases
+    const headerValue = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+    
+    if (typeof headerValue !== 'string') {
+      return undefined;
+    }
+
+    // Extract token - handle both "Bearer token" and just "token" formats
+    const parts = headerValue.trim().split(' ');
+    if (parts.length === 1) {
+      // No "Bearer" prefix, assume the whole value is the token
+      return parts[0];
+    }
+    
+    const [type, token] = parts;
+    return type === 'Bearer' || type === 'bearer' ? token : undefined;
   }
 }
