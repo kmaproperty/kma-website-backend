@@ -107,7 +107,7 @@ export class UserController {
   @Post('login/send-otp')
   @ApiOperation({ 
     summary: 'Send OTP for login (phone must exist)',
-    description: 'Supports OWNER, CHANNEL_PARTNER, and END_USER roles.'
+    description: 'For OWNER and CHANNEL_PARTNER: role should not be passed. API will automatically check if the phone exists for either OWNER or CHANNEL_PARTNER. For END_USER: role is required.'
   })
   @ApiResponse({
     status: 200,
@@ -123,7 +123,7 @@ export class UserController {
   @Post('validate-otp')
   @ApiOperation({
     summary: 'Validate OTP and check if user needs additional details',
-    description: 'Supports OWNER, CHANNEL_PARTNER, and END_USER roles. Role parameter is REQUIRED to identify which account to create/login. Same phone can have different accounts for different roles.',
+    description: 'For OWNER and CHANNEL_PARTNER: role should not be passed. API will automatically check if the phone exists for either OWNER or CHANNEL_PARTNER. For END_USER: role is required.',
   })
   @ApiResponse({
     status: 200,

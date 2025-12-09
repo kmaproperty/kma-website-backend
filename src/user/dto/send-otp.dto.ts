@@ -15,7 +15,7 @@ export class SendOtpDto {
   phone: string;
 
   @ApiPropertyOptional({
-    description: 'User role for signup/login. Required for login, optional for signup (defaults to END_USER)',
+    description: 'User role for signup/login. For login: Do not pass role for OWNER/CHANNEL_PARTNER (API auto-detects), required for END_USER. For signup: optional (defaults to END_USER)',
     example: 'END_USER',
     enum: UserRole,
   })

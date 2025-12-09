@@ -30,15 +30,14 @@ export class ValidateOtpDto {
   @Length(4, 4, { message: 'OTP must be exactly 4 digits' })
   otp: string;
 
-  @ApiProperty({
-    description: 'User role for account creation/login. Options: OWNER, CHANNEL_PARTNER, END_USER. Required to identify which account to create/login.',
+  @ApiPropertyOptional({
+    description: 'User role for account creation/login. For OWNER and CHANNEL_PARTNER: do not pass role (API auto-detects). For END_USER: role is required.',
     example: 'END_USER',
     enum: UserRole,
-    required: true,
   })
   @IsEnum(UserRole, { message: 'Role must be a valid user role' })
-  @IsNotEmpty()
-  role: UserRole;
+  @IsOptional()
+  role?: UserRole;
 }
 
 export class ValidateOtpResponseDto {

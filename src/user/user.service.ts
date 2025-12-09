@@ -247,18 +247,36 @@ export class UserService {
   async sendOtpForLogin(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
     const { phone, role } = sendOtpDto;
 
-    if (!role) {
-      throw new BadRequestException('Role is required for login');
+    let userRole: UserRole | undefined;
+    let existingUser: User | null = null;
+
+    if (role) {
+      // If role is explicitly provided, use it
+      userRole = role;
+      existingUser = await this.userRepository.findByPhoneAndRole(phone, userRole);
+    } else {
+      // If role is not provided, check for OWNER first, then CHANNEL_PARTNER
+      // OWNER and CHANNEL_PARTNER share the same login
+      existingUser = await this.userRepository.findByPhoneAndRole(phone, UserRole.OWNER);
+      if (existingUser) {
+        userRole = UserRole.OWNER;
+      } else {
+        existingUser = await this.userRepository.findByPhoneAndRole(phone, UserRole.CHANNEL_PARTNER);
+        if (existingUser) {
+          userRole = UserRole.CHANNEL_PARTNER;
+        }
+      }
     }
 
-    const existingUser = await this.userRepository.findByPhoneAndRole(phone, role);
-    if (!existingUser) {
-      throw new BadRequestException(
-        `User with phone ${phone} and role ${role} not found. Please signup first.`
-      );
+    if (!existingUser || !userRole) {
+      const roleMessage = role 
+        ? `User with phone ${phone} and role ${role} not found. Please signup first.`
+        : `User with phone ${phone} not found as OWNER or CHANNEL_PARTNER. Please signup first.`;
+      throw new BadRequestException(roleMessage);
     }
 
-    return this.sendOtp(sendOtpDto);
+    // Use the determined role for sending OTP
+    return this.sendOtp({ ...sendOtpDto, role: userRole });
   }
 
   /**
@@ -269,11 +287,6 @@ export class UserService {
     validateOtpDto: ValidateOtpDto,
   ): Promise<ValidateOtpResponseDto> {
     const { phone, otp, role } = validateOtpDto;
-    
-    // Role is required for validateOtp
-    if (!role) {
-      throw new BadRequestException('Role is required for OTP validation');
-    }
 
     // Find the OTP record for this phone
     const otpRecord = await this.otpRepository.findActiveByPhone(phone);
@@ -316,10 +329,36 @@ export class UserService {
         { isUsed: true },
       );
 
-      // Check if user exists with this phone AND role
-      const existingUser = await queryRunner.manager.findOne(User, {
-        where: { phone, role },
-      });
+      // Determine the role to use and find existing user within transaction
+      let userRole: UserRole | undefined;
+      let existingUser: User | null = null;
+
+      if (role) {
+        // If role is explicitly provided, use it
+        userRole = role;
+        existingUser = await queryRunner.manager.findOne(User, {
+          where: { phone, role: userRole },
+        });
+      } else {
+        // If role is not provided, check for OWNER first, then CHANNEL_PARTNER
+        // OWNER and CHANNEL_PARTNER share the same login
+        existingUser = await queryRunner.manager.findOne(User, {
+          where: { phone, role: UserRole.OWNER },
+        });
+        if (existingUser) {
+          userRole = UserRole.OWNER;
+        } else {
+          existingUser = await queryRunner.manager.findOne(User, {
+            where: { phone, role: UserRole.CHANNEL_PARTNER },
+          });
+          if (existingUser) {
+            userRole = UserRole.CHANNEL_PARTNER;
+          } else {
+            // If user doesn't exist and role not provided, default to OWNER for new user creation
+            userRole = UserRole.OWNER;
+          }
+        }
+      }
 
       let user: User;
       let isNewUser = false;
@@ -340,9 +379,13 @@ export class UserService {
         user = updatedUser;
       } else {
         // User doesn't exist with this phone+role combination, create new user
+        if (!userRole) {
+          throw new BadRequestException('Role is required for creating a new user');
+        }
+        
         const userData: Partial<User> = {
           phone,
-          role: role,
+          role: userRole,
           isActive: true,
           phoneVerified: true,
           name: null,
