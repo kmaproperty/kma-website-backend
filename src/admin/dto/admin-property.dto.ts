@@ -75,3 +75,14 @@ export class AdminRejectPropertyDto extends AdminReviewPropertyDto {
   comment: string;
 }
 
+export class AdminPropertyDetailResponseDto {
+  @ApiProperty({ example: true })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'Comprehensive property data with all related entities',
+    type: Object,
+  })
+  data: Record<string, any>;
+}
+

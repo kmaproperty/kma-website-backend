@@ -26,6 +26,7 @@ import {
   AdminLoginResponseDto,
   AdminPropertyListQueryDto,
   AdminPropertyListResponseDto,
+  AdminPropertyDetailResponseDto,
   AdminRejectPropertyDto,
   AdminReviewPropertyDto,
   AdminUpdatePropertyDto,
@@ -120,6 +121,26 @@ export class AdminController {
     @Query() query: AdminPropertyListQueryDto,
   ): Promise<AdminPropertyListResponseDto> {
     return this.adminService.listProperties(query);
+  }
+
+  @Get('properties/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get property details by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Property details retrieved successfully',
+    type: AdminPropertyDetailResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Property not found',
+  })
+  async getPropertyById(
+    @Param('id') propertyId: string,
+  ): Promise<AdminPropertyDetailResponseDto> {
+    return this.adminService.getPropertyById(propertyId);
   }
 
   @Post('properties/:id/approve')

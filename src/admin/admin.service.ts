@@ -12,6 +12,7 @@ import {
   AdminLoginResponseDto,
   AdminPropertyListQueryDto,
   AdminPropertyListResponseDto,
+  AdminPropertyDetailResponseDto,
   AdminReviewPropertyDto,
   AdminRejectPropertyDto,
   AdminUpdatePropertyDto,
@@ -1026,6 +1027,95 @@ export class AdminService {
     };
   }
 
+  private pick(source: any, keys: string[]): Record<string, any> | null {
+    if (!source) {
+      return null;
+    }
+    return keys.reduce<Record<string, any>>((acc, key) => {
+      if (key in source) {
+        acc[key] = source[key];
+      }
+      return acc;
+    }, {});
+  }
+
+  private formatPropertyData(property: any): Record<string, any> {
+    const propertyData: Record<string, any> = {
+      ...property,
+      adminReviewComment: property.adminReviewComment ?? null,
+      adminReviewedAt: property.adminReviewedAt ?? null,
+      adminReviewedBy: property.adminReviewedBy ?? null,
+    };
+
+    const owner = property.user
+      ? this.pick(property.user, [
+          'id',
+          'name',
+          'email',
+          'phone',
+          'role',
+          'intent',
+          'cities',
+          'phoneVerified',
+          'isActive',
+        ])
+      : null;
+
+    const listingType = this.pick(property.listingType, ['id', 'name', 'code']);
+    const category = this.pick(property.category, ['id', 'name', 'code']);
+    const propertyType = this.pick(property.propertyType, ['id', 'name', 'code']);
+    const city = this.pick(property.city, [
+      'id',
+      'name',
+      'code',
+      'state',
+      'latitude',
+      'longitude',
+    ]);
+    const society = this.pick(property.society, [
+      'id',
+      'name',
+      'localityName',
+      'address',
+      'pincode',
+      'latitude',
+      'longitude',
+    ]);
+    const locality = this.pick(property.locality, [
+      'id',
+      'name',
+      'sector',
+      'latitude',
+      'longitude',
+    ]);
+    const bhkType = this.pick(property.bhkType, [
+      'id',
+      'name',
+      'code',
+      'sortOrder',
+    ]);
+
+    delete propertyData.user;
+    delete propertyData.listingType;
+    delete propertyData.category;
+    delete propertyData.propertyType;
+    delete propertyData.city;
+    delete propertyData.society;
+    delete propertyData.locality;
+    delete propertyData.bhkType;
+
+    propertyData.owner = owner;
+    propertyData.listingType = listingType;
+    propertyData.category = category;
+    propertyData.propertyType = propertyType;
+    propertyData.city = city;
+    propertyData.society = society;
+    propertyData.locality = locality;
+    propertyData.bhkType = bhkType;
+
+    return propertyData;
+  }
+
   async listProperties(
     query: AdminPropertyListQueryDto,
   ): Promise<AdminPropertyListResponseDto> {
@@ -1039,94 +1129,7 @@ export class AdminService {
       status: query.status,
     });
 
-    const pick = (source: any, keys: string[]) => {
-      if (!source) {
-        return null;
-      }
-      return keys.reduce<Record<string, any>>((acc, key) => {
-        if (key in source) {
-          acc[key] = source[key];
-        }
-        return acc;
-      }, {});
-    };
-
-    const data = items.map((property) => {
-      const propertyData: Record<string, any> = {
-        ...property,
-        adminReviewComment: property.adminReviewComment ?? null,
-        adminReviewedAt: property.adminReviewedAt ?? null,
-        adminReviewedBy: property.adminReviewedBy ?? null,
-      };
-
-      const owner = property.user
-        ? pick(property.user, [
-            'id',
-            'name',
-            'email',
-            'phone',
-            'role',
-            'intent',
-            'cities',
-            'phoneVerified',
-            'isActive',
-          ])
-        : null;
-
-      const listingType = pick(property.listingType, ['id', 'name', 'code']);
-      const category = pick(property.category, ['id', 'name', 'code']);
-      const propertyType = pick(property.propertyType, ['id', 'name', 'code']);
-      const city = pick(property.city, [
-        'id',
-        'name',
-        'code',
-        'state',
-        'latitude',
-        'longitude',
-      ]);
-      const society = pick(property.society, [
-        'id',
-        'name',
-        'localityName',
-        'address',
-        'pincode',
-        'latitude',
-        'longitude',
-      ]);
-      const locality = pick(property.locality, [
-        'id',
-        'name',
-        'sector',
-        'latitude',
-        'longitude',
-      ]);
-      const bhkType = pick(property.bhkType, [
-        'id',
-        'name',
-        'code',
-        'sortOrder',
-      ]);
-
-      delete propertyData.user;
-      delete propertyData.listingType;
-      delete propertyData.category;
-      delete propertyData.propertyType;
-      delete propertyData.city;
-      delete propertyData.society;
-      delete propertyData.locality;
-      delete propertyData.bhkType;
-
-      propertyData.owner = owner;
-      propertyData.listingType = listingType;
-      propertyData.category = category;
-      propertyData.propertyType = propertyType;
-      propertyData.city = city;
-      propertyData.society = society;
-      propertyData.locality = locality;
-      propertyData.bhkType = bhkType;
-
-      return propertyData;
-    });
+    const data = items.map((property) => this.formatPropertyData(property));
 
     return {
       success: true,
@@ -1134,6 +1137,23 @@ export class AdminService {
       total,
       page,
       limit,
+    };
+  }
+
+  async getPropertyById(
+    propertyId: string,
+  ): Promise<AdminPropertyDetailResponseDto> {
+    const property = await this.propertyRepository.findByIdWithRelations(propertyId);
+
+    if (!property) {
+      throw new BadRequestException(`Property with ID ${propertyId} not found`);
+    }
+
+    const data = this.formatPropertyData(property);
+
+    return {
+      success: true,
+      data,
     };
   }
 
