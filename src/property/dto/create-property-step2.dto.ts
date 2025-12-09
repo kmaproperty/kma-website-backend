@@ -88,11 +88,9 @@ export class CreatePropertyStep2Dto {
 
   @ApiPropertyOptional({
     description: 'Floor number of the unit',
-    minimum: 0,
   })
   @IsOptional()
   @IsInt()
-  @Min(0)
   floorNumber?: number;
 
   @ApiPropertyOptional({

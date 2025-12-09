@@ -325,7 +325,6 @@ export class BuiltUpAreaInfo {
   })
   @IsOptional()
   @IsNumber()
-  @Min(1)
   carpetArea?: number;
 
   @ApiProperty({ 
@@ -699,12 +698,10 @@ export class CreatePropertyStep1Dto {
   @ApiProperty({ 
     description: 'Carpet Area', 
     example: 1000,
-    required: false,
-    minimum: 1
+    required: false
   })
   @IsOptional()
   @IsNumber()
-  @Min(1)
   carpetArea?: number;
 
   @ApiProperty({ 
