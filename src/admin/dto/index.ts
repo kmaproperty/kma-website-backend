@@ -9,4 +9,5 @@ export * from './admin-lead.dto';
 export * from './admin-channel-partner-code.dto';
 export * from './admin-furnishing.dto';
 export * from './admin-amenity.dto';
+export * from './admin-user-management.dto';
 

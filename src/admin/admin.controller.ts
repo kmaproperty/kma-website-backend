@@ -62,18 +62,25 @@ import {
   AdminOwnerResponseDto,
   AdminChannelPartnerResponseDto,
   AdminOwnerListResponseDto,
+  AdminUsersListResponseDto,
+  AdminUserListResponseDto,
   BootstrapAdminDto,
   BootstrapAdminResponseDto,
   AdminLeadListQueryDto,
   AdminLeadListResponseDto,
   LeadResponseDto,
+  AdminEditUserDto,
+  AdminEditUserResponseDto,
+  AdminBlockUserResponseDto,
+  AdminUnblockUserResponseDto,
+  AdminUserDetailResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { AdminPermissionsGuard } from './guards/admin-permissions.guard';
 import { RequireAdminPermissions } from './decorators/admin-permissions.decorator';
 import { AdminPermission } from './enum/admin-permission.enum';
-import { CreateAdminUserDto, AdminUserResponseDto, AdminUserListResponseDto, UpdateAdminPermissionsDto, AdminPermissionsResponseDto } from './dto/admin-users.dto';
+import { CreateAdminUserDto, AdminUserResponseDto, UpdateAdminPermissionsDto, AdminPermissionsResponseDto } from './dto/admin-users.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -844,6 +851,26 @@ export class AdminController {
     return this.adminService.listPermissions();
   }
 
+  // User listing endpoints
+  @Get('users')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ 
+    summary: 'List all users with filters and pagination',
+    description: 'Lists all users (OWNER, CHANNEL_PARTNER, END_USER). Can filter by role, search term, active status, blocked status, and phone verified status. For channel partners, includes agreement completion status.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users',
+    type: AdminOwnerListResponseDto,
+  })
+  async listUsers(
+    @Query() query: AdminOwnerListQueryDto,
+  ): Promise<AdminOwnerListResponseDto<AdminUsersListResponseDto>> {
+    return this.adminService.listUsers(query);
+  }
+
   // User listing endpoints (Owners and Channel Partners)
   @Get('owners')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
@@ -938,6 +965,96 @@ export class AdminController {
       data: leads,
       total: leads.length,
     };
+  }
+
+  // User management endpoints
+  @Get('users/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get user details by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'User details retrieved successfully',
+    type: AdminUserDetailResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async getUserDetails(
+    @Param('id') userId: string,
+  ): Promise<{ success: boolean; data: AdminUserDetailResponseDto }> {
+    return this.adminService.getUserDetails(userId);
+  }
+
+  @Post('users/:id/block')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Block a user' })
+  @ApiResponse({
+    status: 200,
+    description: 'User blocked successfully',
+    type: AdminBlockUserResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User is already blocked',
+  })
+  async blockUser(
+    @Param('id') userId: string,
+  ): Promise<AdminBlockUserResponseDto> {
+    return this.adminService.blockUser(userId);
+  }
+
+  @Post('users/:id/unblock')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Unblock a user' })
+  @ApiResponse({
+    status: 200,
+    description: 'User unblocked successfully',
+    type: AdminUnblockUserResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User is not blocked',
+  })
+  async unblockUser(
+    @Param('id') userId: string,
+  ): Promise<AdminUnblockUserResponseDto> {
+    return this.adminService.unblockUser(userId);
+  }
+
+  @Patch('users/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Edit user details' })
+  @ApiResponse({
+    status: 200,
+    description: 'User updated successfully',
+    type: AdminEditUserResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async editUser(
+    @Param('id') userId: string,
+    @Body() dto: AdminEditUserDto,
+  ): Promise<AdminEditUserResponseDto> {
+    return this.adminService.editUser(userId, dto);
   }
 }
 

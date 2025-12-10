@@ -87,9 +87,10 @@ export class UserRepository {
     role?: string;
     search?: string;
     isActive?: boolean;
+    isBlocked?: boolean;
     phoneVerified?: boolean;
   }): Promise<{ items: User[]; total: number }> {
-    const { page, limit, role, search, isActive, phoneVerified } = options;
+    const { page, limit, role, search, isActive, isBlocked, phoneVerified } = options;
     const qb = this.userRepository
       .createQueryBuilder('user')
       .orderBy('user.createdAt', 'DESC')
@@ -102,6 +103,10 @@ export class UserRepository {
 
     if (isActive !== undefined) {
       qb.andWhere('user.isActive = :isActive', { isActive });
+    }
+
+    if (isBlocked !== undefined) {
+      qb.andWhere('user.isBlocked = :isBlocked', { isBlocked });
     }
 
     if (phoneVerified !== undefined) {

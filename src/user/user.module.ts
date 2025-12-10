@@ -75,6 +75,7 @@ const repositories = [
     OtpRepository,
     ChannelPartnerCodeService,
     ChannelPartnerCodeRepository,
+    ChannelPartnerAgreementRepository,
     LeadRepository,
   ],
 })

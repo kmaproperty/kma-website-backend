@@ -46,6 +46,15 @@ export class AdminOwnerListQueryDto {
   @IsBoolean()
   phoneVerified?: boolean;
 
+  @ApiPropertyOptional({
+    description: 'Filter by blocked status',
+    example: false,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isBlocked?: boolean;
+
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -85,6 +94,9 @@ export class AdminOwnerResponseDto {
   isActive: boolean;
 
   @ApiProperty()
+  isBlocked: boolean;
+
+  @ApiProperty()
   phoneVerified: boolean;
 
   @ApiPropertyOptional({ nullable: true })
@@ -117,7 +129,13 @@ export class AdminChannelPartnerResponseDto {
   isActive: boolean;
 
   @ApiProperty()
+  isBlocked: boolean;
+
+  @ApiProperty()
   phoneVerified: boolean;
+
+  @ApiProperty()
+  isAgreementCompleted: boolean;
 
   @ApiPropertyOptional({ nullable: true })
   channelPartnerCode: string | null;
@@ -144,6 +162,61 @@ export class AdminChannelPartnerResponseDto {
   updatedAt: Date;
 }
 
+// Unified user response DTO that includes all possible fields
+export class AdminUsersListResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  name: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  email: string | null;
+
+  @ApiProperty()
+  phone: string;
+
+  @ApiProperty({ enum: UserRole })
+  role: UserRole;
+
+  @ApiProperty()
+  isActive: boolean;
+
+  @ApiProperty()
+  isBlocked: boolean;
+
+  @ApiProperty()
+  phoneVerified: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  intent: string | null;
+
+  // Channel Partner specific fields (optional)
+  @ApiPropertyOptional({ nullable: true })
+  isAgreementCompleted?: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  channelPartnerCode?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  firmName?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  cities?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  businessSince?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  aboutYourSelf?: string | null;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+}
+
 export class AdminOwnerListResponseDto<T> {
   @ApiProperty()
   success: boolean;
@@ -160,4 +233,3 @@ export class AdminOwnerListResponseDto<T> {
   @ApiProperty()
   limit: number;
 }
-

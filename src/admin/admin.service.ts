@@ -49,6 +49,7 @@ import {
   AdminOwnerResponseDto,
   AdminChannelPartnerResponseDto,
   AdminOwnerListResponseDto,
+  AdminUsersListResponseDto,
   AdminFurnishingListQueryDto,
   AdminFurnishingResponseDto,
   AdminCreateFurnishingDto,
@@ -57,6 +58,11 @@ import {
   AdminAmenityResponseDto,
   AdminCreateAmenityDto,
   AdminUpdateAmenityDto,
+  AdminEditUserDto,
+  AdminEditUserResponseDto,
+  AdminBlockUserResponseDto,
+  AdminUnblockUserResponseDto,
+  AdminUserDetailResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
@@ -66,8 +72,10 @@ import { LocalityRepository } from '../property/repositories/locality.repository
 import { FurnishingRepository } from '../property/repositories/furnishing.repository';
 import { AmenityRepository } from '../property/repositories/amenity.repository';
 import { ChannelPartnerCodeRepository } from '../user/repositories/channel-partner-code.repository';
+import { ChannelPartnerAgreementRepository } from '../user/repositories/channel-partner-agreement.repository';
 import { UserRepository } from '../user/repositories/user.repository';
 import { PropertyService } from '../property/property.service';
+import { AgreementStatus } from '../user/entities/channel-partner-agreement.entity';
 import { AdminRole } from './enum/admin-role.enum';
 import { AdminPermission } from './enum/admin-permission.enum';
 import { Property } from '../property/entities/property.entity';
@@ -217,6 +225,7 @@ export class AdminService {
     private readonly furnishingRepository: FurnishingRepository,
     private readonly amenityRepository: AmenityRepository,
     private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
+    private readonly channelPartnerAgreementRepository: ChannelPartnerAgreementRepository,
     private readonly userRepository: UserRepository,
     private readonly propertyService: PropertyService,
     private readonly jwtService: JwtService,
@@ -948,6 +957,7 @@ export class AdminService {
       role: UserRole.OWNER,
       search,
       isActive: query?.isActive,
+      isBlocked: query?.isBlocked,
       phoneVerified: query?.phoneVerified,
     });
 
@@ -974,10 +984,88 @@ export class AdminService {
       role: UserRole.CHANNEL_PARTNER,
       search,
       isActive: query?.isActive,
+      isBlocked: query?.isBlocked,
       phoneVerified: query?.phoneVerified,
     });
 
-    const data = items.map((user) => this.toChannelPartnerResponse(user));
+    // Fetch agreement status for all channel partners
+    const agreementStatusMap = new Map<string, boolean>();
+    for (const user of items) {
+      const latestAgreement = await this.channelPartnerAgreementRepository.findLatestByUserId(user.id);
+      const isAgreementCompleted = latestAgreement?.status === AgreementStatus.COMPLETED;
+      agreementStatusMap.set(user.id, isAgreementCompleted ?? false);
+    }
+
+    const data = items.map((user) => 
+      this.toChannelPartnerResponse(user, agreementStatusMap.get(user.id) ?? false)
+    );
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async listUsers(
+    query: AdminOwnerListQueryDto,
+  ): Promise<AdminOwnerListResponseDto<AdminUsersListResponseDto>> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+
+    const { items, total } = await this.userRepository.findPaginated({
+      page,
+      limit,
+      role: query?.role, // Optional role filter - can be undefined to get all users
+      search,
+      isActive: query?.isActive,
+      isBlocked: query?.isBlocked,
+      phoneVerified: query?.phoneVerified,
+    });
+
+    // Separate users by role
+    const channelPartnerIds = items
+      .filter((user) => user.role === UserRole.CHANNEL_PARTNER)
+      .map((user) => user.id);
+
+    // Fetch agreement status for channel partners only
+    const agreementStatusMap = new Map<string, boolean>();
+    for (const userId of channelPartnerIds) {
+      const latestAgreement = await this.channelPartnerAgreementRepository.findLatestByUserId(userId);
+      const isAgreementCompleted = latestAgreement?.status === AgreementStatus.COMPLETED;
+      agreementStatusMap.set(userId, isAgreementCompleted ?? false);
+    }
+
+    const data = items.map((user) => {
+      const baseData: AdminUsersListResponseDto = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+        isBlocked: user.isBlocked,
+        phoneVerified: user.phoneVerified,
+        intent: user.intent ?? null,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+
+      // Add channel partner specific fields
+      if (user.role === UserRole.CHANNEL_PARTNER) {
+        baseData.isAgreementCompleted = agreementStatusMap.get(user.id) ?? false;
+        baseData.channelPartnerCode = user.channelPartnerCode ?? null;
+        baseData.firmName = user.firmName ?? null;
+        baseData.cities = user.cities ?? null;
+        baseData.businessSince = user.businessSince ?? null;
+        baseData.aboutYourSelf = user.aboutYourSelf ?? null;
+      }
+
+      return baseData;
+    });
+
     return {
       success: true,
       data,
@@ -1622,6 +1710,7 @@ export class AdminService {
       phone: user.phone,
       role: user.role,
       isActive: user.isActive,
+      isBlocked: user.isBlocked,
       phoneVerified: user.phoneVerified,
       intent: user.intent ?? null,
       createdAt: user.createdAt,
@@ -1631,6 +1720,7 @@ export class AdminService {
 
   private toChannelPartnerResponse(
     user: User,
+    isAgreementCompleted: boolean = false,
   ): AdminChannelPartnerResponseDto {
     return {
       id: user.id,
@@ -1639,7 +1729,9 @@ export class AdminService {
       phone: user.phone,
       role: user.role,
       isActive: user.isActive,
+      isBlocked: user.isBlocked,
       phoneVerified: user.phoneVerified,
+      isAgreementCompleted,
       channelPartnerCode: user.channelPartnerCode,
       firmName: user.firmName,
       cities: user.cities,
@@ -1944,6 +2036,141 @@ export class AdminService {
       isActive: amenity.isActive,
       createdAt: amenity.createdAt,
       updatedAt: amenity.updatedAt,
+    };
+  }
+
+  // User management methods
+  async blockUser(userId: string): Promise<AdminBlockUserResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(`User with ID ${userId} not found`);
+    }
+
+    if (user.isBlocked) {
+      throw new BadRequestException('User is already blocked');
+    }
+
+    await this.userRepository.update(userId, { isBlocked: true });
+
+    return {
+      success: true,
+      message: 'User blocked successfully',
+      userId,
+      isBlocked: true,
+    };
+  }
+
+  async unblockUser(userId: string): Promise<AdminUnblockUserResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(`User with ID ${userId} not found`);
+    }
+
+    if (!user.isBlocked) {
+      throw new BadRequestException('User is not blocked');
+    }
+
+    await this.userRepository.update(userId, { isBlocked: false });
+
+    return {
+      success: true,
+      message: 'User unblocked successfully',
+      userId,
+      isBlocked: false,
+    };
+  }
+
+  async editUser(
+    userId: string,
+    dto: AdminEditUserDto,
+  ): Promise<AdminEditUserResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(`User with ID ${userId} not found`);
+    }
+
+    // Check for email uniqueness if email is being updated
+    if (dto.email && dto.email !== user.email) {
+      const existingUser = await this.userRepository.findByEmail(dto.email);
+      if (existingUser && existingUser.id !== userId) {
+        throw new BadRequestException(
+          `Email ${dto.email} is already in use by another user`,
+        );
+      }
+    }
+
+    const updateData: Partial<User> = {};
+
+    if (dto.name !== undefined) {
+      updateData.name = dto.name?.trim() || null;
+    }
+    if (dto.email !== undefined) {
+      updateData.email = dto.email?.trim() || null;
+    }
+    if (dto.firmName !== undefined) {
+      updateData.firmName = dto.firmName?.trim() || null;
+    }
+    if (dto.cities !== undefined) {
+      updateData.cities = dto.cities?.trim() || null;
+    }
+    if (dto.businessSince !== undefined) {
+      updateData.businessSince = dto.businessSince?.trim() || null;
+    }
+    if (dto.aboutYourSelf !== undefined) {
+      updateData.aboutYourSelf = dto.aboutYourSelf?.trim() || null;
+    }
+    if (dto.isActive !== undefined) {
+      updateData.isActive = dto.isActive;
+    }
+    if (dto.phoneVerified !== undefined) {
+      updateData.phoneVerified = dto.phoneVerified;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new BadRequestException('No fields provided to update');
+    }
+
+    const updatedUser = await this.userRepository.update(userId, updateData);
+
+    return {
+      success: true,
+      message: 'User updated successfully',
+      data: this.toUserDetailResponse(updatedUser!),
+    };
+  }
+
+  async getUserDetails(
+    userId: string,
+  ): Promise<{ success: boolean; data: AdminUserDetailResponseDto }> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(`User with ID ${userId} not found`);
+    }
+
+    return {
+      success: true,
+      data: this.toUserDetailResponse(user),
+    };
+  }
+
+  private toUserDetailResponse(user: User): AdminUserDetailResponseDto {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      isBlocked: user.isBlocked,
+      phoneVerified: user.phoneVerified,
+      intent: user.intent ?? null,
+      channelPartnerCode: user.channelPartnerCode ?? null,
+      firmName: user.firmName ?? null,
+      cities: user.cities ?? null,
+      businessSince: user.businessSince ?? null,
+      aboutYourSelf: user.aboutYourSelf ?? null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 }

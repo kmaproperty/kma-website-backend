@@ -45,6 +45,13 @@ export class User extends BaseEntity {
   isActive: boolean;
 
   @Column({
+    name: 'is_blocked',
+    type: 'boolean',
+    default: false,
+  })
+  isBlocked: boolean;
+
+  @Column({
     name: 'phone_verified',
     type: 'boolean',
     default: false,
