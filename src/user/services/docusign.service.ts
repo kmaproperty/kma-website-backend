@@ -369,13 +369,28 @@ export class DocuSignService {
         { recipientViewRequest: viewRequest },
       );
 
-      // Save agreement to database
-      await this.agreementRepository.create({
-        userId,
-        envelopeId,
-        status: AgreementStatus.SENT,
-        returnUrl,
-      });
+      // Check if user already has an agreement
+      const existingAgreement = await this.agreementRepository.findLatestByUserId(userId);
+      
+      if (existingAgreement) {
+        // Update existing agreement with new envelope
+        await this.agreementRepository.update(existingAgreement.id, {
+          envelopeId,
+          status: AgreementStatus.SENT,
+          returnUrl,
+          completedAt: null, // Reset completion date
+        });
+        this.logger.log(`Updated existing agreement for user ${userId} with new envelope ${envelopeId}`);
+      } else {
+        // Create new agreement
+        await this.agreementRepository.create({
+          userId,
+          envelopeId,
+          status: AgreementStatus.SENT,
+          returnUrl,
+        });
+        this.logger.log(`Created new agreement for user ${userId} with envelope ${envelopeId}`);
+      }
 
       return {
         envelopeId,
@@ -527,13 +542,28 @@ export class DocuSignService {
         { recipientViewRequest: viewRequest },
       );
 
-      // Save agreement to database
-      await this.agreementRepository.create({
-        userId,
-        envelopeId,
-        status: AgreementStatus.SENT,
-        returnUrl,
-      });
+      // Check if user already has an agreement
+      const existingAgreement = await this.agreementRepository.findLatestByUserId(userId);
+      
+      if (existingAgreement) {
+        // Update existing agreement with new envelope
+        await this.agreementRepository.update(existingAgreement.id, {
+          envelopeId,
+          status: AgreementStatus.SENT,
+          returnUrl,
+          completedAt: null, // Reset completion date
+        });
+        this.logger.log(`Updated existing agreement for user ${userId} with new envelope ${envelopeId}`);
+      } else {
+        // Create new agreement
+        await this.agreementRepository.create({
+          userId,
+          envelopeId,
+          status: AgreementStatus.SENT,
+          returnUrl,
+        });
+        this.logger.log(`Created new agreement for user ${userId} with envelope ${envelopeId}`);
+      }
 
       return {
         envelopeId,

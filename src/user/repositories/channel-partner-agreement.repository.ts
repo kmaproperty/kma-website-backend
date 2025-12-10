@@ -38,6 +38,18 @@ export class ChannelPartnerAgreementRepository {
     });
   }
 
+  /**
+   * Find the most recent agreement for a user
+   */
+  async findLatestByUserId(
+    userId: string,
+  ): Promise<ChannelPartnerAgreement | null> {
+    return await this.agreementRepository.findOne({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async update(
     id: string,
     updateData: Partial<ChannelPartnerAgreement>,

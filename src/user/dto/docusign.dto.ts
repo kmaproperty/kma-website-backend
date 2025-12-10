@@ -175,6 +175,79 @@ export class ListAgreementsResponseDto {
   data: AgreementResponseDto[];
 }
 
+export class SimplifiedAgreementResponseDto {
+  @ApiProperty({
+    description: 'Agreement ID',
+    example: 'uuid-v4',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'User ID',
+    example: 'uuid-v4',
+  })
+  userId: string;
+
+  @ApiProperty({
+    description: 'DocuSign envelope ID',
+    example: 'abc123-def456-ghi789',
+  })
+  envelopeId: string;
+
+  @ApiProperty({
+    description: 'Agreement status',
+    enum: ['sent', 'pending', 'completed'],
+    example: 'pending',
+  })
+  status: 'sent' | 'pending' | 'completed';
+
+  @ApiProperty({
+    description: 'Completion date',
+    example: '2024-01-01T00:00:00Z',
+    required: false,
+  })
+  completedAt: Date | null;
+
+  @ApiProperty({
+    description: 'Return URL',
+    example: 'https://example.com/signature-complete',
+    required: false,
+  })
+  returnUrl: string | null;
+
+  @ApiProperty({
+    description: 'Created date',
+    example: '2024-01-01T00:00:00Z',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    description: 'Updated date',
+    example: '2024-01-01T00:00:00Z',
+  })
+  updatedAt: Date;
+}
+
+export class ListAgreementsSimplifiedResponseDto {
+  @ApiProperty({
+    description: 'Success status',
+    example: true,
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'Response message',
+    example: 'Agreements retrieved successfully',
+  })
+  message: string;
+
+  @ApiProperty({
+    description: 'List of agreements with simplified status',
+    type: [SimplifiedAgreementResponseDto],
+  })
+  data: SimplifiedAgreementResponseDto[];
+}
+
 export class UpdateEnvelopeStatusDto {
   @ApiProperty({
     description: 'Envelope ID from DocuSign',

@@ -25,6 +25,7 @@ import { DocuSignService } from './services/docusign.service';
 import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
 import { ApiResponseDto, ApiResponse as ApiResponseType } from '../common/dto';
 import { Public } from '../common/decorators/public.decorator';
+import { AgreementStatus } from './entities/channel-partner-agreement.entity';
 import {
   SendOtpDto,
   SendOtpResponseDto,
@@ -44,13 +45,13 @@ import {
   DashboardResponseDto,
   CreateEnvelopeDto,
   CreateEnvelopeResponseDto,
-  GetAgreementResponseDto,
   ListAgreementsResponseDto,
   CreateFixedAgreementEnvelopeDto,
   UpdateEnvelopeStatusDto,
   UpdateEnvelopeStatusResponseDto,
   CreateTemplateDto,
   CreateTemplateResponseDto,
+  ListAgreementsSimplifiedResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import {
@@ -424,6 +425,52 @@ export class UserController {
   //   };
   // }
 
+  @Get('agreements')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'List all agreements for the authenticated user',
+    description: 'Returns a list of all agreements with their status (sent, pending, or completed) for the authenticated user'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Agreements retrieved successfully',
+    type: ListAgreementsSimplifiedResponseDto,
+  })
+  async listAgreements(@Req() req: Request): Promise<ListAgreementsSimplifiedResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const agreements = await this.agreementRepository.findByUserId(req.user.id);
+    
+    // Helper function to map AgreementStatus to simplified status
+    const getSimplifiedStatus = (status: AgreementStatus): 'sent' | 'pending' | 'completed' => {
+      if (status === AgreementStatus.COMPLETED) {
+        return 'completed';
+      } else if (status === AgreementStatus.SENT) {
+        return 'sent';
+      } else {
+        // DELIVERED, SIGNED, DECLINED, VOIDED -> pending
+        return 'pending';
+      }
+    };
+
+    return {
+      success: true,
+      message: 'Agreements retrieved successfully',
+      data: agreements.map((agreement) => ({
+        id: agreement.id,
+        userId: agreement.userId,
+        envelopeId: agreement.envelopeId,
+        status: getSimplifiedStatus(agreement.status),
+        completedAt: agreement.completedAt,
+        returnUrl: agreement.returnUrl,
+        createdAt: agreement.createdAt,
+        updatedAt: agreement.updatedAt,
+      })),
+    };
+  }
+
   @Get('docusign/agreements')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get all agreements for the authenticated user' })
@@ -452,48 +499,6 @@ export class UserController {
         createdAt: agreement.createdAt,
         updatedAt: agreement.updatedAt,
       })),
-    };
-  }
-
-  @Get('docusign/agreements/:envelopeId')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get agreement by envelope ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Agreement retrieved successfully',
-    type: GetAgreementResponseDto,
-  })
-  async getAgreement(
-    @Param('envelopeId') envelopeId: string,
-    @Req() req: Request,
-  ): Promise<GetAgreementResponseDto> {
-    if (!req.user?.id) {
-      throw new BadRequestException('User not authenticated');
-    }
-
-    const agreement = await this.agreementRepository.findByEnvelopeId(envelopeId);
-    
-    if (!agreement) {
-      throw new BadRequestException('Agreement not found');
-    }
-
-    if (agreement.userId !== req.user.id) {
-      throw new BadRequestException('Unauthorized to access this agreement');
-    }
-
-    return {
-      success: true,
-      message: 'Agreement retrieved successfully',
-      data: {
-        id: agreement.id,
-        userId: agreement.userId,
-        envelopeId: agreement.envelopeId,
-        status: agreement.status,
-        completedAt: agreement.completedAt,
-        returnUrl: agreement.returnUrl,
-        createdAt: agreement.createdAt,
-        updatedAt: agreement.updatedAt,
-      },
     };
   }
 
@@ -679,7 +684,7 @@ export class UserController {
           agreementUpdated: !!result,
           agreementId: result?.id,
         });
-      } catch (error) {
+    } catch (error) {
         const duration = Date.now() - startTime;
         this.logger.error('Error processing webhook asynchronously', {
           error: error.message,
