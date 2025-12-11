@@ -275,6 +275,16 @@ export class UserService {
       throw new BadRequestException(roleMessage);
     }
 
+    // Check if user is blocked
+    if (existingUser.isBlocked) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
+    }
+
+    // Check if user is inactive
+    if (!existingUser.isActive) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
+    }
+
     // Use the determined role for sending OTP
     return this.sendOtp({ ...sendOtpDto, role: userRole });
   }
@@ -364,6 +374,18 @@ export class UserService {
       let isNewUser = false;
 
       if (existingUser) {
+        // Check if user is blocked
+        if (existingUser.isBlocked) {
+          await queryRunner.rollbackTransaction();
+          throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
+        }
+
+        // Check if user is inactive
+        if (!existingUser.isActive) {
+          await queryRunner.rollbackTransaction();
+          throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
+        }
+
         // User exists, update phone_verified flag
         await queryRunner.manager.update(
           User,

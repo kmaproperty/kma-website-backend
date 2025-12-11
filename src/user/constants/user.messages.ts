@@ -23,6 +23,8 @@ export const USER_MESSAGES = {
     EMAIL_ALREADY_REGISTERED:
       'Email address is already registered with another user.',
     ALREADY_EXISTS: 'User exists, please login',
+    ACCOUNT_BLOCKED: 'Your account has been blocked. Please contact support.',
+    ACCOUNT_INACTIVE: 'Your account is inactive. Please contact support.',
   },
   OTP: {
     SENT: 'OTP sent successfully',

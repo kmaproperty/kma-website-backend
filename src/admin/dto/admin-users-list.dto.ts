@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsBoolean,
   IsInt,
   IsOptional,
   IsString,
@@ -21,39 +20,12 @@ export class AdminOwnerListQueryDto {
 
   @ApiPropertyOptional({
     description: 'Filter by user role',
-    enum: UserRole,
+    enum: [UserRole.OWNER, UserRole.CHANNEL_PARTNER, UserRole.END_USER],
     example: UserRole.OWNER,
   })
   @IsOptional()
   @IsString()
   role?: UserRole;
-
-  @ApiPropertyOptional({
-    description: 'Filter by active status',
-    example: true,
-  })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  isActive?: boolean;
-
-  @ApiPropertyOptional({
-    description: 'Filter by phone verified status',
-    example: true,
-  })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  phoneVerified?: boolean;
-
-  @ApiPropertyOptional({
-    description: 'Filter by blocked status',
-    example: false,
-  })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  isBlocked?: boolean;
 
   @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
   @IsOptional()

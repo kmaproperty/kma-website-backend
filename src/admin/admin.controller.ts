@@ -858,7 +858,7 @@ export class AdminController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ 
     summary: 'List all users with filters and pagination',
-    description: 'Lists all users (OWNER, CHANNEL_PARTNER, END_USER). Can filter by role, search term, active status, blocked status, and phone verified status. For channel partners, includes agreement completion status.'
+    description: 'Lists all users (OWNER, CHANNEL_PARTNER, END_USER). Can filter by role and search term. For channel partners, includes agreement completion status.'
   })
   @ApiResponse({
     status: 200,
@@ -869,39 +869,6 @@ export class AdminController {
     @Query() query: AdminOwnerListQueryDto,
   ): Promise<AdminOwnerListResponseDto<AdminUsersListResponseDto>> {
     return this.adminService.listUsers(query);
-  }
-
-  // User listing endpoints (Owners and Channel Partners)
-  @Get('owners')
-  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.OWNER_MANAGEMENT)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'List owners with filters and pagination' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of owners',
-    type: AdminOwnerListResponseDto,
-  })
-  async listOwners(
-    @Query() query: AdminOwnerListQueryDto,
-  ): Promise<AdminOwnerListResponseDto<AdminOwnerResponseDto>> {
-    return this.adminService.listOwners(query);
-  }
-
-  @Get('channel-partners')
-  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
-  @RequireAdminPermissions(AdminPermission.CHANNEL_PARTNER_MANAGEMENT)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'List channel partners with filters and pagination' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of channel partners',
-    type: AdminOwnerListResponseDto,
-  })
-  async listChannelPartners(
-    @Query() query: AdminOwnerListQueryDto,
-  ): Promise<AdminOwnerListResponseDto<AdminChannelPartnerResponseDto>> {
-    return this.adminService.listChannelPartners(query);
   }
 
   // Lead management endpoints

@@ -943,71 +943,6 @@ export class AdminService {
     };
   }
 
-  // User listing (Owners and Channel Partners)
-  async listOwners(
-    query: AdminOwnerListQueryDto,
-  ): Promise<AdminOwnerListResponseDto<AdminOwnerResponseDto>> {
-    const page = Math.max(1, query?.page || 1);
-    const limit = Math.min(100, Math.max(1, query?.limit || 20));
-    const search = query?.search?.trim();
-
-    const { items, total } = await this.userRepository.findPaginated({
-      page,
-      limit,
-      role: UserRole.OWNER,
-      search,
-      isActive: query?.isActive,
-      isBlocked: query?.isBlocked,
-      phoneVerified: query?.phoneVerified,
-    });
-
-    const data = items.map((user) => this.toOwnerResponse(user));
-    return {
-      success: true,
-      data,
-      total,
-      page,
-      limit,
-    };
-  }
-
-  async listChannelPartners(
-    query: AdminOwnerListQueryDto,
-  ): Promise<AdminOwnerListResponseDto<AdminChannelPartnerResponseDto>> {
-    const page = Math.max(1, query?.page || 1);
-    const limit = Math.min(100, Math.max(1, query?.limit || 20));
-    const search = query?.search?.trim();
-
-    const { items, total } = await this.userRepository.findPaginated({
-      page,
-      limit,
-      role: UserRole.CHANNEL_PARTNER,
-      search,
-      isActive: query?.isActive,
-      isBlocked: query?.isBlocked,
-      phoneVerified: query?.phoneVerified,
-    });
-
-    // Fetch agreement status for all channel partners
-    const agreementStatusMap = new Map<string, boolean>();
-    for (const user of items) {
-      const latestAgreement = await this.channelPartnerAgreementRepository.findLatestByUserId(user.id);
-      const isAgreementCompleted = latestAgreement?.status === AgreementStatus.COMPLETED;
-      agreementStatusMap.set(user.id, isAgreementCompleted ?? false);
-    }
-
-    const data = items.map((user) => 
-      this.toChannelPartnerResponse(user, agreementStatusMap.get(user.id) ?? false)
-    );
-    return {
-      success: true,
-      data,
-      total,
-      page,
-      limit,
-    };
-  }
-
   async listUsers(
     query: AdminOwnerListQueryDto,
   ): Promise<AdminOwnerListResponseDto<AdminUsersListResponseDto>> {
@@ -1020,9 +955,6 @@ export class AdminService {
       limit,
       role: query?.role, // Optional role filter - can be undefined to get all users
       search,
-      isActive: query?.isActive,
-      isBlocked: query?.isBlocked,
-      phoneVerified: query?.phoneVerified,
     });
 
     // Separate users by role
