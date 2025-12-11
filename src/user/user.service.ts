@@ -49,6 +49,7 @@ import {
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
+import { GooglePlacesService } from '../property/services/google-places.service';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
 import { DashboardResponseDto } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
@@ -70,6 +71,7 @@ export class UserService {
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
     private readonly propertyRepository: PropertyRepository,
+    private readonly googlePlacesService: GooglePlacesService,
     private readonly leadRepository: LeadRepository,
     private readonly userRoleHistoryRepository: UserRoleHistoryRepository,
   ) {}
@@ -1738,5 +1740,33 @@ export class UserService {
       limit,
       totalPages,
     };
+  }
+
+  /**
+   * Auto-detect nearby cities using Google Places API based on latitude/longitude
+   */
+  async autoDetectCity(
+    latitude: number,
+    longitude: number,
+  ): Promise<any[]> {
+    // Search for nearby cities within 10-15 km
+    const nearbyCities = await this.googlePlacesService.searchNearbyCities(
+      latitude,
+      longitude,
+      15000, // 15km radius
+    );
+
+    // Map to response format
+    return nearbyCities.map((city) => ({
+      id: city.placeId || `google-${Math.random()}`,
+      name: city.name,
+      code: city.name.toLowerCase().replace(/\s+/g, '-'),
+      state: city.state || undefined,
+      latitude: city.latitude || undefined,
+      longitude: city.longitude || undefined,
+      source: 'google',
+      country: city.country,
+      placeId: city.placeId,
+    }));
   }
 }

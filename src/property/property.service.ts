@@ -36,6 +36,7 @@ import {
   OwnerPropertyListingItemDto,
   OwnerPropertyListingResponseDto,
   OwnerPropertyDetailResponseDto,
+  CityResponseDto,
 } from './dto/property-response.dto';
 
 @Injectable()

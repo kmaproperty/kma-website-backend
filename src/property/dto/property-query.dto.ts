@@ -180,3 +180,23 @@ export class LocationSearchQueryDto {
   @Min(1)
   limit?: number = 10;
 }
+
+export class AutoDetectCityQueryDto {
+  @ApiProperty({
+    description: 'Latitude coordinate',
+    example: 28.6139,
+    required: true,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  latitude: number;
+
+  @ApiProperty({
+    description: 'Longitude coordinate',
+    example: 77.2090,
+    required: true,
+  })
+  @IsNumber()
+  @Type(() => Number)
+  longitude: number;
+}

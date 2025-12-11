@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiOkResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UserService } from './user.service';
@@ -272,6 +273,51 @@ export class UserController {
   getCities(): ApiResponseType<string[]> {
     const cities = this.userService.getCities();
     return ApiResponseDto.success(cities, 'Cities fetched successfully');
+  }
+
+  @Get('auto-detect-city')
+  @Public()
+  @ApiOperation({
+    summary: 'Auto-detect nearby cities',
+    description:
+      'Detects nearby cities (within 10-15 km) based on latitude and longitude using Google Places API. Returns up to 15 cities sorted by proximity.',
+  })
+  @ApiQuery({
+    name: 'latitude',
+    required: true,
+    description: 'Latitude coordinate',
+    example: 28.6139,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'longitude',
+    required: true,
+    description: 'Longitude coordinate',
+    example: 77.2090,
+    type: Number,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Nearby cities detected successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid latitude or longitude',
+  })
+  async autoDetectCity(
+    @Query('latitude') latitude: number,
+    @Query('longitude') longitude: number,
+  ): Promise<ApiResponseType<any[]>> {
+    if (
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      throw new BadRequestException('Invalid latitude or longitude values');
+    }
+    const cities = await this.userService.autoDetectCity(latitude, longitude);
+    return ApiResponseDto.success(cities, 'Cities detected successfully');
   }
 
   @Get('leads')

@@ -86,6 +86,7 @@ import { AdminModule } from '../admin/admin.module';
     LocalityRepository,
     FurnishingRepository,
     AmenityRepository,
+    GooglePlacesService,
   ],
 })
 export class PropertyModule implements OnModuleInit {

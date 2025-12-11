@@ -1372,4 +1372,140 @@ export class GooglePlacesService {
       return null;
     }
   }
+
+  /**
+   * Search for nearby cities using Google Places Nearby Search API
+   * Returns cities within 10-15 km radius of the given coordinates
+   */
+  async searchNearbyCities(
+    latitude: number,
+    longitude: number,
+    radius: number = 15000, // 15km in meters
+  ): Promise<GooglePlaceCity[]> {
+    if (!this.apiKey) {
+      this.logger.warn(
+        'Google Maps API key not configured - skipping Google API search',
+      );
+      return [];
+    }
+
+    try {
+      const nearbySearchUrl = `${this.baseUrl}/nearbysearch/json`;
+      const response = await axios.get(nearbySearchUrl, {
+        params: {
+          location: `${latitude},${longitude}`,
+          radius: radius,
+          type: '(cities)',
+          key: this.apiKey,
+        },
+      });
+
+      if (
+        response.data.status !== 'OK' &&
+        response.data.status !== 'ZERO_RESULTS'
+      ) {
+        this.logger.error(
+          `Google Places Nearby Search API error: ${response.data.status}`,
+        );
+        return [];
+      }
+
+      if (
+        !response.data.results ||
+        response.data.results.length === 0
+      ) {
+        return [];
+      }
+
+      const cities: GooglePlaceCity[] = [];
+
+      // Process each result
+      for (const result of response.data.results) {
+        try {
+          // Extract city information from the result
+          const cityName = this.extractCityNameFromResult(result);
+          if (!cityName) {
+            continue;
+          }
+
+          // Get place details for more information
+          const placeDetails = await this.getPlaceDetails(result.place_id);
+          if (placeDetails) {
+            cities.push(placeDetails);
+          } else {
+            // Fallback: use basic info from nearby search result
+            const addressComponents = result.address_components || [];
+            const cityComponent = addressComponents.find(
+              (component: any) =>
+                component.types.includes('locality') ||
+                component.types.includes('administrative_area_level_2'),
+            );
+            const stateComponent = addressComponents.find((component: any) =>
+              component.types.includes('administrative_area_level_1'),
+            );
+            const countryComponent = addressComponents.find((component: any) =>
+              component.types.includes('country'),
+            );
+
+            if (cityComponent) {
+              cities.push({
+                name: cityComponent.long_name,
+                state: stateComponent?.long_name,
+                country: countryComponent?.long_name || 'India',
+                latitude: result.geometry?.location?.lat,
+                longitude: result.geometry?.location?.lng,
+                placeId: result.place_id,
+              });
+            }
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error processing nearby city result: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
+      }
+
+      // Remove duplicates based on placeId or name
+      const uniqueCities = this.deduplicateCities(cities);
+
+      this.logger.debug(
+        `Found ${uniqueCities.length} nearby cities within ${radius / 1000}km`,
+      );
+
+      return uniqueCities.slice(0, 15); // Limit to 15 cities
+    } catch (error) {
+      this.logger.error(
+        `Error searching nearby cities from Google: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Extract city name from Google Places API result
+   */
+  private extractCityNameFromResult(result: any): string | null {
+    const addressComponents = result.address_components || [];
+    const cityComponent = addressComponents.find(
+      (component: any) =>
+        component.types.includes('locality') ||
+        component.types.includes('administrative_area_level_2'),
+    );
+    return cityComponent?.long_name || result.name || null;
+  }
+
+  /**
+   * Remove duplicate cities based on placeId or name
+   */
+  private deduplicateCities(cities: GooglePlaceCity[]): GooglePlaceCity[] {
+    const seen = new Set<string>();
+    return cities.filter((city) => {
+      const key = city.placeId || city.name?.toLowerCase() || '';
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
 }
