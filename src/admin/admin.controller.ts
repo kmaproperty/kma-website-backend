@@ -34,6 +34,7 @@ import {
   AdminCityResponseDto,
   AdminCreateCityDto,
   AdminUpdateCityDto,
+  AdminMarkCityFeaturedDto,
   AdminSocietyListQueryDto,
   AdminSocietyResponseDto,
   AdminCreateSocietyDto,
@@ -288,6 +289,23 @@ export class AdminController {
     @Body() dto: AdminUpdateCityDto,
   ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
     return this.adminService.updateCity(cityId, dto);
+  }
+
+  @Patch('cities/:id/featured')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Mark city as featured or unfeatured' })
+  @ApiResponse({
+    status: 200,
+    description: 'City featured status updated successfully',
+    type: AdminCityResponseDto,
+  })
+  async markCityFeatured(
+    @Param('id') cityId: string,
+    @Body() dto: AdminMarkCityFeaturedDto,
+  ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
+    return this.adminService.markCityFeatured(cityId, dto);
   }
 
   @Delete('cities/:id')

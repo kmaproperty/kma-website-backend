@@ -117,4 +117,12 @@ export class User extends BaseEntity {
     nullable: true,
   })
   aboutYourSelf: string | null;
+
+  @Column({
+    name: 'profile_image',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  profileImage: string | null;
 }

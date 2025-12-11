@@ -64,6 +64,9 @@ export class AdminCityResponseDto {
   longitude: number | null;
 
   @ApiProperty()
+  isFeatured: boolean;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
@@ -115,9 +118,27 @@ export class AdminCreateCityDto {
   @IsOptional()
   @IsNumber()
   longitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Mark city as featured',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
 }
 
 export class AdminUpdateCityDto extends PartialType(AdminCreateCityDto) {}
+
+export class AdminMarkCityFeaturedDto {
+  @ApiProperty({
+    description: 'Mark city as featured',
+    example: true,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  isFeatured: boolean;
+}
 
 export class AdminSocietyListQueryDto {
   @ApiPropertyOptional({

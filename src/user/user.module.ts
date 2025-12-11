@@ -21,10 +21,12 @@ import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { DocuSignService } from './services/docusign.service';
 import { UserController } from './user.controller';
 import { ChannelPartnerCodeController } from './channel-partner-code.controller';
+import { EndUserController } from './end-user.controller';
 import { LoggerService } from '../logger/logger.service';
 import { ErrorHandlerService } from '../common/errorHandler/error-handler.service';
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { AdminModule } from '../admin/admin.module';
+import { PropertyModule } from '../property/property.module';
 
 const entities = [User, Otp, ChannelPartnerCode, ChannelPartnerAgreement, Lead, UserRoleHistory, Property];
 const repositories = [
@@ -41,6 +43,7 @@ const repositories = [
   imports: [
     TypeOrmModule.forFeature(entities),
     AdminModule,
+    PropertyModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
@@ -58,7 +61,7 @@ const repositories = [
       inject: [ConfigService],
     }),
   ],
-  controllers: [UserController, ChannelPartnerCodeController],
+  controllers: [UserController, ChannelPartnerCodeController, EndUserController],
   providers: [
     UserService,
     ChannelPartnerCodeService,
@@ -114,6 +117,9 @@ export class UserModule implements NestModule {
         'users/docusign/agreements',
         'users/docusign/update-status',
         'users/docusign/channel-partner-agreement',
+        'end-user/profile',
+        'end-user/change-mobile',
+        'end-user/verify-change-mobile-otp',
       );
   }
 }

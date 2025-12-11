@@ -20,6 +20,7 @@ import {
   AdminCityResponseDto,
   AdminCreateCityDto,
   AdminUpdateCityDto,
+  AdminMarkCityFeaturedDto,
   AdminSocietyListQueryDto,
   AdminSocietyResponseDto,
   AdminCreateSocietyDto,
@@ -433,6 +434,7 @@ export class AdminService {
       state: dto.state?.trim() ?? null,
       latitude: dto.latitude ?? null,
       longitude: dto.longitude ?? null,
+      isFeatured: dto.isFeatured ?? false,
     });
 
     return {
@@ -465,8 +467,24 @@ export class AdminService {
       name: dto.name?.trim() ?? dto.name,
       code: normalizedCode ?? dto.code ?? city.code,
       state: dto.state?.trim() ?? dto.state,
+      isFeatured: dto.isFeatured !== undefined ? dto.isFeatured : city.isFeatured,
     });
 
+    const updated = await this.ensureCityExists(cityId);
+    return {
+      success: true,
+      data: this.toCityResponse(updated),
+    };
+  }
+
+  async markCityFeatured(
+    cityId: string,
+    dto: AdminMarkCityFeaturedDto,
+  ): Promise<{ success: boolean; data: AdminCityResponseDto }> {
+    await this.ensureCityExists(cityId);
+    await this.cityRepository.updateCity(cityId, {
+      isFeatured: dto.isFeatured,
+    });
     const updated = await this.ensureCityExists(cityId);
     return {
       success: true,
@@ -1451,6 +1469,7 @@ export class AdminService {
         city.longitude === null || city.longitude === undefined
           ? null
           : Number(city.longitude),
+      isFeatured: city.isFeatured ?? false,
       createdAt: city.createdAt,
       updatedAt: city.updatedAt,
     };

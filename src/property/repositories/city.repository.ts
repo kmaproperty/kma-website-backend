@@ -16,6 +16,13 @@ export class CityRepository {
     });
   }
 
+  async findFeatured(): Promise<MasterCity[]> {
+    return await this.cityRepository.find({
+      where: { isFeatured: true },
+      order: { name: 'ASC' },
+    });
+  }
+
   async findById(id: string): Promise<MasterCity | null> {
     return await this.cityRepository.findOne({
       where: { id },

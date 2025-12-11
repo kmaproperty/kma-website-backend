@@ -17,4 +17,7 @@ export class MasterCity extends BaseEntity {
 
   @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
   longitude: number | null;
+
+  @Column({ name: 'is_featured', type: 'boolean', default: false })
+  isFeatured: boolean;
 }

@@ -24,8 +24,27 @@ import {
   RefreshTokenDto,
   RefreshTokenResponseDto,
   LogoutResponseDto,
+  EndUserSignupDto,
+  EndUserSignupResponseDto,
+  EndUserVerifyOtpDto,
+  EndUserVerifyOtpResponseDto,
+  EndUserLoginDto,
+  EndUserLoginResponseDto,
+  EndUserVerifyLoginOtpDto,
+  EndUserVerifyLoginOtpResponseDto,
+  EndUserProfileResponseDto,
+  EndUserEditProfileDto,
+  EndUserEditProfileResponseDto,
+  EndUserChangeMobileDto,
+  EndUserChangeMobileResponseDto,
+  EndUserVerifyChangeMobileOtpDto,
+  EndUserVerifyChangeMobileOtpResponseDto,
+  EndUserHomePageResponseDto,
+  CityItemDto,
+  EndUserCitiesQueryDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
+import { CityRepository } from '../property/repositories/city.repository';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
 import { DashboardResponseDto } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
@@ -42,6 +61,7 @@ export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly otpRepository: OtpRepository,
+    private readonly cityRepository: CityRepository,
     private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
@@ -719,6 +739,346 @@ export class UserService {
   }
 
   /**
+   * End User Signup - Send OTP
+   * Takes name, email, phone and sends OTP for verification
+   */
+  async signupEndUser(
+    signupDto: EndUserSignupDto,
+  ): Promise<EndUserSignupResponseDto> {
+    const { name, email, phone } = signupDto;
+
+    // Check if user already exists with this phone and END_USER role
+    const existingUser = await this.userRepository.findByPhoneAndRole(
+      phone,
+      UserRole.END_USER,
+    );
+    if (existingUser) {
+      throw new BadRequestException(
+        'User with this phone number already exists. Please login instead.',
+      );
+    }
+
+    // Check if email is already registered
+    if (email) {
+      const existingUserByEmail = await this.userRepository.findByEmail(email);
+      if (existingUserByEmail) {
+        throw new BadRequestException(
+          USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+        );
+      }
+    }
+
+    // Send OTP for signup
+    const otpResponse = await this.sendOtpForSignup({
+      phone,
+      role: UserRole.END_USER,
+    });
+
+    return {
+      success: true,
+      message: 'OTP sent successfully to your mobile number',
+      phone,
+      otp: otpResponse.otp, // Only in development
+    };
+  }
+
+  /**
+   * End User Verify OTP - Complete Signup
+   * Validates OTP and creates complete END_USER account with name and email
+   */
+  async verifyEndUserOtp(
+    verifyOtpDto: EndUserVerifyOtpDto,
+  ): Promise<EndUserVerifyOtpResponseDto> {
+    const { name, email, phone, otp } = verifyOtpDto;
+
+    // Find the OTP record for this phone
+    const otpRecord = await this.otpRepository.findActiveByPhone(phone);
+
+    if (!otpRecord) {
+      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
+    }
+
+    // Check if OTP has expired
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
+    }
+
+    // Check if OTP is already used
+    if (otpRecord.isUsed) {
+      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
+    }
+
+    // Check if too many attempts
+    if (otpRecord.attempts >= 3) {
+      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
+    }
+
+    // Validate OTP code
+    if (otpRecord.otpCode !== otp) {
+      await this.otpRepository.incrementAttempts(otpRecord.id);
+      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
+    }
+
+    // Use transaction to ensure atomicity
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Mark OTP as used
+      await queryRunner.manager.update(
+        'otps',
+        { id: otpRecord.id },
+        { isUsed: true },
+      );
+
+      // Check if user already exists (should not happen, but safety check)
+      const existingUser = await queryRunner.manager.findOne(User, {
+        where: { phone, role: UserRole.END_USER },
+      });
+
+      if (existingUser) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException(
+          'User with this phone number already exists. Please login instead.',
+        );
+      }
+
+      // Check if email is already registered
+      if (email) {
+        const existingUserByEmail = await queryRunner.manager.findOne(User, {
+          where: { email },
+        });
+        if (existingUserByEmail) {
+          await queryRunner.rollbackTransaction();
+          throw new BadRequestException(
+            USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+          );
+        }
+      }
+
+      // Create new END_USER with all details
+      const userData: Partial<User> = {
+        phone,
+        role: UserRole.END_USER,
+        name,
+        email,
+        isActive: true,
+        phoneVerified: true,
+        isBlocked: false,
+        intent: null,
+      };
+
+      const user = queryRunner.manager.create(User, userData);
+      const savedUser = await queryRunner.manager.save(user);
+
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = this.generateTokens(savedUser);
+
+      // Update user with tokens
+      await queryRunner.manager.update(
+        User,
+        { id: savedUser.id },
+        { token: accessToken, refreshToken: refreshToken },
+      );
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+
+      return {
+        success: true,
+        message: 'Account created successfully',
+        accessToken,
+        refreshToken,
+        user: {
+          id: savedUser.id,
+          name: savedUser.name || '',
+          email: savedUser.email || '',
+          phone: savedUser.phone,
+          role: savedUser.role,
+          isActive: savedUser.isActive,
+        },
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * End User Login - Send OTP
+   * Sends OTP to existing end user for login
+   */
+  async loginEndUser(
+    loginDto: EndUserLoginDto,
+  ): Promise<EndUserLoginResponseDto> {
+    const { phone } = loginDto;
+
+    // Check if user exists with END_USER role
+    const existingUser = await this.userRepository.findByPhoneAndRole(
+      phone,
+      UserRole.END_USER,
+    );
+
+    if (!existingUser) {
+      throw new BadRequestException(
+        'User with this phone number not found. Please signup first.',
+      );
+    }
+
+    // Check if user is blocked
+    if (existingUser.isBlocked) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
+    }
+
+    // Check if user is inactive
+    if (!existingUser.isActive) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
+    }
+
+    // Send OTP for login
+    const otpResponse = await this.sendOtp({
+      phone,
+      role: UserRole.END_USER,
+    });
+
+    return {
+      success: true,
+      message: 'OTP sent successfully to your mobile number',
+      phone,
+      otp: otpResponse.otp, // Only in development
+    };
+  }
+
+  /**
+   * End User Verify Login OTP
+   * Validates OTP and logs in the end user
+   */
+  async verifyEndUserLoginOtp(
+    verifyOtpDto: EndUserVerifyLoginOtpDto,
+  ): Promise<EndUserVerifyLoginOtpResponseDto> {
+    const { phone, otp } = verifyOtpDto;
+
+    // Find the OTP record for this phone
+    const otpRecord = await this.otpRepository.findActiveByPhone(phone);
+
+    if (!otpRecord) {
+      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
+    }
+
+    // Check if OTP has expired
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
+    }
+
+    // Check if OTP is already used
+    if (otpRecord.isUsed) {
+      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
+    }
+
+    // Check if too many attempts
+    if (otpRecord.attempts >= 3) {
+      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
+    }
+
+    // Validate OTP code
+    if (otpRecord.otpCode !== otp) {
+      await this.otpRepository.incrementAttempts(otpRecord.id);
+      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
+    }
+
+    // Use transaction to ensure atomicity
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Mark OTP as used
+      await queryRunner.manager.update(
+        'otps',
+        { id: otpRecord.id },
+        { isUsed: true },
+      );
+
+      // Find user
+      const user = await queryRunner.manager.findOne(User, {
+        where: { phone, role: UserRole.END_USER },
+      });
+
+      if (!user) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+      }
+
+      // Check if user is blocked
+      if (user.isBlocked) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
+      }
+
+      // Check if user is inactive
+      if (!user.isActive) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
+      }
+
+      // Update phone verified flag
+      await queryRunner.manager.update(
+        User,
+        { id: user.id },
+        { phoneVerified: true },
+      );
+
+      const updatedUser = await queryRunner.manager.findOne(User, {
+        where: { id: user.id },
+      });
+
+      if (!updatedUser) {
+        throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
+      }
+
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = this.generateTokens(updatedUser);
+
+      // Update user with tokens
+      await queryRunner.manager.update(
+        User,
+        { id: updatedUser.id },
+        { token: accessToken, refreshToken: refreshToken },
+      );
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+
+      return {
+        success: true,
+        message: 'Login successful',
+        accessToken,
+        refreshToken,
+        user: {
+          id: updatedUser.id,
+          name: updatedUser.name || '',
+          email: updatedUser.email || '',
+          phone: updatedUser.phone,
+          role: updatedUser.role,
+          isActive: updatedUser.isActive,
+        },
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
+    }
+  }
+
+  /**
    * Resend OTP to phone number
    */
   async resendOtp(resendOtpDto: ResendOtpDto): Promise<ResendOtpResponseDto> {
@@ -899,5 +1259,345 @@ export class UserService {
         },
       },
     };
+  }
+
+  /**
+   * Get End User Profile
+   */
+  async getEndUserProfile(userId: string): Promise<EndUserProfileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.END_USER) {
+      throw new BadRequestException('User is not an end user');
+    }
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+        phoneVerified: user.phoneVerified,
+        profileImage: user.profileImage,
+      },
+    };
+  }
+
+  /**
+   * Edit End User Profile (Name and Email)
+   */
+  async editEndUserProfile(
+    userId: string,
+    editProfileDto: EndUserEditProfileDto,
+  ): Promise<EndUserEditProfileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.END_USER) {
+      throw new BadRequestException('User is not an end user');
+    }
+
+    const updateData: Partial<User> = {};
+
+    if (editProfileDto.name !== undefined) {
+      updateData.name = editProfileDto.name || null;
+    }
+
+    if (editProfileDto.email !== undefined) {
+      // Check if email is already used by another user
+      if (editProfileDto.email) {
+        const existingUserByEmail = await this.userRepository.findByEmail(
+          editProfileDto.email,
+        );
+        if (existingUserByEmail && existingUserByEmail.id !== userId) {
+          throw new BadRequestException(
+            USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+          );
+        }
+      }
+      updateData.email = editProfileDto.email || null;
+    }
+
+    if (editProfileDto.profileImage !== undefined) {
+      updateData.profileImage = editProfileDto.profileImage || null;
+    }
+
+    const updatedUser = await this.userRepository.update(userId, updateData);
+    if (!updatedUser) {
+      throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
+    }
+
+    return {
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        profileImage: updatedUser.profileImage,
+      },
+    };
+  }
+
+  /**
+   * Change Mobile Number - Send OTP
+   */
+  async changeEndUserMobile(
+    userId: string,
+    changeMobileDto: EndUserChangeMobileDto,
+  ): Promise<EndUserChangeMobileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.END_USER) {
+      throw new BadRequestException('User is not an end user');
+    }
+
+    const { phone: newPhone } = changeMobileDto;
+
+    // Check if new phone is same as current phone
+    if (user.phone === newPhone) {
+      throw new BadRequestException(
+        'New mobile number is the same as current mobile number',
+      );
+    }
+
+    // Check if new phone is already registered
+    const existingUser = await this.userRepository.findByPhoneAndRole(
+      newPhone,
+      UserRole.END_USER,
+    );
+    if (existingUser) {
+      throw new BadRequestException(
+        'This mobile number is already registered with another account',
+      );
+    }
+
+    // Send OTP to new phone number
+    const otpResponse = await this.sendOtp({
+      phone: newPhone,
+      role: UserRole.END_USER,
+    });
+
+    return {
+      success: true,
+      message: 'OTP sent successfully to your new mobile number',
+      phone: newPhone,
+      otp: otpResponse.otp, // Only in development
+    };
+  }
+
+  /**
+   * Verify OTP and Change Mobile Number
+   */
+  async verifyChangeEndUserMobile(
+    userId: string,
+    verifyOtpDto: EndUserVerifyChangeMobileOtpDto,
+  ): Promise<EndUserVerifyChangeMobileOtpResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.END_USER) {
+      throw new BadRequestException('User is not an end user');
+    }
+
+    const { phone: newPhone, otp } = verifyOtpDto;
+
+    // Find the OTP record for the new phone
+    const otpRecord = await this.otpRepository.findActiveByPhone(newPhone);
+
+    if (!otpRecord) {
+      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
+    }
+
+    // Check if OTP has expired
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
+    }
+
+    // Check if OTP is already used
+    if (otpRecord.isUsed) {
+      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
+    }
+
+    // Check if too many attempts
+    if (otpRecord.attempts >= 3) {
+      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
+    }
+
+    // Validate OTP code
+    if (otpRecord.otpCode !== otp) {
+      await this.otpRepository.incrementAttempts(otpRecord.id);
+      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
+    }
+
+    // Use transaction to ensure atomicity
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Mark OTP as used
+      await queryRunner.manager.update(
+        'otps',
+        { id: otpRecord.id },
+        { isUsed: true },
+      );
+
+      // Check if new phone is already registered (double check)
+      const existingUser = await queryRunner.manager.findOne(User, {
+        where: { phone: newPhone, role: UserRole.END_USER },
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException(
+          'This mobile number is already registered with another account',
+        );
+      }
+
+      // Update user's phone number and mark as verified
+      await queryRunner.manager.update(
+        User,
+        { id: userId },
+        { phone: newPhone, phoneVerified: true },
+      );
+
+      const updatedUser = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+      });
+
+      if (!updatedUser) {
+        throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
+      }
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+
+      return {
+        success: true,
+        message: 'Mobile number changed successfully',
+        user: {
+          id: updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          phone: updatedUser.phone,
+          role: updatedUser.role,
+          isActive: updatedUser.isActive,
+        },
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Get End User Home Page Data
+   * Returns featured cities and all cities list with search and location detection
+   */
+  async getEndUserHomePage(
+    query?: EndUserCitiesQueryDto,
+  ): Promise<EndUserHomePageResponseDto> {
+    const { search, latitude, longitude } = query || {};
+
+    // Map cities to DTO format
+    const mapCityToDto = (city: any): CityItemDto => ({
+      id: city.id,
+      name: city.name,
+      code: city.code,
+      state: city.state,
+      latitude: city.latitude ? parseFloat(city.latitude.toString()) : null,
+      longitude: city.longitude ? parseFloat(city.longitude.toString()) : null,
+      iconUrl: null, // Can be added later if city icons are stored
+    });
+
+    // Get featured cities from database
+    const featuredCitiesFromDb = await this.cityRepository.findFeatured();
+    const featuredCities = featuredCitiesFromDb.map(mapCityToDto);
+
+    // Detect city based on search or latitude/longitude
+    let detectedCity: CityItemDto | null = null;
+
+    // Priority 1: If search is provided, use search results
+    if (search && search.trim()) {
+      const searchResults = await this.cityRepository.searchByName(
+        search.trim(),
+        1,
+      );
+      if (searchResults.length > 0) {
+        detectedCity = mapCityToDto(searchResults[0]);
+      }
+    }
+    // Priority 2: If no search but lat/long provided, detect by location
+    else if (latitude !== undefined && longitude !== undefined) {
+      const allCitiesForDetection = await this.cityRepository.findAll();
+
+      // Find the nearest city using Haversine formula
+      let minDistance = Infinity;
+      let nearestCity: any = null;
+
+      for (const city of allCitiesForDetection) {
+        if (city.latitude && city.longitude) {
+          const cityLat = parseFloat(city.latitude.toString());
+          const cityLon = parseFloat(city.longitude.toString());
+
+          // Haversine formula to calculate distance
+          const R = 6371; // Earth's radius in km
+          const dLat = this.deg2rad(cityLat - latitude);
+          const dLon = this.deg2rad(cityLon - longitude);
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(this.deg2rad(latitude)) *
+              Math.cos(this.deg2rad(cityLat)) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const distance = R * c; // Distance in km
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestCity = city;
+          }
+        }
+      }
+
+      // Only return detected city if it's within reasonable distance (e.g., 50km)
+      if (nearestCity && minDistance <= 50) {
+        detectedCity = mapCityToDto(nearestCity);
+      }
+    }
+
+    return {
+      success: true,
+      featuredCities,
+      detectedCity,
+    };
+  }
+
+  /**
+   * Convert degrees to radians
+   */
+  private deg2rad(deg: number): number {
+    return deg * (Math.PI / 180);
   }
 }
