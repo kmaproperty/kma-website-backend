@@ -15,3 +15,4 @@ export * from './dashboard.dto';
 export * from './upgrade-channel-partner.dto';
 export * from './docusign.dto';
 export * from './end-user-signup.dto';
+export * from './end-user-properties-search.dto';

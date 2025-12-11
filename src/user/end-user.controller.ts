@@ -19,6 +19,8 @@ import {
   EndUserVerifyChangeMobileOtpResponseDto,
   EndUserHomePageResponseDto,
   EndUserCitiesQueryDto,
+  EndUserPropertiesSearchQueryDto,
+  EndUserPropertiesSearchResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -230,6 +232,22 @@ export class EndUserController {
     @Query() query: EndUserCitiesQueryDto,
   ): Promise<EndUserHomePageResponseDto> {
     return await this.userService.getEndUserHomePage(query);
+  }
+
+  @Get('properties')
+  @ApiOperation({
+    summary: 'Search Properties',
+    description: 'Search and filter properties with various filters including city, search, category, property type, BHK, furnishing, construction status, price range, and location-based search.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Properties retrieved successfully',
+    type: EndUserPropertiesSearchResponseDto,
+  })
+  async searchProperties(
+    @Query() query: EndUserPropertiesSearchQueryDto,
+  ): Promise<EndUserPropertiesSearchResponseDto> {
+    return await this.userService.searchEndUserProperties(query);
   }
 }
 

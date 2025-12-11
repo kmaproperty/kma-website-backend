@@ -42,6 +42,10 @@ import {
   EndUserHomePageResponseDto,
   CityItemDto,
   EndUserCitiesQueryDto,
+  EndUserPropertiesSearchQueryDto,
+  EndUserPropertiesSearchResponseDto,
+  EndUserPropertyListItemDto,
+  EndUserPropertyUnitDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
@@ -1599,5 +1603,140 @@ export class UserService {
    */
   private deg2rad(deg: number): number {
     return deg * (Math.PI / 180);
+  }
+
+  /**
+   * Search properties for end users
+   * Returns paginated list of active properties with filters
+   */
+  async searchEndUserProperties(
+    query: EndUserPropertiesSearchQueryDto,
+  ): Promise<EndUserPropertiesSearchResponseDto> {
+    const {
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      cityId,
+      search,
+      categoryIds,
+      propertyTypeIds,
+      bhkTypeIds,
+      furnishingTypes,
+      constructionStatuses,
+      minPrice,
+      maxPrice,
+      latitude,
+      longitude,
+      radius,
+    } = query;
+
+    const result = await this.propertyRepository.findEndUserProjects({
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      filters: {
+        cityId,
+        search,
+        categoryIds,
+        propertyTypeIds,
+        bhkTypeIds,
+        furnishingTypes,
+        constructionStatuses,
+        minPrice,
+        maxPrice,
+        latitude,
+        longitude,
+        radius,
+      },
+    });
+
+    // Map properties to response DTO
+    const properties: EndUserPropertyListItemDto[] = result.items.map(
+      (property) => {
+        // Get primary image (cover image or first image)
+        let imageUrl: string | null = null;
+        if (property.photos && property.photos.length > 0) {
+          const coverImage = property.photos.find((p) => p.isCoverImage);
+          const firstPhoto = property.photos[0];
+          const selectedPhoto = coverImage || firstPhoto;
+          // Note: You may need to generate full URL from fileKey using S3Service
+          // For now, returning fileKey - adjust based on your URL generation logic
+          imageUrl = selectedPhoto.fileKey || null;
+        }
+
+        // Build address
+        const addressParts: string[] = [];
+        if (property.society?.name) {
+          addressParts.push(property.society.name);
+        }
+        if (property.locality?.name) {
+          addressParts.push(property.locality.name);
+        }
+        if (property.city?.name) {
+          addressParts.push(property.city.name);
+        }
+        const address = addressParts.join(', ') || 'Address not available';
+
+        // Build property name (use society name or property description)
+        const propertyName =
+          property.society?.name ||
+          property.propertyDescription?.split('.')[0] ||
+          'Property';
+
+        // Build units array (simplified - you may want to enhance this)
+        const units: EndUserPropertyUnitDto[] = [];
+        if (property.bhkType?.name && property.builtUpAreaMetadata) {
+          const superBuiltUpArea = property.builtUpAreaMetadata.superBuiltUpArea
+            ? `${property.builtUpAreaMetadata.superBuiltUpArea} Sq. Ft.`
+            : property.builtUpAreaMetadata.carpetArea
+              ? `${property.builtUpAreaMetadata.carpetArea} Sq. Ft.`
+              : 'Size not available';
+          const price =
+            property.price != null
+              ? `₹ ${property.price.toLocaleString('en-IN')}`
+              : property.monthlyRent != null
+                ? `₹ ${property.monthlyRent.toLocaleString('en-IN')}/month`
+                : 'Price On Request';
+
+          units.push({
+            unit: property.bhkType.name,
+            size: `${superBuiltUpArea} (Saleable)`,
+            price,
+          });
+        }
+
+        return {
+          id: property.id,
+          propertyName,
+          address,
+          description: property.propertyDescription || undefined,
+          imageUrl,
+          isReraRegistered: false, // Add RERA field to Property entity if needed
+          constructionStatus: property.constructionStatus || null,
+          category: property.category?.name || null,
+          propertyType: property.propertyType?.name || null,
+          bhkType: property.bhkType?.name || null,
+          price: property.price || null,
+          monthlyRent: property.monthlyRent || null,
+          city: property.city?.name || null,
+          society: property.society?.name || null,
+          locality: property.locality?.name || null,
+          units: units.length > 0 ? units : undefined,
+        };
+      },
+    );
+
+    const totalPages = Math.ceil(result.total / limit);
+
+    return {
+      success: true,
+      properties,
+      total: result.total,
+      page,
+      limit,
+      totalPages,
+    };
   }
 }

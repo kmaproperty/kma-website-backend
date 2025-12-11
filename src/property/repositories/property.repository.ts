@@ -261,4 +261,170 @@ export class PropertyRepository {
   async deleteProperty(id: string): Promise<void> {
     await this.propertyRepository.delete(id);
   }
+
+  async findEndUserProjects(options: {
+    page: number;
+    limit: number;
+    sortBy: 'price' | 'createdAt' | 'updatedAt';
+    sortOrder: 'ASC' | 'DESC';
+    filters?: {
+      cityId?: string;
+      search?: string;
+      categoryIds?: string[];
+      propertyTypeIds?: string[];
+      bhkTypeIds?: string[];
+      furnishingTypes?: string[];
+      constructionStatuses?: string[];
+      minPrice?: number;
+      maxPrice?: number;
+      latitude?: number;
+      longitude?: number;
+      radius?: number;
+    };
+  }): Promise<{
+    items: Property[];
+    total: number;
+  }> {
+    const {
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      filters = {},
+    } = options;
+
+    const qb = this.propertyRepository
+      .createQueryBuilder('property')
+      .leftJoinAndSelect('property.listingType', 'listingType')
+      .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .where('property.isDeleted = false')
+      .andWhere('property.status = :status', { status: 'active' });
+
+    // Filter by city
+    if (filters.cityId) {
+      qb.andWhere('property.cityId = :cityId', { cityId: filters.cityId });
+    }
+
+    // Filter by category
+    if (filters.categoryIds?.length) {
+      qb.andWhere('property.categoryId IN (:...categoryIds)', {
+        categoryIds: filters.categoryIds,
+      });
+    }
+
+    // Filter by property type
+    if (filters.propertyTypeIds?.length) {
+      qb.andWhere('property.propertyTypeId IN (:...propertyTypeIds)', {
+        propertyTypeIds: filters.propertyTypeIds,
+      });
+    }
+
+    // Filter by BHK type
+    if (filters.bhkTypeIds?.length) {
+      qb.andWhere('property.bhkTypeId IN (:...bhkTypeIds)', {
+        bhkTypeIds: filters.bhkTypeIds,
+      });
+    }
+
+    // Filter by furnishing types
+    if (filters.furnishingTypes?.length) {
+      qb.andWhere('property.furnishType IN (:...furnishingTypes)', {
+        furnishingTypes: filters.furnishingTypes,
+      });
+    }
+
+    // Filter by construction status
+    if (filters.constructionStatuses?.length) {
+      qb.andWhere('property.constructionStatus IN (:...constructionStatuses)', {
+        constructionStatuses: filters.constructionStatuses,
+      });
+    }
+
+    // Filter by price range
+    if (filters.minPrice != null) {
+      qb.andWhere(
+        '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) )',
+        { minPrice: filters.minPrice },
+      );
+    }
+
+    if (filters.maxPrice != null) {
+      qb.andWhere(
+        '( (property.price IS NOT NULL AND property.price <= :maxPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent <= :maxPrice) )',
+        { maxPrice: filters.maxPrice },
+      );
+    }
+
+    // Search by project name, locality, or builder
+    if (filters.search?.trim()) {
+      const searchTerm = `%${filters.search.trim()}%`;
+      qb.andWhere(
+        '(society.name ILIKE :searchTerm OR locality.name ILIKE :searchTerm OR property.propertyDescription ILIKE :searchTerm)',
+        { searchTerm },
+      );
+    }
+
+    // Location-based search (Near Me)
+    if (
+      filters.latitude != null &&
+      filters.longitude != null &&
+      filters.radius != null
+    ) {
+      // Haversine formula for distance calculation
+      const radiusInKm = filters.radius;
+      const lat = filters.latitude;
+      const lon = filters.longitude;
+
+      // Filter by distance using Haversine formula
+      qb.andWhere('property.latitude IS NOT NULL')
+        .andWhere('property.longitude IS NOT NULL')
+        .andWhere(
+          `(
+            6371 * acos(
+              cos(radians(:lat)) * 
+              cos(radians(CAST(property.latitude AS DECIMAL))) * 
+              cos(radians(CAST(property.longitude AS DECIMAL)) - radians(:lon)) + 
+              sin(radians(:lat)) * 
+              sin(radians(CAST(property.latitude AS DECIMAL)))
+            )
+          ) <= :radius`,
+          { lat, lon, radius: radiusInKm },
+        );
+    }
+
+    // Get total count
+    const total = await qb.clone().getCount();
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'price':
+        qb.orderBy(
+          'COALESCE(property.price, property.monthlyRent, 0)',
+          sortOrder,
+        );
+        break;
+      case 'updatedAt':
+        qb.addOrderBy('property.updatedAt', sortOrder);
+        break;
+      case 'createdAt':
+      default:
+        qb.addOrderBy('property.createdAt', sortOrder);
+        break;
+    }
+
+    // Apply pagination
+    qb.skip((page - 1) * limit).take(limit);
+
+    const items = await qb.getMany();
+
+    return {
+      items,
+      total,
+    };
+  }
 }
