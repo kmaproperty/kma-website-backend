@@ -303,7 +303,7 @@ export class PropertyRepository {
       .leftJoinAndSelect('property.locality', 'locality')
       .leftJoinAndSelect('property.bhkType', 'bhkType')
       .where('property.isDeleted = false')
-      .andWhere('property.status = :status', { status: 'active' });
+      .andWhere('property.status = :status', { status: 'approved' });
 
     // Filter by city
     if (filters.cityId) {

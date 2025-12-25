@@ -97,7 +97,7 @@ export class Property extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  // Property status (lifecycle: draft, pending_review, active, inactive, sold, rented)
+  // Property status (lifecycle: draft, pending_review, approved, rejected, expired, inactive)
   @Column({
     type: 'enum',
     enum: [
@@ -105,10 +105,8 @@ export class Property extends BaseEntity {
       'pending_review',
       'approved',
       'rejected',
-      'active',
+      'expired',
       'inactive',
-      'sold',
-      'rented',
     ],
     default: 'draft',
   })

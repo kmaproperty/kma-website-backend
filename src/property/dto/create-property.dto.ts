@@ -493,10 +493,8 @@ export class CreatePropertyStep1Dto {
       'pending_review',
       'approved',
       'rejected',
-      'active',
+      'expired',
       'inactive',
-      'sold',
-      'rented',
     ],
     required: false,
     default: 'draft'
@@ -507,10 +505,8 @@ export class CreatePropertyStep1Dto {
     'pending_review',
     'approved',
     'rejected',
-    'active',
+    'expired',
     'inactive',
-    'sold',
-    'rented',
   ])
   status?: string;
 

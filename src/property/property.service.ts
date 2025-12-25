@@ -172,10 +172,8 @@ export class PropertyService {
       'pending_review',
       'approved',
       'rejected',
-      'active',
+      'expired',
       'inactive',
-      'sold',
-      'rented',
     ];
 
     const normalizedCounts = { ...statusCounts };
