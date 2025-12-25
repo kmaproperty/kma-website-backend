@@ -280,9 +280,7 @@ export class UserService {
 
     const existingUser = await this.userRepository.findByPhoneAndRole(phone, userRole);
     if (existingUser) {
-      throw new BadRequestException(
-        `User with phone ${phone} and role ${userRole} already exists. Please login.`
-      );
+      throw new BadRequestException('User already exists. Please login.');
     }
 
     // Check if same phone number has conflicting user types (CHANNEL_PARTNER and OWNER cannot coexist)
@@ -292,9 +290,7 @@ export class UserService {
         UserRole.CHANNEL_PARTNER,
       );
       if (existingChannelPartner) {
-        throw new BadRequestException(
-          `A CHANNEL_PARTNER account with phone number ${phone} already exists. CHANNEL_PARTNER and OWNER cannot exist with the same phone number.`,
-        );
+        throw new BadRequestException('User already exists. Please login.');
       }
     } else if (userRole === UserRole.CHANNEL_PARTNER) {
       const existingOwner = await this.userRepository.findByPhoneAndRole(
@@ -302,9 +298,7 @@ export class UserService {
         UserRole.OWNER,
       );
       if (existingOwner) {
-        throw new BadRequestException(
-          `An OWNER account with phone number ${phone} already exists. CHANNEL_PARTNER and OWNER cannot exist with the same phone number.`,
-        );
+        throw new BadRequestException('User already exists. Please login.');
       }
     }
 
@@ -339,10 +333,7 @@ export class UserService {
     }
 
     if (!existingUser || !userRole) {
-      const roleMessage = role 
-        ? `User with phone ${phone} and role ${role} not found. Please signup first.`
-        : `User with phone ${phone} not found as OWNER or CHANNEL_PARTNER. Please signup first.`;
-      throw new BadRequestException(roleMessage);
+      throw new BadRequestException('User not found. Please signup first.');
     }
 
     // Check if user is blocked
@@ -803,9 +794,7 @@ export class UserService {
       UserRole.END_USER,
     );
     if (existingUser) {
-      throw new BadRequestException(
-        'User with this phone number already exists. Please login instead.',
-      );
+      throw new BadRequestException('User already exists. Please login.');
     }
 
     // Check if email is already registered
@@ -889,9 +878,7 @@ export class UserService {
 
       if (existingUser) {
         await queryRunner.rollbackTransaction();
-        throw new BadRequestException(
-          'User with this phone number already exists. Please login instead.',
-        );
+        throw new BadRequestException('User already exists. Please login.');
       }
 
       // Check if email is already registered
@@ -975,9 +962,7 @@ export class UserService {
     );
 
     if (!existingUser) {
-      throw new BadRequestException(
-        'User with this phone number not found. Please signup first.',
-      );
+      throw new BadRequestException('User not found. Please signup first.');
     }
 
     // Check if user is blocked
