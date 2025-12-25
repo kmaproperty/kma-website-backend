@@ -123,6 +123,18 @@ export class UserService {
       throw new BadRequestException('Invalid channel partner code');
     }
 
+    // Check if a CHANNEL_PARTNER with the same phone already exists
+    // This prevents violating the unique constraint UQ_users_phone_role
+    const existingChannelPartner = await this.userRepository.findByPhoneAndRole(
+      user.phone,
+      UserRole.CHANNEL_PARTNER,
+    );
+    if (existingChannelPartner && existingChannelPartner.id !== user.id) {
+      throw new BadRequestException(
+        'A CHANNEL_PARTNER account with this phone number already exists',
+      );
+    }
+
     // Update role and persist history in a transaction
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -142,6 +154,15 @@ export class UserService {
       await queryRunner.commitTransaction();
     } catch (e) {
       await queryRunner.rollbackTransaction();
+      // Handle unique constraint violation with a user-friendly message
+      if (
+        e instanceof Error &&
+        e.message?.includes('UQ_users_phone_role')
+      ) {
+        throw new BadRequestException(
+          'A CHANNEL_PARTNER account with this phone number already exists',
+        );
+      }
       throw e;
     } finally {
       await queryRunner.release();
@@ -262,6 +283,29 @@ export class UserService {
       throw new BadRequestException(
         `User with phone ${phone} and role ${userRole} already exists. Please login.`
       );
+    }
+
+    // Check if same phone number has conflicting user types (CHANNEL_PARTNER and OWNER cannot coexist)
+    if (userRole === UserRole.OWNER) {
+      const existingChannelPartner = await this.userRepository.findByPhoneAndRole(
+        phone,
+        UserRole.CHANNEL_PARTNER,
+      );
+      if (existingChannelPartner) {
+        throw new BadRequestException(
+          `A CHANNEL_PARTNER account with phone number ${phone} already exists. CHANNEL_PARTNER and OWNER cannot exist with the same phone number.`,
+        );
+      }
+    } else if (userRole === UserRole.CHANNEL_PARTNER) {
+      const existingOwner = await this.userRepository.findByPhoneAndRole(
+        phone,
+        UserRole.OWNER,
+      );
+      if (existingOwner) {
+        throw new BadRequestException(
+          `An OWNER account with phone number ${phone} already exists. CHANNEL_PARTNER and OWNER cannot exist with the same phone number.`,
+        );
+      }
     }
 
     return this.sendOtp(sendOtpDto);
