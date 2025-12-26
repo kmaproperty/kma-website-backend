@@ -64,6 +64,10 @@ import {
   AdminBlockUserResponseDto,
   AdminUnblockUserResponseDto,
   AdminUserDetailResponseDto,
+  AdminApproveLivePhotoDto,
+  AdminApproveLivePhotoResponseDto,
+  AdminApproveKycDto,
+  AdminApproveKycResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
@@ -75,6 +79,7 @@ import { AmenityRepository } from '../property/repositories/amenity.repository';
 import { ChannelPartnerCodeRepository } from '../user/repositories/channel-partner-code.repository';
 import { ChannelPartnerAgreementRepository } from '../user/repositories/channel-partner-agreement.repository';
 import { UserRepository } from '../user/repositories/user.repository';
+import { UserService } from '../user/user.service';
 import { PropertyService } from '../property/property.service';
 import { AgreementStatus } from '../user/entities/channel-partner-agreement.entity';
 import { AdminRole } from './enum/admin-role.enum';
@@ -228,6 +233,7 @@ export class AdminService {
     private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
     private readonly channelPartnerAgreementRepository: ChannelPartnerAgreementRepository,
     private readonly userRepository: UserRepository,
+    private readonly userService: UserService,
     private readonly propertyService: PropertyService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -1210,11 +1216,16 @@ export class AdminService {
   ) {
     const property = await this.ensurePropertyExists(propertyId);
 
+    // Calculate expiry date: 15 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 15);
+
     await this.propertyRepository.updateProperty(propertyId, {
       status: 'approved',
       adminReviewComment: dto.comment ?? null,
       adminReviewedBy: adminId,
       adminReviewedAt: new Date(),
+      expiresAt,
     });
 
     return {
@@ -1379,6 +1390,12 @@ export class AdminService {
 
     if (dto.status !== undefined && !hasStep1Changes) {
       directUpdates.status = dto.status;
+      // If status is being set to 'approved', set expiry date to 15 days from now
+      if (dto.status === 'approved') {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 15);
+        directUpdates.expiresAt = expiresAt;
+      }
       touchedDirect = true;
     }
 
@@ -2122,6 +2139,89 @@ export class AdminService {
       aboutYourSelf: user.aboutYourSelf ?? null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+    };
+  }
+
+  /**
+   * Approve or reject live photo for channel partner KYC
+   */
+  async approveLivePhoto(
+    dto: AdminApproveLivePhotoDto,
+    adminId: string,
+  ): Promise<AdminApproveLivePhotoResponseDto> {
+    const user = await this.userRepository.findById(dto.userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Verify user is a channel partner
+    if (user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User is not a channel partner');
+    }
+
+    // Check if live photo exists
+    if (!user.livePhotoUrl) {
+      throw new BadRequestException('User has not uploaded a live photo');
+    }
+
+    // Update live photo approval status
+    await this.userRepository.update(dto.userId, {
+      livePhotoApproved: dto.approved,
+    });
+
+    // Check and update KYC status after approval
+    const kycCompleted = await this.userService.checkAndUpdateKycStatus(dto.userId);
+
+    return {
+      success: true,
+      message: dto.approved
+        ? 'Live photo approved successfully'
+        : 'Live photo approval rejected',
+      userId: dto.userId,
+      live_photo_approved: dto.approved,
+      kyc_completed: kycCompleted,
+    };
+  }
+
+  /**
+   * Approve or reject KYC for channel partner
+   * This sets the kycCompleted flag directly, overriding automatic checks
+   */
+  async approveKyc(
+    dto: AdminApproveKycDto,
+    adminId: string,
+  ): Promise<AdminApproveKycResponseDto> {
+    const user = await this.userRepository.findById(dto.userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Verify user is a channel partner
+    if (user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User is not a channel partner');
+    }
+
+    // Update KYC completion status
+    await this.userRepository.update(dto.userId, {
+      kycCompleted: dto.approved,
+    });
+
+    // Get updated KYC status
+    const kycStatus = await this.userService.getVerificationStepsStatus(dto.userId);
+
+    return {
+      success: true,
+      message: dto.approved
+        ? 'KYC approved successfully'
+        : 'KYC approval rejected',
+      userId: dto.userId,
+      kyc_completed: dto.approved,
+      kyc_status: {
+        step1_live_photo: kycStatus.step1_live_photo,
+        step2_aadhaar: kycStatus.step2_aadhaar,
+        step3_bank_details: kycStatus.step3_bank_details,
+        step4_docusign_agreement: kycStatus.step4_docusign_agreement,
+      },
     };
   }
 }

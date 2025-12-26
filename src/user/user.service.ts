@@ -46,6 +46,17 @@ import {
   EndUserPropertiesSearchResponseDto,
   EndUserPropertyListItemDto,
   EndUserPropertyUnitDto,
+  UploadProfilePicDto,
+  UploadProfilePicResponseDto,
+  GetProfilePicResponseDto,
+  UploadLivePhotoDto,
+  UploadLivePhotoResponseDto,
+  VerifyAadhaarDto,
+  VerifyAadhaarResponseDto,
+  BankDetailsDto,
+  BankDetailsResponseDto,
+  DocuSignAgreementStatusResponseDto,
+  VerificationStepsStatusResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
@@ -56,6 +67,10 @@ import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from '
 import { LeadRepository } from './repositories/lead.repository';
 import { LeadType } from './entities/lead.entity';
 import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
+import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
+import { AgreementStatus } from './entities/channel-partner-agreement.entity';
+import { BankDetailsRepository } from './repositories/bank-details.repository';
+import { EncryptionService } from './services/encryption.service';
 
 @Injectable()
 export class UserService {
@@ -74,6 +89,9 @@ export class UserService {
     private readonly googlePlacesService: GooglePlacesService,
     private readonly leadRepository: LeadRepository,
     private readonly userRoleHistoryRepository: UserRoleHistoryRepository,
+    private readonly agreementRepository: ChannelPartnerAgreementRepository,
+    private readonly bankDetailsRepository: BankDetailsRepository,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   /**
@@ -1269,6 +1287,9 @@ export class UserService {
       this.leadRepository.countByUserAndTypeSinceQuery(user.id, LeadType.COMMERCIAL, monthSince),
     ]);
 
+    // Get KYC status
+    const kycStatus = await this.getVerificationStepsStatus(userId);
+
     return {
       name: user.name ?? null,
       role: user.role,
@@ -1292,6 +1313,13 @@ export class UserService {
           residential: monthResidential,
           commercial: monthCommercial,
         },
+      },
+      kycStatus: {
+        step1_live_photo: kycStatus.step1_live_photo,
+        step2_aadhaar: kycStatus.step2_aadhaar,
+        step3_bank_details: kycStatus.step3_bank_details,
+        step4_docusign_agreement: kycStatus.step4_docusign_agreement,
+        kyc_completed: kycStatus.kyc_completed,
       },
     };
   }
@@ -1797,5 +1825,292 @@ export class UserService {
       country: city.country,
       placeId: city.placeId,
     }));
+  }
+
+  /**
+   * Upload profile picture
+   */
+  async uploadProfilePic(
+    userId: string,
+    uploadProfilePicDto: UploadProfilePicDto,
+  ): Promise<UploadProfilePicResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    await this.userRepository.update(userId, {
+      profileImage: uploadProfilePicDto.profile_pic_url,
+    });
+
+    return {
+      success: true,
+      message: 'Profile picture uploaded successfully',
+      profile_pic_url: uploadProfilePicDto.profile_pic_url,
+    };
+  }
+
+  /**
+   * Get profile picture
+   */
+  async getProfilePic(
+    userId: string,
+  ): Promise<GetProfilePicResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return {
+      success: true,
+      profile_pic_url: user.profileImage ?? null,
+    };
+  }
+
+  /**
+   * Step 1: Upload live photo
+   */
+  async uploadLivePhoto(
+    userId: string,
+    uploadLivePhotoDto: UploadLivePhotoDto,
+  ): Promise<UploadLivePhotoResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    await this.userRepository.update(userId, {
+      livePhotoUrl: uploadLivePhotoDto.live_photo_url,
+      livePhotoApproved: false, // Reset approval status when new photo is uploaded
+    });
+
+    // Check and update KYC status
+    await this.checkAndUpdateKycStatus(userId);
+
+    const updatedUser = await this.userRepository.findById(userId);
+    return {
+      success: true,
+      message: 'Live photo uploaded successfully. Waiting for admin approval.',
+      live_photo_url: uploadLivePhotoDto.live_photo_url,
+      live_photo_approved: updatedUser?.livePhotoApproved ?? false,
+    };
+  }
+
+  /**
+   * Step 2: Verify Aadhaar
+   * Accepts fixed OTP "1234" for verification
+   */
+  async verifyAadhaar(
+    userId: string,
+    verifyAadhaarDto: VerifyAadhaarDto,
+  ): Promise<VerifyAadhaarResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Validate Aadhaar number format (12 digits)
+    if (!/^\d{12}$/.test(verifyAadhaarDto.aadhaar_number)) {
+      throw new BadRequestException('Aadhaar number must be exactly 12 digits');
+    }
+
+    // Validate OTP - accept only "1234"
+    if (verifyAadhaarDto.otp !== '1234') {
+      throw new BadRequestException('Invalid OTP code. Please enter 1234.');
+    }
+
+    // Store Aadhaar number and mark as verified
+    await this.userRepository.update(userId, {
+      aadhaarNumber: verifyAadhaarDto.aadhaar_number,
+      aadhaarVerified: true,
+    });
+
+    // Check and update KYC status
+    await this.checkAndUpdateKycStatus(userId);
+
+    return {
+      success: true,
+      message: 'Aadhaar verified successfully',
+      aadhaar_verified: true,
+    };
+  }
+
+  /**
+   * Step 3: Save bank details (encrypted)
+   */
+  async saveBankDetails(
+    userId: string,
+    bankDetailsDto: BankDetailsDto,
+  ): Promise<BankDetailsResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Encrypt sensitive fields
+    const encryptedAccountNumber = this.encryptionService.encrypt(
+      bankDetailsDto.account_number,
+    );
+    const encryptedIfscCode = this.encryptionService.encrypt(
+      bankDetailsDto.ifsc_code,
+    );
+
+    // Save encrypted bank details
+    await this.bankDetailsRepository.upsertBankDetails(userId, {
+      accountNumber: encryptedAccountNumber,
+      ifscCode: encryptedIfscCode,
+      bankName: bankDetailsDto.bank_name,
+      accountHolderName: bankDetailsDto.account_holder_name,
+      branchName: bankDetailsDto.branch_name || null,
+    });
+
+    // Mark bank details as filled
+    await this.userRepository.update(userId, {
+      bankDetailsFilled: true,
+    });
+
+    // Check and update KYC status
+    await this.checkAndUpdateKycStatus(userId);
+
+    return {
+      success: true,
+      message: 'Bank details saved successfully',
+      bank_details_filled: true,
+    };
+  }
+
+  /**
+   * Get bank details (decrypted) - for admin or user viewing their own details
+   */
+  async getBankDetails(userId: string): Promise<BankDetailsDto | null> {
+    const bankDetails = await this.bankDetailsRepository.findByUserId(userId);
+    if (!bankDetails) {
+      return null;
+    }
+
+    // Decrypt sensitive fields
+    try {
+      const decryptedAccountNumber = this.encryptionService.decrypt(
+        bankDetails.accountNumber,
+      );
+      const decryptedIfscCode = this.encryptionService.decrypt(
+        bankDetails.ifscCode,
+      );
+
+      return {
+        account_number: decryptedAccountNumber,
+        ifsc_code: decryptedIfscCode,
+        bank_name: bankDetails.bankName,
+        account_holder_name: bankDetails.accountHolderName,
+        branch_name: bankDetails.branchName || undefined,
+      };
+    } catch (error) {
+      this.logger.error('Failed to decrypt bank details', error);
+      throw new BadRequestException('Failed to retrieve bank details');
+    }
+  }
+
+  /**
+   * Step 4: Get DocuSign agreement status
+   */
+  async getDocuSignAgreementStatus(
+    userId: string,
+  ): Promise<DocuSignAgreementStatusResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Check if there's a completed agreement
+    const agreements = await this.agreementRepository.findByUserId(userId);
+    const completedAgreement = agreements.find(
+      (agreement) => agreement.status === AgreementStatus.COMPLETED,
+    );
+
+    const isSigned = !!completedAgreement || user.docusignAgreementSigned;
+
+    if (completedAgreement && !user.docusignAgreementSigned) {
+      // Update the flag if agreement is completed but flag is not set
+      await this.userRepository.update(userId, {
+        docusignAgreementSigned: true,
+      });
+    }
+
+    return {
+      success: true,
+      docusign_agreement_signed: isSigned,
+      envelope_id: completedAgreement?.envelopeId ?? null,
+    };
+  }
+
+  /**
+   * Check and update KYC completion status
+   * KYC is completed when all 4 steps are done:
+   * 1. Live photo uploaded and approved by admin
+   * 2. Aadhaar verified
+   * 3. Bank details filled
+   * 4. DocuSign agreement signed
+   */
+  async checkAndUpdateKycStatus(userId: string): Promise<boolean> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      return false;
+    }
+
+    // Check DocuSign agreement status (might be updated in agreement table)
+    const agreementStatus = await this.getDocuSignAgreementStatus(userId);
+
+    // Check if all 4 steps are completed
+    const isKycCompleted =
+      user.livePhotoApproved && // Step 1: Live photo approved by admin
+      user.aadhaarVerified && // Step 2: Aadhaar verified
+      user.bankDetailsFilled && // Step 3: Bank details filled
+      agreementStatus.docusign_agreement_signed; // Step 4: DocuSign agreement signed
+
+    // Update KYC status if it has changed
+    if (user.kycCompleted !== isKycCompleted) {
+      await this.userRepository.update(userId, {
+        kycCompleted: isKycCompleted,
+      });
+    }
+
+    return isKycCompleted;
+  }
+
+  /**
+   * Get all verification steps status
+   */
+  async getVerificationStepsStatus(
+    userId: string,
+  ): Promise<VerificationStepsStatusResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Check and update KYC status
+    const kycCompleted = await this.checkAndUpdateKycStatus(userId);
+
+    // Check DocuSign agreement status
+    const agreementStatus = await this.getDocuSignAgreementStatus(userId);
+
+    return {
+      success: true,
+      step1_live_photo: {
+        live_photo_url: user.livePhotoUrl ?? null,
+        live_photo_approved: user.livePhotoApproved,
+      },
+      step2_aadhaar: {
+        aadhaar_number: user.aadhaarNumber ?? null,
+        aadhaar_verified: user.aadhaarVerified,
+      },
+      step3_bank_details: {
+        bank_details_filled: user.bankDetailsFilled,
+      },
+      step4_docusign_agreement: {
+        docusign_agreement_signed: agreementStatus.docusign_agreement_signed,
+      },
+      kyc_completed: kycCompleted,
+    };
   }
 }

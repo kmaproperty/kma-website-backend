@@ -31,6 +31,7 @@ import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminModule } from '../admin/admin.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AdminModule } from '../admin/admin.module';
       Property,
     ]),
     forwardRef(() => AdminModule),
+    forwardRef(() => UserModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

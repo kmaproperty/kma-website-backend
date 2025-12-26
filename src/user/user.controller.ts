@@ -20,6 +20,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express';
+import { UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { LeadService } from '../admin/services/lead.service';
 import { DocuSignService } from './services/docusign.service';
@@ -27,6 +28,7 @@ import { ChannelPartnerAgreementRepository } from './repositories/channel-partne
 import { ApiResponseDto, ApiResponse as ApiResponseType } from '../common/dto';
 import { Public } from '../common/decorators/public.decorator';
 import { AgreementStatus } from './entities/channel-partner-agreement.entity';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import {
   SendOtpDto,
   SendOtpResponseDto,
@@ -53,6 +55,17 @@ import {
   CreateTemplateDto,
   CreateTemplateResponseDto,
   ListAgreementsSimplifiedResponseDto,
+  UploadProfilePicDto,
+  UploadProfilePicResponseDto,
+  GetProfilePicResponseDto,
+  UploadLivePhotoDto,
+  UploadLivePhotoResponseDto,
+  VerifyAadhaarDto,
+  VerifyAadhaarResponseDto,
+  BankDetailsDto,
+  BankDetailsResponseDto,
+  DocuSignAgreementStatusResponseDto,
+  VerificationStepsStatusResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import {
@@ -208,6 +221,153 @@ export class UserController {
       throw new BadRequestException('User not found');
     }
     return user;
+  }
+
+  @Post('/profile-pic')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Upload profile picture' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile picture uploaded successfully',
+    type: UploadProfilePicResponseDto,
+  })
+  async uploadProfilePic(
+    @Body() uploadProfilePicDto: UploadProfilePicDto,
+    @Req() req: Request,
+  ): Promise<UploadProfilePicResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.uploadProfilePic(
+      req.user.id,
+      uploadProfilePicDto,
+    );
+  }
+
+  @Get('/profile-pic')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get profile picture' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile picture retrieved successfully',
+    type: GetProfilePicResponseDto,
+  })
+  async getProfilePic(
+    @Req() req: Request,
+  ): Promise<GetProfilePicResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getProfilePic(req.user.id);
+  }
+
+  // Step 1: Live Photo Upload
+  @Post('/verification/live-photo')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Upload live photo (Step 1)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Live photo uploaded successfully',
+    type: UploadLivePhotoResponseDto,
+  })
+  async uploadLivePhoto(
+    @Body() uploadLivePhotoDto: UploadLivePhotoDto,
+    @Req() req: Request,
+  ): Promise<UploadLivePhotoResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.uploadLivePhoto(
+      req.user.id,
+      uploadLivePhotoDto,
+    );
+  }
+
+  // Step 2: Aadhaar Verification
+  @Post('/verification/aadhaar')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Verify Aadhaar (Step 2)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Aadhaar verified successfully',
+    type: VerifyAadhaarResponseDto,
+  })
+  async verifyAadhaar(
+    @Body() verifyAadhaarDto: VerifyAadhaarDto,
+    @Req() req: Request,
+  ): Promise<VerifyAadhaarResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.verifyAadhaar(
+      req.user.id,
+      verifyAadhaarDto,
+    );
+  }
+
+  // Step 3: Bank Details
+  @Post('/verification/bank-details')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Save bank details (Step 3)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bank details saved successfully',
+    type: BankDetailsResponseDto,
+  })
+  async saveBankDetails(
+    @Body() bankDetailsDto: BankDetailsDto,
+    @Req() req: Request,
+  ): Promise<BankDetailsResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.saveBankDetails(
+      req.user.id,
+      bankDetailsDto,
+    );
+  }
+
+  // Step 4: DocuSign Agreement Status
+  @Get('/verification/docusign-agreement')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get DocuSign agreement status (Step 4)' })
+  @ApiResponse({
+    status: 200,
+    description: 'DocuSign agreement status retrieved successfully',
+    type: DocuSignAgreementStatusResponseDto,
+  })
+  async getDocuSignAgreementStatus(
+    @Req() req: Request,
+  ): Promise<DocuSignAgreementStatusResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getDocuSignAgreementStatus(req.user.id);
+  }
+
+  // Get all verification steps status
+  @Get('/verification/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get all verification steps status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification steps status retrieved successfully',
+    type: VerificationStepsStatusResponseDto,
+  })
+  async getVerificationStepsStatus(
+    @Req() req: Request,
+  ): Promise<VerificationStepsStatusResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getVerificationStepsStatus(req.user.id);
   }
 
   @Get('dashboard')

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { IsNull } from 'typeorm';
 import { PropertyCompletionStep } from './enum/property-completion-step.enum';
 import { PropertyListingTypeRepository } from './repositories/property-listing-type.repository';
@@ -14,6 +14,8 @@ import { AmenityRepository } from './repositories/amenity.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
+import { UserRepository } from '../user/repositories/user.repository';
+import { UserRole } from '../user/enum/user-role.enum';
 import {
   CreatePropertyStep2Dto,
   MaintenanceType,
@@ -55,6 +57,8 @@ export class PropertyService {
     private readonly propertyRepository: PropertyRepository,
     private readonly masterDataSeederService: MasterDataSeederService,
     private readonly googlePlacesService: GooglePlacesService,
+    @Inject(forwardRef(() => UserRepository))
+    private readonly userRepository: UserRepository,
   ) {}
 
   private readonly DEFAULT_TOTAL_STEPS = 4;
@@ -298,6 +302,7 @@ export class PropertyService {
       progressPercentage,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
+      expiresAt: property.expiresAt ?? null,
     };
   }
 
@@ -894,6 +899,18 @@ export class PropertyService {
    * If propertyId is provided and exists, updates the existing property; otherwise creates a new one
    */
   async createProperty(createPropertyDto: any, userId: string): Promise<any> {
+    // Check KYC completion for channel partners
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.role === UserRole.CHANNEL_PARTNER && !user.kycCompleted) {
+      throw new BadRequestException(
+        'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
+      );
+    }
+
     const {
       propertyId,
       listingTypeId,
@@ -1524,6 +1541,18 @@ export class PropertyService {
     dto: CreatePropertyStep2Dto,
     userId: string,
   ): Promise<{ id: string; status: string; completionStep: number; progressPercentage: number }> {
+    // Check KYC completion for channel partners
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.role === UserRole.CHANNEL_PARTNER && !user.kycCompleted) {
+      throw new BadRequestException(
+        'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
+      );
+    }
+
     const property = await this.propertyRepository.findById(dto.propertyId);
     if (!property) {
       throw new BadRequestException(
@@ -2103,6 +2132,18 @@ export class PropertyService {
     dto: CreatePropertyStep4Dto,
     userId: string,
   ): Promise<{ id: string; status: string; completionStep: number; progressPercentage: number }> {
+    // Check KYC completion for channel partners
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.role === UserRole.CHANNEL_PARTNER && !user.kycCompleted) {
+      throw new BadRequestException(
+        'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
+      );
+    }
+
     const property = await this.propertyRepository.findById(dto.propertyId);
     if (!property) {
       throw new BadRequestException(

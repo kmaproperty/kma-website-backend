@@ -125,4 +125,60 @@ export class User extends BaseEntity {
     nullable: true,
   })
   profileImage: string | null;
+
+  // Step 1: Live Photo Upload
+  @Column({
+    name: 'live_photo_url',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  livePhotoUrl: string | null;
+
+  @Column({
+    name: 'live_photo_approved',
+    type: 'boolean',
+    default: false,
+  })
+  livePhotoApproved: boolean;
+
+  // Step 2: Aadhaar Verification
+  @Column({
+    name: 'aadhaar_number',
+    type: 'varchar',
+    length: 12,
+    nullable: true,
+  })
+  aadhaarNumber: string | null;
+
+  @Column({
+    name: 'aadhaar_verified',
+    type: 'boolean',
+    default: false,
+  })
+  aadhaarVerified: boolean;
+
+  // Step 3: Bank Details
+  @Column({
+    name: 'bank_details_filled',
+    type: 'boolean',
+    default: false,
+  })
+  bankDetailsFilled: boolean;
+
+  // Step 4: DocuSign Agreement
+  @Column({
+    name: 'docusign_agreement_signed',
+    type: 'boolean',
+    default: false,
+  })
+  docusignAgreementSigned: boolean;
+
+  // KYC Completion Status (true when all 4 steps are completed and approved)
+  @Column({
+    name: 'kyc_completed',
+    type: 'boolean',
+    default: false,
+  })
+  kycCompleted: boolean;
 }

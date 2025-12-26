@@ -679,4 +679,11 @@ export class Property extends BaseEntity {
     nullable: true,
   })
   adminReviewedAt: Date | null;
+
+  // Expiry date for approved properties (15 days from approval)
+  @Column({
+    type: 'timestamp with time zone',
+    nullable: true,
+  })
+  expiresAt: Date | null;
 }

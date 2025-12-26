@@ -742,6 +742,13 @@ export class OwnerPropertyListingItemDto {
     example: '2025-07-20T08:45:00.000Z',
   })
   updatedAt: Date;
+
+  @ApiProperty({
+    description: 'Expiry date for approved properties (15 days from approval)',
+    example: '2025-08-05T10:15:00.000Z',
+    required: false,
+  })
+  expiresAt?: Date | null;
 }
 
 export class OwnerPropertyListingPaginationDto {

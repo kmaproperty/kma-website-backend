@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as docusign from 'docusign-esign';
 import { ChannelPartnerAgreementRepository } from '../repositories/channel-partner-agreement.repository';
 import { ChannelPartnerAgreement, AgreementStatus } from '../entities/channel-partner-agreement.entity';
+import { UserRepository } from '../repositories/user.repository';
 
 @Injectable()
 export class DocuSignService {
@@ -19,6 +20,7 @@ export class DocuSignService {
   constructor(
     private readonly configService: ConfigService,
     private readonly agreementRepository: ChannelPartnerAgreementRepository,
+    private readonly userRepository: UserRepository,
   ) {
     this.initializeApiClient();
   }
@@ -655,6 +657,21 @@ export class DocuSignService {
           agreementId: updatedAgreement.id,
           status: updatedAgreement.status,
         });
+
+        // Update user's docusign_agreement_signed flag if agreement is completed
+        if (status === AgreementStatus.COMPLETED) {
+          await this.userRepository.update(updatedAgreement.userId, {
+            docusignAgreementSigned: true,
+          });
+          this.logger.log('User docusign_agreement_signed flag updated', {
+            userId: updatedAgreement.userId,
+            envelopeId,
+          });
+          
+          // Note: KYC status will be checked when user calls getVerificationStepsStatus
+          // or we could inject UserService here to call checkAndUpdateKycStatus
+          // For now, it will be updated on next status check
+        }
       } else {
         this.logger.warn('No agreement found with envelope ID', { envelopeId });
       }

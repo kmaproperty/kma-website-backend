@@ -8,10 +8,12 @@ import { ChannelPartnerCode } from './entities/channel-partner-code.entity';
 import { ChannelPartnerAgreement } from './entities/channel-partner-agreement.entity';
 import { Lead } from './entities/lead.entity';
 import { UserRoleHistory } from './entities/user-role-history.entity';
+import { BankDetails } from './entities/bank-details.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
 import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
+import { BankDetailsRepository } from './repositories/bank-details.repository';
 import { Property } from '../property/entities/property.entity';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { LeadRepository } from './repositories/lead.repository';
@@ -19,6 +21,7 @@ import { UserRoleHistoryRepository } from './repositories/user-role-history.repo
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { DocuSignService } from './services/docusign.service';
+import { EncryptionService } from './services/encryption.service';
 import { UserController } from './user.controller';
 import { ChannelPartnerCodeController } from './channel-partner-code.controller';
 import { EndUserController } from './end-user.controller';
@@ -28,12 +31,13 @@ import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { AdminModule } from '../admin/admin.module';
 import { PropertyModule } from '../property/property.module';
 
-const entities = [User, Otp, ChannelPartnerCode, ChannelPartnerAgreement, Lead, UserRoleHistory, Property];
+const entities = [User, Otp, ChannelPartnerCode, ChannelPartnerAgreement, Lead, UserRoleHistory, Property, BankDetails];
 const repositories = [
   UserRepository,
   OtpRepository,
   ChannelPartnerCodeRepository,
   ChannelPartnerAgreementRepository,
+  BankDetailsRepository,
   PropertyRepository,
   LeadRepository,
   UserRoleHistoryRepository,
@@ -66,6 +70,7 @@ const repositories = [
     UserService,
     ChannelPartnerCodeService,
     DocuSignService,
+    EncryptionService,
     LoggerService,
     ErrorHandlerService,
     AuthMiddleware,
@@ -117,6 +122,12 @@ export class UserModule implements NestModule {
         'users/docusign/agreements',
         'users/docusign/update-status',
         'users/docusign/channel-partner-agreement',
+        'users/verification/live-photo',
+        'users/verification/aadhaar',
+        'users/verification/bank-details',
+        'users/verification/docusign-agreement',
+        'users/verification/status',
+        'users/profile-pic',
         'end-user/profile',
         'end-user/change-mobile',
         'end-user/verify-change-mobile-otp',

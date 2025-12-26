@@ -75,6 +75,10 @@ import {
   AdminBlockUserResponseDto,
   AdminUnblockUserResponseDto,
   AdminUserDetailResponseDto,
+  AdminApproveLivePhotoDto,
+  AdminApproveLivePhotoResponseDto,
+  AdminApproveKycDto,
+  AdminApproveKycResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -1040,6 +1044,70 @@ export class AdminController {
     @Body() dto: AdminEditUserDto,
   ): Promise<AdminEditUserResponseDto> {
     return this.adminService.editUser(userId, dto);
+  }
+
+  @Post('users/:id/approve-live-photo')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Approve or reject live photo for channel partner KYC' })
+  @ApiResponse({
+    status: 200,
+    description: 'Live photo approval status updated successfully',
+    type: AdminApproveLivePhotoResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User is not a channel partner or has not uploaded live photo',
+  })
+  async approveLivePhoto(
+    @Param('id') userId: string,
+    @Body() dto: Omit<AdminApproveLivePhotoDto, 'userId'>,
+    @Req() req: Request,
+  ): Promise<AdminApproveLivePhotoResponseDto> {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.approveLivePhoto(
+      { ...dto, userId },
+      req.admin.id,
+    );
+  }
+
+  @Post('users/:id/approve-kyc')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Approve or reject KYC for channel partner' })
+  @ApiResponse({
+    status: 200,
+    description: 'KYC approval status updated successfully',
+    type: AdminApproveKycResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User is not a channel partner',
+  })
+  async approveKyc(
+    @Param('id') userId: string,
+    @Body() dto: Omit<AdminApproveKycDto, 'userId'>,
+    @Req() req: Request,
+  ): Promise<AdminApproveKycResponseDto> {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.approveKyc(
+      { ...dto, userId },
+      req.admin.id,
+    );
   }
 }
 

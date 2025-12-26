@@ -19,6 +19,7 @@ import { ContactUs } from './contact-us/entities/contact-us.entity';
 import { Lead } from './admin/entities/lead.entity';
 import { LeadNote } from './admin/entities/lead-note.entity';
 import { LeadPropertyContact } from './admin/entities/lead-property-contact.entity';
+import { BankDetails } from './user/entities/bank-details.entity';
 
 // Load environment variables
 config();
@@ -54,6 +55,7 @@ export const AppDataSource = new DataSource({
     Lead,
     LeadNote,
     LeadPropertyContact,
+    BankDetails,
   ],
   migrations: ['src/migration/*.ts'],
   subscribers: [],
