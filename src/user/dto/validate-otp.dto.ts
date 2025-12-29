@@ -87,6 +87,18 @@ export class ValidateOtpResponseDto {
   hasReachedListingLimit: boolean;
 
   @ApiProperty({
+    description: 'Count of properties added by the user',
+    example: 5,
+  })
+  propertyCount: number;
+
+  @ApiProperty({
+    description: 'KYC completion status (true when all 4 verification steps are completed and approved)',
+    example: false,
+  })
+  kycCompleted: boolean;
+
+  @ApiProperty({
     description: 'User information',
     example: {
       id: 'uuid-string',

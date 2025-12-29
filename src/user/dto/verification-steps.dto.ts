@@ -222,3 +222,73 @@ export class VerificationStepsStatusResponseDto {
   kyc_completed: boolean;
 }
 
+// GET endpoints response DTOs
+export class GetLivePhotoResponseDto {
+  @ApiProperty({
+    description: 'Success status',
+    example: true,
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'Live photo URL',
+    example: 'https://example.com/live-photo.jpg',
+    nullable: true,
+  })
+  live_photo_url: string | null;
+
+  @ApiProperty({
+    description: 'Whether the photo is approved by admin',
+    example: false,
+  })
+  live_photo_approved: boolean;
+}
+
+export class GetAadhaarDetailsResponseDto {
+  @ApiProperty({
+    description: 'Success status',
+    example: true,
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'Aadhaar number',
+    example: '123456789012',
+    nullable: true,
+  })
+  aadhaar_number: string | null;
+
+  @ApiProperty({
+    description: 'Whether Aadhaar is verified',
+    example: true,
+  })
+  aadhaar_verified: boolean;
+}
+
+export class GetBankDetailsResponseDto {
+  @ApiProperty({
+    description: 'Success status',
+    example: true,
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'Bank details (decrypted)',
+    example: {
+      account_number: '1234567890',
+      ifsc_code: 'SBIN0001234',
+      bank_name: 'State Bank of India',
+      account_holder_name: 'John Doe',
+      branch_name: 'Main Branch',
+    },
+    nullable: true,
+  })
+  bank_details: {
+    account_number: string;
+    ifsc_code: string;
+    bank_name: string;
+    account_holder_name: string;
+    branch_name?: string;
+  } | null;
+}
+

@@ -27,6 +27,24 @@ export class AdminApproveLivePhotoDto {
   comment?: string;
 }
 
+export class AdminApproveLivePhotoRequestDto {
+  @ApiProperty({
+    description: 'Whether to approve the live photo',
+    example: true,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  approved: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Optional comment for approval/rejection',
+    example: 'Live photo approved after verification',
+  })
+  @IsOptional()
+  @IsString()
+  comment?: string;
+}
+
 export class AdminApproveLivePhotoResponseDto {
   @ApiProperty({
     description: 'Success status',
@@ -68,6 +86,24 @@ export class AdminApproveKycDto {
   @IsNotEmpty()
   userId: string;
 
+  @ApiProperty({
+    description: 'Whether to approve the KYC',
+    example: true,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  approved: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Optional comment for approval/rejection',
+    example: 'KYC approved after thorough verification',
+  })
+  @IsOptional()
+  @IsString()
+  comment?: string;
+}
+
+export class AdminApproveKycRequestDto {
   @ApiProperty({
     description: 'Whether to approve the KYC',
     example: true,

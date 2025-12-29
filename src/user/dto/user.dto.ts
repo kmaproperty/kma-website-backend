@@ -11,3 +11,11 @@ export class EmailDto {
   @IsEmail()
   email: string;
 }
+
+export class CheckDuplicateEmailResponseDto {
+  @ApiProperty({
+    description: 'Response message',
+    example: 'Email is available',
+  })
+  message: string;
+}

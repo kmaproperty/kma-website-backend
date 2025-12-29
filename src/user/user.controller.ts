@@ -66,6 +66,11 @@ import {
   BankDetailsResponseDto,
   DocuSignAgreementStatusResponseDto,
   VerificationStepsStatusResponseDto,
+  GetLivePhotoResponseDto,
+  GetAadhaarDetailsResponseDto,
+  GetBankDetailsResponseDto,
+  EmailDto,
+  CheckDuplicateEmailResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import {
@@ -370,6 +375,63 @@ export class UserController {
     return await this.userService.getVerificationStepsStatus(req.user.id);
   }
 
+  // Get live photo with status
+  @Get('/verification/live-photo')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get live photo with approval status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Live photo details retrieved successfully',
+    type: GetLivePhotoResponseDto,
+  })
+  async getLivePhoto(
+    @Req() req: Request,
+  ): Promise<GetLivePhotoResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getLivePhoto(req.user.id);
+  }
+
+  // Get Aadhaar details with status
+  @Get('/verification/aadhaar')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get Aadhaar details with verification status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Aadhaar details retrieved successfully',
+    type: GetAadhaarDetailsResponseDto,
+  })
+  async getAadhaarDetails(
+    @Req() req: Request,
+  ): Promise<GetAadhaarDetailsResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getAadhaarDetails(req.user.id);
+  }
+
+  // Get bank details
+  @Get('/verification/bank-details')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get bank details (decrypted)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bank details retrieved successfully',
+    type: GetBankDetailsResponseDto,
+  })
+  async getBankDetails(
+    @Req() req: Request,
+  ): Promise<GetBankDetailsResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getUserBankDetails(req.user.id);
+  }
+
   @Get('dashboard')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get seller/channel partner dashboard data' })
@@ -478,6 +540,29 @@ export class UserController {
     }
     const cities = await this.userService.autoDetectCity(latitude, longitude);
     return ApiResponseDto.success(cities, 'Cities detected successfully');
+  }
+
+  @Post('check-duplicate-email')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Check if email already exists',
+    description: 'Checks if the provided email address is already registered in the system. Returns 200 if available, 400 if duplicate.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email is available',
+    type: CheckDuplicateEmailResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already exists or invalid email format',
+  })
+  async checkDuplicateEmail(
+    @Body() emailDto: EmailDto,
+  ): Promise<ApiResponseType<CheckDuplicateEmailResponseDto>> {
+    const result = await this.userService.checkDuplicateEmail(emailDto.email);
+    return ApiResponseDto.success(result, result.message);
   }
 
   @Get('leads')
@@ -591,45 +676,45 @@ export class UserController {
     };
   }
 
-  // @Post('docusign/create-template')
-  // @ApiBearerAuth('access-token')
-  // @ApiOperation({
-  //   summary:
-  //     'Create a DocuSign template from the Channel Partner Agreement PDF (one-time setup)',
-  //   description:
-  //     'This endpoint creates a template in DocuSign from the PDF configured in DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH. ' +
-  //     'After creating the template, save the returned template ID to the DOCUSIGN_TEMPLATE_ID environment variable. ' +
-  //     'Once configured, all future envelope creations will use this template instead of uploading the PDF each time.',
-  // })
-  // @ApiResponse({
-  //   status: 201,
-  //   description: 'Template created successfully',
-  //   type: CreateTemplateResponseDto,
-  // })
-  // async createTemplate(
-  //   @Body() body: CreateTemplateDto,
-  //   @Req() req: Request,
-  // ): Promise<CreateTemplateResponseDto> {
-  //   if (!req.user?.id) {
-  //     throw new BadRequestException('User not authenticated');
-  //   }
+  @Post('docusign/create-template')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Create a DocuSign template from the Channel Partner Agreement PDF (one-time setup)',
+    description:
+      'This endpoint creates a template in DocuSign from the PDF configured in DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH. ' +
+      'After creating the template, save the returned template ID to the DOCUSIGN_TEMPLATE_ID environment variable. ' +
+      'Once configured, all future envelope creations will use this template instead of uploading the PDF each time.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Template created successfully',
+    type: CreateTemplateResponseDto,
+  })
+  async createTemplate(
+    @Body() body: CreateTemplateDto,
+    @Req() req: Request,
+  ): Promise<CreateTemplateResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
 
-  //   const templateName =
-  //     body.templateName || 'Channel Partner Agreement Template';
+    const templateName =
+      body.templateName || 'Channel Partner Agreement Template';
 
-  //   const { templateId } = await this.docuSignService.createTemplate(
-  //     templateName,
-  //   );
+    const { templateId } = await this.docuSignService.createTemplate(
+      templateName,
+    );
 
-  //   return {
-  //     success: true,
-  //     message: 'Template created successfully',
-  //     templateId,
-  //     instructions:
-  //       'Save this template ID to DOCUSIGN_TEMPLATE_ID environment variable. ' +
-  //       'Once configured, all future envelope creations will automatically use this template.',
-  //   };
-  // }
+    return {
+      success: true,
+      message: 'Template created successfully',
+      templateId,
+      instructions:
+        'Save this template ID to DOCUSIGN_TEMPLATE_ID environment variable. ' +
+        'Once configured, all future envelope creations will automatically use this template.',
+    };
+  }
 
   @Get('agreements')
   @ApiBearerAuth('access-token')

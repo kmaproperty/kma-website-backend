@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiTags,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AdminService } from './admin.service';
@@ -76,8 +77,10 @@ import {
   AdminUnblockUserResponseDto,
   AdminUserDetailResponseDto,
   AdminApproveLivePhotoDto,
+  AdminApproveLivePhotoRequestDto,
   AdminApproveLivePhotoResponseDto,
   AdminApproveKycDto,
+  AdminApproveKycRequestDto,
   AdminApproveKycResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
@@ -1051,6 +1054,12 @@ export class AdminController {
   @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Approve or reject live photo for channel partner KYC' })
+  @ApiParam({
+    name: 'id',
+    description: 'User ID of the channel partner',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
   @ApiResponse({
     status: 200,
     description: 'Live photo approval status updated successfully',
@@ -1066,7 +1075,7 @@ export class AdminController {
   })
   async approveLivePhoto(
     @Param('id') userId: string,
-    @Body() dto: Omit<AdminApproveLivePhotoDto, 'userId'>,
+    @Body() dto: AdminApproveLivePhotoRequestDto,
     @Req() req: Request,
   ): Promise<AdminApproveLivePhotoResponseDto> {
     if (!req.admin) {
@@ -1083,6 +1092,12 @@ export class AdminController {
   @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Approve or reject KYC for channel partner' })
+  @ApiParam({
+    name: 'id',
+    description: 'User ID of the channel partner',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
   @ApiResponse({
     status: 200,
     description: 'KYC approval status updated successfully',
@@ -1098,7 +1113,7 @@ export class AdminController {
   })
   async approveKyc(
     @Param('id') userId: string,
-    @Body() dto: Omit<AdminApproveKycDto, 'userId'>,
+    @Body() dto: AdminApproveKycRequestDto,
     @Req() req: Request,
   ): Promise<AdminApproveKycResponseDto> {
     if (!req.admin) {

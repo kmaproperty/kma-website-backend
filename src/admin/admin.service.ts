@@ -2098,12 +2098,24 @@ export class AdminService {
       throw new BadRequestException('No fields provided to update');
     }
 
-    const updatedUser = await this.userRepository.update(userId, updateData);
+    await this.userRepository.update(userId, updateData);
+
+    // Fetch updated user
+    const updatedUser = await this.userRepository.findById(userId);
+    if (!updatedUser) {
+      throw new BadRequestException(`User with ID ${userId} not found after update`);
+    }
+
+    // Get KYC status
+    const kycStatus = await this.userService.getVerificationStepsStatus(userId);
+
+    // Get bank details (decrypted)
+    const bankDetails = await this.userService.getBankDetails(userId);
 
     return {
       success: true,
       message: 'User updated successfully',
-      data: this.toUserDetailResponse(updatedUser!),
+      data: this.toUserDetailResponse(updatedUser, kycStatus, bankDetails),
     };
   }
 
@@ -2115,13 +2127,23 @@ export class AdminService {
       throw new BadRequestException(`User with ID ${userId} not found`);
     }
 
+    // Get KYC status
+    const kycStatus = await this.userService.getVerificationStepsStatus(userId);
+
+    // Get bank details (decrypted)
+    const bankDetails = await this.userService.getBankDetails(userId);
+
     return {
       success: true,
-      data: this.toUserDetailResponse(user),
+      data: this.toUserDetailResponse(user, kycStatus, bankDetails),
     };
   }
 
-  private toUserDetailResponse(user: User): AdminUserDetailResponseDto {
+  private toUserDetailResponse(
+    user: User,
+    kycStatus: any,
+    bankDetails: any,
+  ): AdminUserDetailResponseDto {
     return {
       id: user.id,
       name: user.name,
@@ -2139,6 +2161,16 @@ export class AdminService {
       aboutYourSelf: user.aboutYourSelf ?? null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      kyc_completed: kycStatus.kyc_completed,
+      kyc_status: {
+        step1_live_photo: kycStatus.step1_live_photo,
+        step2_aadhaar: kycStatus.step2_aadhaar,
+        step3_bank_details: kycStatus.step3_bank_details,
+        step4_docusign_agreement: kycStatus.step4_docusign_agreement,
+      },
+      live_photo_url: user.livePhotoUrl ?? null,
+      aadhaar_number: user.aadhaarNumber ?? null,
+      bank_details: bankDetails ?? null,
     };
   }
 

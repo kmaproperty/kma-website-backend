@@ -126,6 +126,81 @@ export class AdminUserDetailResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({
+    description: 'Whether KYC is completed',
+    example: false,
+  })
+  kyc_completed: boolean;
+
+  @ApiProperty({
+    description: 'KYC verification steps status',
+    example: {
+      step1_live_photo: {
+        live_photo_url: 'https://example.com/live-photo.jpg',
+        live_photo_approved: false,
+      },
+      step2_aadhaar: {
+        aadhaar_number: '123456789012',
+        aadhaar_verified: true,
+      },
+      step3_bank_details: {
+        bank_details_filled: true,
+      },
+      step4_docusign_agreement: {
+        docusign_agreement_signed: false,
+      },
+    },
+  })
+  kyc_status: {
+    step1_live_photo: {
+      live_photo_url: string | null;
+      live_photo_approved: boolean;
+    };
+    step2_aadhaar: {
+      aadhaar_number: string | null;
+      aadhaar_verified: boolean;
+    };
+    step3_bank_details: {
+      bank_details_filled: boolean;
+    };
+    step4_docusign_agreement: {
+      docusign_agreement_signed: boolean;
+    };
+  };
+
+  @ApiPropertyOptional({
+    description: 'Live photo URL',
+    example: 'https://example.com/live-photo.jpg',
+    nullable: true,
+  })
+  live_photo_url: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Aadhaar number',
+    example: '123456789012',
+    nullable: true,
+  })
+  aadhaar_number: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Bank details (decrypted)',
+    example: {
+      account_number: '1234567890',
+      ifsc_code: 'SBIN0001234',
+      bank_name: 'State Bank of India',
+      account_holder_name: 'John Doe',
+      branch_name: 'Main Branch',
+    },
+    nullable: true,
+  })
+  bank_details: {
+    account_number: string;
+    ifsc_code: string;
+    bank_name: string;
+    account_holder_name: string;
+    branch_name?: string;
+  } | null;
 }
 
 export class AdminBlockUserResponseDto {

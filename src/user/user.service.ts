@@ -57,6 +57,9 @@ import {
   BankDetailsResponseDto,
   DocuSignAgreementStatusResponseDto,
   VerificationStepsStatusResponseDto,
+  GetLivePhotoResponseDto,
+  GetAadhaarDetailsResponseDto,
+  GetBankDetailsResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
@@ -512,10 +515,15 @@ export class UserService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
+      // Get property count for the user
+      const propertyCount = await this.propertyRepository.countByUserId(user.id);
+
+      // Check and update KYC status
+      const kycCompleted = await this.checkAndUpdateKycStatus(user.id);
+
       const hasReachedListingLimit =
         user.role === UserRole.OWNER
-          ? (await this.propertyRepository.countByUserId(user.id)) >=
-            MAX_LISTINGS_PER_OWNER
+          ? propertyCount >= MAX_LISTINGS_PER_OWNER
           : false;
 
       return {
@@ -536,6 +544,8 @@ export class UserService {
           isActive: user.isActive,
         },
         hasReachedListingLimit,
+        propertyCount,
+        kycCompleted,
       } as ValidateOtpResponseDto;
     } catch (error) {
       // Rollback transaction on error
@@ -2011,6 +2021,54 @@ export class UserService {
   }
 
   /**
+   * Get live photo with status
+   */
+  async getLivePhoto(userId: string): Promise<GetLivePhotoResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return {
+      success: true,
+      live_photo_url: user.livePhotoUrl ?? null,
+      live_photo_approved: user.livePhotoApproved,
+    };
+  }
+
+  /**
+   * Get Aadhaar details with status
+   */
+  async getAadhaarDetails(
+    userId: string,
+  ): Promise<GetAadhaarDetailsResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return {
+      success: true,
+      aadhaar_number: user.aadhaarNumber ?? null,
+      aadhaar_verified: user.aadhaarVerified,
+    };
+  }
+
+  /**
+   * Get bank details (for user endpoint)
+   */
+  async getUserBankDetails(
+    userId: string,
+  ): Promise<GetBankDetailsResponseDto> {
+    const bankDetails = await this.getBankDetails(userId);
+
+    return {
+      success: true,
+      bank_details: bankDetails,
+    };
+  }
+
+  /**
    * Step 4: Get DocuSign agreement status
    */
   async getDocuSignAgreementStatus(
@@ -2111,6 +2169,22 @@ export class UserService {
         docusign_agreement_signed: agreementStatus.docusign_agreement_signed,
       },
       kyc_completed: kycCompleted,
+    };
+  }
+
+  /**
+   * Check if email already exists in the system
+   * Throws BadRequestException if email exists
+   */
+  async checkDuplicateEmail(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findByEmail(email);
+    
+    if (user) {
+      throw new BadRequestException('Email already exists');
+    }
+    
+    return {
+      message: 'Email is available',
     };
   }
 }
