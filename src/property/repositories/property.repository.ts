@@ -52,6 +52,96 @@ export class PropertyRepository {
     });
   }
 
+  /**
+   * Count active properties by user ID (approved and not deleted)
+   */
+  async countActivePropertiesByUserId(userId: string): Promise<number> {
+    return await this.propertyRepository.count({
+      where: { userId, status: 'approved', isDeleted: false },
+    });
+  }
+
+  /**
+   * Find active properties by user ID with all relations (approved and not deleted)
+   */
+  async findActivePropertiesByUserId(
+    userId: string,
+    limit: number = 20,
+  ): Promise<Property[]> {
+    return await this.propertyRepository.find({
+      where: { userId, status: 'approved', isDeleted: false },
+      relations: [
+        'listingType',
+        'category',
+        'propertyType',
+        'city',
+        'society',
+        'locality',
+        'bhkType',
+        'builtUpAreaMetadata',
+      ],
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Find active properties by user ID categorized (Buy, Rent, Commercial)
+   * Returns top 10 most recent properties in each category
+   */
+  async findActivePropertiesByUserIdCategorized(
+    userId: string,
+  ): Promise<{
+    buy: Property[];
+    rent: Property[];
+    commercial: Property[];
+  }> {
+    const qb = this.propertyRepository
+      .createQueryBuilder('property')
+      .leftJoinAndSelect('property.listingType', 'listingType')
+      .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
+      .where('property.userId = :userId', { userId })
+      .andWhere('property.status = :status', { status: 'approved' })
+      .andWhere('property.isDeleted = false')
+      .orderBy('property.createdAt', 'DESC');
+
+    // Fetch all active properties
+    const allProperties = await qb.getMany();
+
+    // Categorize properties
+    const buy: Property[] = [];
+    const rent: Property[] = [];
+    const commercial: Property[] = [];
+
+    for (const property of allProperties) {
+      const categoryName = property.category?.name?.toLowerCase() || '';
+      const listingTypeName = property.listingType?.name?.toLowerCase() || '';
+
+      if (categoryName === 'commercial') {
+        commercial.push(property);
+      } else if (categoryName === 'residential') {
+        if (listingTypeName === 'sale') {
+          buy.push(property);
+        } else if (listingTypeName === 'rent') {
+          rent.push(property);
+        }
+      }
+    }
+
+    // Return top 10 in each category
+    return {
+      buy: buy.slice(0, 10),
+      rent: rent.slice(0, 10),
+      commercial: commercial.slice(0, 10),
+    };
+  }
+
   async createProperty(propertyData: Partial<Property>): Promise<Property> {
     const property = this.propertyRepository.create(propertyData);
     return await this.propertyRepository.save(property);

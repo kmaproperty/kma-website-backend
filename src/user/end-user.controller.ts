@@ -1,5 +1,5 @@
-import { Controller, Post, Body, Get, Put, Req, Query, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, Get, Put, Req, Query, Param, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import {
   EndUserSignupDto,
@@ -21,6 +21,9 @@ import {
   EndUserCitiesQueryDto,
   EndUserPropertiesSearchQueryDto,
   EndUserPropertiesSearchResponseDto,
+  EndUserChannelPartnerListQueryDto,
+  EndUserChannelPartnerListResponseDto,
+  EndUserChannelPartnerDetailsResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -248,6 +251,52 @@ export class EndUserController {
     @Query() query: EndUserPropertiesSearchQueryDto,
   ): Promise<EndUserPropertiesSearchResponseDto> {
     return await this.userService.searchEndUserProperties(query);
+  }
+
+  @Get('channel-partners')
+  @ApiOperation({
+    summary: 'List Channel Partners',
+    description: 'Search and filter channel partners with options to filter by name, experience, city, and number of properties. Only returns active, non-blocked, and KYC-completed channel partners.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel partners retrieved successfully',
+    type: EndUserChannelPartnerListResponseDto,
+  })
+  async listChannelPartners(
+    @Query() query: EndUserChannelPartnerListQueryDto,
+  ): Promise<EndUserChannelPartnerListResponseDto> {
+    return await this.userService.listChannelPartners(query);
+  }
+
+  @Get('channel-partners/:id')
+  @ApiOperation({
+    summary: 'Get Channel Partner Details',
+    description: 'Get detailed information about a specific channel partner including profile, statistics (buyers served, experience, property holdings, areas of operation), and contact information.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Channel partner user ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel partner details retrieved successfully',
+    type: EndUserChannelPartnerDetailsResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Channel partner not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Channel partner profile is not available (inactive, blocked, or KYC not completed)',
+  })
+  async getChannelPartnerDetails(
+    @Param('id') channelPartnerId: string,
+  ): Promise<EndUserChannelPartnerDetailsResponseDto> {
+    return await this.userService.getChannelPartnerDetails(channelPartnerId);
   }
 }
 

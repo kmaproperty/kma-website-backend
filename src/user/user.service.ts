@@ -46,6 +46,11 @@ import {
   EndUserPropertiesSearchResponseDto,
   EndUserPropertyListItemDto,
   EndUserPropertyUnitDto,
+  EndUserChannelPartnerListQueryDto,
+  EndUserChannelPartnerListResponseDto,
+  ChannelPartnerListItemDto,
+  EndUserChannelPartnerDetailsResponseDto,
+  ChannelPartnerStatisticsDto,
   UploadProfilePicDto,
   UploadProfilePicResponseDto,
   GetProfilePicResponseDto,
@@ -2185,6 +2190,252 @@ export class UserService {
     
     return {
       message: 'Email is available',
+    };
+  }
+
+  /**
+   * List channel partners with search and filters for end users
+   */
+  async listChannelPartners(
+    query: EndUserChannelPartnerListQueryDto,
+  ): Promise<EndUserChannelPartnerListResponseDto> {
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.min(100, Math.max(1, query.limit || 10));
+
+    // Parse property range if provided
+    let propertyCountMin: number | undefined;
+    let propertyCountMax: number | null | undefined;
+    if (query.properties) {
+      [propertyCountMin, propertyCountMax] = this.parsePropertyRange(query.properties);
+    }
+
+    // Get channel partners with all filters applied in SQL
+    const { items: users, total } = await this.userRepository.findChannelPartners({
+      page,
+      limit,
+      search: query.search,
+      city: query.city,
+      experience: query.experience,
+      propertyCountMin,
+      propertyCountMax,
+    });
+
+    // Calculate property counts and experience for each user (for response)
+    const channelPartnersWithDetails = await Promise.all(
+      users.map(async (user) => {
+        const propertyCount = await this.propertyRepository.countByUserId(user.id);
+        
+        // Calculate experience years from businessSince
+        let experienceYears: number | null = null;
+        if (user.businessSince) {
+          const businessDate = new Date(user.businessSince);
+          const today = new Date();
+          const years = Math.floor(
+            (today.getTime() - businessDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+          );
+          experienceYears = Math.max(0, years);
+        }
+
+        return {
+          user,
+          propertyCount,
+          experienceYears,
+        };
+      })
+    );
+
+    // Map to response DTO
+    const data: ChannelPartnerListItemDto[] = channelPartnersWithDetails.map((item) => ({
+      id: item.user.id,
+      name: item.user.name,
+      firm_name: item.user.firmName,
+      profile_image: item.user.profileImage,
+      cities: item.user.cities,
+      experience_years: item.experienceYears,
+      property_count: item.propertyCount,
+    }));
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return {
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  /**
+   * Parse property range string to min and max values
+   */
+  private parsePropertyRange(range: string): [number, number | null] {
+    if (range === '50+') {
+      return [50, null];
+    }
+    const [min, max] = range.split('-').map(Number);
+    return [min, max];
+  }
+
+  /**
+   * Get channel partner details for end users
+   */
+  async getChannelPartnerDetails(
+    channelPartnerId: string,
+  ): Promise<EndUserChannelPartnerDetailsResponseDto> {
+    const user = await this.userRepository.findById(channelPartnerId);
+    if (!user) {
+      throw new BadRequestException('Channel partner not found');
+    }
+
+    // Verify it's a channel partner
+    if (user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User is not a channel partner');
+    }
+
+    // Verify channel partner is active and KYC completed
+    if (!user.isActive || user.isBlocked || !user.kycCompleted) {
+      throw new BadRequestException('Channel partner profile is not available');
+    }
+
+    // Calculate statistics
+    const propertyCount = await this.propertyRepository.countByUserId(user.id);
+    const activePropertyCount = await this.propertyRepository.countActivePropertiesByUserId(user.id);
+    
+    // Count total leads (buyers served)
+    const totalLeads = await this.leadRepository.countByUserId(user.id);
+
+    // Calculate experience years
+    let experienceYears: number | null = null;
+    if (user.businessSince) {
+      const businessDate = new Date(user.businessSince);
+      const today = new Date();
+      const years = Math.floor(
+        (today.getTime() - businessDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+      );
+      experienceYears = Math.max(0, years);
+    }
+
+    // Parse areas of operation from cities field
+    const areasOfOperationList = user.cities
+      ? user.cities.split(',').map((city) => city.trim()).filter(Boolean)
+      : [];
+    const areasOfOperationCount = new Set(areasOfOperationList).size;
+
+    // Fetch active properties categorized
+    const categorizedProperties = await this.propertyRepository.findActivePropertiesByUserIdCategorized(
+      user.id,
+    );
+
+    // Helper function to map property to EndUserPropertyListItemDto
+    const mapProperty = (property: any): EndUserPropertyListItemDto => {
+        // Get primary image (cover image or first image)
+        let imageUrl: string | null = null;
+        if (property.photos && property.photos.length > 0) {
+          const coverImage = property.photos.find((p) => p.isCoverImage);
+          const firstPhoto = property.photos[0];
+          const selectedPhoto = coverImage || firstPhoto;
+          // Note: You may need to generate full URL from fileKey using S3Service
+          // For now, returning fileKey - adjust based on your URL generation logic
+          imageUrl = selectedPhoto.fileKey || null;
+        }
+
+        // Build address
+        const addressParts: string[] = [];
+        if (property.society?.name) {
+          addressParts.push(property.society.name);
+        }
+        if (property.locality?.name) {
+          addressParts.push(property.locality.name);
+        }
+        if (property.city?.name) {
+          addressParts.push(property.city.name);
+        }
+        const address = addressParts.join(', ') || 'Address not available';
+
+        // Build property name (use society name or property description)
+        const propertyName =
+          property.society?.name ||
+          property.propertyDescription?.split('.')[0] ||
+          'Property';
+
+        // Build units array (simplified - you may want to enhance this)
+        const units: EndUserPropertyUnitDto[] = [];
+        if (property.bhkType?.name && property.builtUpAreaMetadata) {
+          const superBuiltUpArea = property.builtUpAreaMetadata.superBuiltUpArea
+            ? `${property.builtUpAreaMetadata.superBuiltUpArea} Sq. Ft.`
+            : property.builtUpAreaMetadata.carpetArea
+              ? `${property.builtUpAreaMetadata.carpetArea} Sq. Ft.`
+              : 'Size not available';
+          const price =
+            property.price != null
+              ? `₹ ${property.price.toLocaleString('en-IN')}`
+              : property.monthlyRent != null
+                ? `₹ ${property.monthlyRent.toLocaleString('en-IN')}/month`
+                : 'Price On Request';
+
+          units.push({
+            unit: property.bhkType.name,
+            size: `${superBuiltUpArea} (Saleable)`,
+            price,
+          });
+        }
+
+      return {
+        id: property.id,
+        propertyName,
+        address,
+        description: property.propertyDescription || undefined,
+        imageUrl,
+        isReraRegistered: false, // Add RERA field to Property entity if needed
+        constructionStatus: property.constructionStatus || null,
+        category: property.category?.name || null,
+        propertyType: property.propertyType?.name || null,
+        bhkType: property.bhkType?.name || null,
+        price: property.price || null,
+        monthlyRent: property.monthlyRent || null,
+        city: property.city?.name || null,
+        society: property.society?.name || null,
+        locality: property.locality?.name || null,
+        units: units.length > 0 ? units : undefined,
+      };
+    };
+
+    // Map categorized properties
+    const mappedActiveProperties = {
+      buy: categorizedProperties.buy.map(mapProperty),
+      rent: categorizedProperties.rent.map(mapProperty),
+      commercial: categorizedProperties.commercial.map(mapProperty),
+    };
+
+    const statistics: ChannelPartnerStatisticsDto = {
+      buyers_served: totalLeads,
+      years_of_experience: experienceYears,
+      property_holdings: propertyCount,
+      active_properties: activePropertyCount,
+      team_size: null, // Not available in database
+      areas_of_operation: areasOfOperationCount,
+    };
+
+    return {
+      success: true,
+      id: user.id,
+      name: user.name,
+      firm_name: user.firmName,
+      channel_partner_code: user.channelPartnerCode,
+      profile_image: user.profileImage,
+      created_at: user.createdAt,
+      phone: user.phone,
+      email: user.email,
+      about: user.aboutYourSelf,
+      cities: user.cities,
+      trusted_since: user.businessSince,
+      statistics,
+      areas_of_operation_list: areasOfOperationList,
+      active_properties: mappedActiveProperties,
     };
   }
 }

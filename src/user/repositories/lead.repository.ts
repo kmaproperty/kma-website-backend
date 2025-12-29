@@ -36,6 +36,15 @@ export class LeadRepository {
       .andWhere('lead.createdAt >= :since', { since });
     return qb.getCount();
   }
+
+  /**
+   * Count total leads by user ID
+   */
+  async countByUserId(userId: string): Promise<number> {
+    return this.repository.count({
+      where: { userId },
+    });
+  }
 }
 
 

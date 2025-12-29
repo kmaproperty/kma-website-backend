@@ -123,4 +123,115 @@ export class UserRepository {
     const [items, total] = await qb.getManyAndCount();
     return { items, total };
   }
+
+  /**
+   * Find channel partners with filters and pagination
+   */
+  async findChannelPartners(options: {
+    page: number;
+    limit: number;
+    search?: string;
+    city?: string;
+    experience?: number;
+    propertyCountMin?: number;
+    propertyCountMax?: number | null;
+  }): Promise<{ items: User[]; total: number }> {
+    const { page, limit, search, city, experience, propertyCountMin, propertyCountMax } = options;
+    
+    // Base query builder for filtering
+    const baseQb = this.userRepository
+      .createQueryBuilder('user')
+      .where('user.role = :role', { role: UserRole.CHANNEL_PARTNER })
+      .andWhere('user.isActive = :isActive', { isActive: true })
+      .andWhere('user.isBlocked = :isBlocked', { isBlocked: false })
+      .andWhere('user.kycCompleted = :kycCompleted', { kycCompleted: true });
+
+    if (search?.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      baseQb.andWhere(
+        '(user.name ILIKE :search OR user.firmName ILIKE :search)',
+        { search: searchTerm },
+      );
+    }
+
+    if (city?.trim()) {
+      const cityTerm = `%${city.trim()}%`;
+      baseQb.andWhere('user.cities ILIKE :city', { city: cityTerm });
+    }
+
+    // Filter by experience (years from businessSince)
+    if (experience !== undefined) {
+      const minDate = new Date();
+      minDate.setFullYear(minDate.getFullYear() - experience);
+      baseQb.andWhere('user.businessSince IS NOT NULL')
+        .andWhere('user.businessSince <= :minDate', { minDate: minDate.toISOString().split('T')[0] });
+    }
+
+    // If property count filter is needed, use a subquery approach
+    if (propertyCountMin !== undefined) {
+      const userIdsWithPropertyCount = this.userRepository
+        .createQueryBuilder('u')
+        .select('u.id', 'userId')
+        .addSelect('COUNT(p.id)', 'propertyCount')
+        .leftJoin('properties', 'p', 'p.userId = u.id AND p.isDeleted = false')
+        .where('u.role = :role', { role: UserRole.CHANNEL_PARTNER })
+        .andWhere('u.isActive = :isActive', { isActive: true })
+        .andWhere('u.isBlocked = :isBlocked', { isBlocked: false })
+        .andWhere('u.kycCompleted = :kycCompleted', { kycCompleted: true })
+        .groupBy('u.id');
+
+      // Apply same filters as base query
+      if (search?.trim()) {
+        const searchTerm = `%${search.trim()}%`;
+        userIdsWithPropertyCount.andWhere(
+          '(u.name ILIKE :search OR u.firmName ILIKE :search)',
+          { search: searchTerm },
+        );
+      }
+
+      if (city?.trim()) {
+        const cityTerm = `%${city.trim()}%`;
+        userIdsWithPropertyCount.andWhere('u.cities ILIKE :city', { city: cityTerm });
+      }
+
+      if (experience !== undefined) {
+        const minDate = new Date();
+        minDate.setFullYear(minDate.getFullYear() - experience);
+        userIdsWithPropertyCount
+          .andWhere('u.businessSince IS NOT NULL')
+          .andWhere('u.businessSince <= :minDate', { minDate: minDate.toISOString().split('T')[0] });
+      }
+
+      if (propertyCountMax === null) {
+        userIdsWithPropertyCount.having('COUNT(p.id) >= :propertyCountMin', {
+          propertyCountMin,
+        });
+      } else {
+        userIdsWithPropertyCount
+          .having('COUNT(p.id) >= :propertyCountMin', { propertyCountMin })
+          .andHaving('COUNT(p.id) < :propertyCountMax', { propertyCountMax });
+      }
+
+      const filteredUserIds = await userIdsWithPropertyCount.getRawMany();
+      const userIds = filteredUserIds.map((row) => row.userId);
+
+      if (userIds.length === 0) {
+        return { items: [], total: 0 };
+      }
+
+      baseQb.andWhere('user.id IN (:...userIds)', { userIds });
+    }
+
+    // Get total count
+    const total = await baseQb.getCount();
+
+    // Apply pagination and get items
+    const items = await baseQb
+      .orderBy('user.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return { items, total };
+  }
 }
