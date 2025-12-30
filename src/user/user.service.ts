@@ -65,6 +65,15 @@ import {
   GetLivePhotoResponseDto,
   GetAadhaarDetailsResponseDto,
   GetBankDetailsResponseDto,
+  OwnerProfileResponseDto,
+  OwnerEditProfileDto,
+  OwnerEditProfileResponseDto,
+  ChannelPartnerProfileResponseDto,
+  ChannelPartnerEditProfileDto,
+  ChannelPartnerEditProfileResponseDto,
+  UserProfileResponseDto,
+  UserEditProfileDto,
+  UserEditProfileResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
@@ -1423,6 +1432,391 @@ export class UserService {
         phone: updatedUser.phone,
         role: updatedUser.role,
         isActive: updatedUser.isActive,
+        profileImage: updatedUser.profileImage,
+      },
+    };
+  }
+
+  /**
+   * Get User Profile (Owner or Channel Partner)
+   */
+  async getUserProfile(userId: string): Promise<UserProfileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.OWNER && user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User must be an owner or channel partner');
+    }
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+        phoneVerified: user.phoneVerified,
+        city: user.role === UserRole.OWNER ? user.cities : null,
+        channelPartnerCode: user.role === UserRole.CHANNEL_PARTNER ? user.channelPartnerCode : null,
+        firmName: user.role === UserRole.CHANNEL_PARTNER ? user.firmName : null,
+        businessSince: user.role === UserRole.CHANNEL_PARTNER ? user.businessSince : null,
+        cities: user.role === UserRole.CHANNEL_PARTNER ? user.cities : null,
+        aboutYourSelf: user.role === UserRole.CHANNEL_PARTNER ? user.aboutYourSelf : null,
+        profileImage: user.profileImage,
+      },
+    };
+  }
+
+  /**
+   * Get Owner Profile
+   */
+  async getOwnerProfile(userId: string): Promise<OwnerProfileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.OWNER) {
+      throw new BadRequestException('User is not an owner');
+    }
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+        phoneVerified: user.phoneVerified,
+        intent: user.intent,
+        city: user.cities,
+        profileImage: user.profileImage,
+      },
+    };
+  }
+
+  /**
+   * Edit Owner Profile
+   */
+  async editOwnerProfile(
+    userId: string,
+    editProfileDto: OwnerEditProfileDto,
+  ): Promise<OwnerEditProfileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.OWNER) {
+      throw new BadRequestException('User is not an owner');
+    }
+
+    const updateData: Partial<User> = {};
+
+    if (editProfileDto.name !== undefined) {
+      updateData.name = editProfileDto.name || null;
+    }
+
+    if (editProfileDto.email !== undefined) {
+      // Check if email is already used by another user
+      if (editProfileDto.email) {
+        const existingUserByEmail = await this.userRepository.findByEmail(
+          editProfileDto.email,
+        );
+        if (existingUserByEmail && existingUserByEmail.id !== userId) {
+          throw new BadRequestException(
+            USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+          );
+        }
+      }
+      updateData.email = editProfileDto.email || null;
+    }
+
+    if (editProfileDto.intent !== undefined) {
+      updateData.intent = editProfileDto.intent || null;
+    }
+
+    if (editProfileDto.city !== undefined) {
+      updateData.cities = editProfileDto.city || null;
+    }
+
+    if (editProfileDto.profileImage !== undefined) {
+      updateData.profileImage = editProfileDto.profileImage || null;
+    }
+
+    const updatedUser = await this.userRepository.update(userId, updateData);
+    if (!updatedUser) {
+      throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
+    }
+
+    return {
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        intent: updatedUser.intent,
+        city: updatedUser.cities,
+        profileImage: updatedUser.profileImage,
+      },
+    };
+  }
+
+  /**
+   * Get Channel Partner Profile
+   */
+  async getChannelPartnerProfile(
+    userId: string,
+  ): Promise<ChannelPartnerProfileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User is not a channel partner');
+    }
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+        phoneVerified: user.phoneVerified,
+        channelPartnerCode: user.channelPartnerCode,
+        firmName: user.firmName,
+        businessSince: user.businessSince,
+        cities: user.cities,
+        aboutYourSelf: user.aboutYourSelf,
+        intent: user.intent,
+        profileImage: user.profileImage,
+      },
+    };
+  }
+
+  /**
+   * Edit User Profile (Owner or Channel Partner)
+   */
+  async editUserProfile(
+    userId: string,
+    editProfileDto: UserEditProfileDto,
+  ): Promise<UserEditProfileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.OWNER && user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User must be an owner or channel partner');
+    }
+
+    const updateData: Partial<User> = {};
+
+    if (editProfileDto.name !== undefined) {
+      updateData.name = editProfileDto.name || null;
+    }
+
+    if (editProfileDto.email !== undefined) {
+      // Check if email is already used by another user
+      if (editProfileDto.email) {
+        const existingUserByEmail = await this.userRepository.findByEmail(
+          editProfileDto.email,
+        );
+        if (existingUserByEmail && existingUserByEmail.id !== userId) {
+          throw new BadRequestException(
+            USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+          );
+        }
+      }
+      updateData.email = editProfileDto.email || null;
+    }
+
+    if (editProfileDto.profileImage !== undefined) {
+      updateData.profileImage = editProfileDto.profileImage || null;
+    }
+
+    // Owner-specific fields
+    if (user.role === UserRole.OWNER) {
+      if (editProfileDto.city !== undefined) {
+        updateData.cities = editProfileDto.city || null;
+      }
+    }
+
+    // Channel Partner-specific fields
+    if (user.role === UserRole.CHANNEL_PARTNER) {
+      if (editProfileDto.channelPartnerCode !== undefined) {
+        // Validate channel partner code if provided
+        if (editProfileDto.channelPartnerCode) {
+          const validCode =
+            await this.channelPartnerCodeRepository.findByCode(
+              editProfileDto.channelPartnerCode,
+            );
+          if (!validCode) {
+            throw new BadRequestException(
+              USER_MESSAGES.CHANNEL_PARTNER.INVALID_CODE,
+            );
+          }
+        }
+        updateData.channelPartnerCode =
+          editProfileDto.channelPartnerCode || null;
+      }
+
+      if (editProfileDto.firmName !== undefined) {
+        updateData.firmName = editProfileDto.firmName || null;
+      }
+
+      if (editProfileDto.businessSince !== undefined) {
+        updateData.businessSince = editProfileDto.businessSince || null;
+      }
+
+      if (editProfileDto.cities !== undefined) {
+        updateData.cities = editProfileDto.cities || null;
+      }
+
+      if (editProfileDto.aboutYourSelf !== undefined) {
+        updateData.aboutYourSelf = editProfileDto.aboutYourSelf || null;
+      }
+    }
+
+    const updatedUser = await this.userRepository.update(userId, updateData);
+    if (!updatedUser) {
+      throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
+    }
+
+    return {
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        city: updatedUser.role === UserRole.OWNER ? updatedUser.cities : null,
+        channelPartnerCode: updatedUser.role === UserRole.CHANNEL_PARTNER ? updatedUser.channelPartnerCode : null,
+        firmName: updatedUser.role === UserRole.CHANNEL_PARTNER ? updatedUser.firmName : null,
+        businessSince: updatedUser.role === UserRole.CHANNEL_PARTNER ? updatedUser.businessSince : null,
+        cities: updatedUser.role === UserRole.CHANNEL_PARTNER ? updatedUser.cities : null,
+        aboutYourSelf: updatedUser.role === UserRole.CHANNEL_PARTNER ? updatedUser.aboutYourSelf : null,
+        profileImage: updatedUser.profileImage,
+      },
+    };
+  }
+
+  /**
+   * Edit Channel Partner Profile
+   */
+  async editChannelPartnerProfile(
+    userId: string,
+    editProfileDto: ChannelPartnerEditProfileDto,
+  ): Promise<ChannelPartnerEditProfileResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
+    }
+
+    if (user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User is not a channel partner');
+    }
+
+    const updateData: Partial<User> = {};
+
+    if (editProfileDto.name !== undefined) {
+      updateData.name = editProfileDto.name || null;
+    }
+
+    if (editProfileDto.email !== undefined) {
+      // Check if email is already used by another user
+      if (editProfileDto.email) {
+        const existingUserByEmail = await this.userRepository.findByEmail(
+          editProfileDto.email,
+        );
+        if (existingUserByEmail && existingUserByEmail.id !== userId) {
+          throw new BadRequestException(
+            USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+          );
+        }
+      }
+      updateData.email = editProfileDto.email || null;
+    }
+
+    if (editProfileDto.channelPartnerCode !== undefined) {
+      // Validate channel partner code if provided
+      if (editProfileDto.channelPartnerCode) {
+        const validCode =
+          await this.channelPartnerCodeRepository.findByCode(
+            editProfileDto.channelPartnerCode,
+          );
+        if (!validCode) {
+          throw new BadRequestException(
+            USER_MESSAGES.CHANNEL_PARTNER.INVALID_CODE,
+          );
+        }
+      }
+      updateData.channelPartnerCode =
+        editProfileDto.channelPartnerCode || null;
+    }
+
+    if (editProfileDto.firmName !== undefined) {
+      updateData.firmName = editProfileDto.firmName || null;
+    }
+
+    if (editProfileDto.businessSince !== undefined) {
+      updateData.businessSince = editProfileDto.businessSince || null;
+    }
+
+    if (editProfileDto.cities !== undefined) {
+      updateData.cities = editProfileDto.cities || null;
+    }
+
+    if (editProfileDto.aboutYourSelf !== undefined) {
+      updateData.aboutYourSelf = editProfileDto.aboutYourSelf || null;
+    }
+
+    if (editProfileDto.intent !== undefined) {
+      updateData.intent = editProfileDto.intent || null;
+    }
+
+    if (editProfileDto.profileImage !== undefined) {
+      updateData.profileImage = editProfileDto.profileImage || null;
+    }
+
+    const updatedUser = await this.userRepository.update(userId, updateData);
+    if (!updatedUser) {
+      throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
+    }
+
+    return {
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        channelPartnerCode: updatedUser.channelPartnerCode,
+        firmName: updatedUser.firmName,
+        businessSince: updatedUser.businessSince,
+        cities: updatedUser.cities,
+        aboutYourSelf: updatedUser.aboutYourSelf,
+        intent: updatedUser.intent,
         profileImage: updatedUser.profileImage,
       },
     };

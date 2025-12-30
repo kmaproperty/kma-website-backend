@@ -3,6 +3,7 @@ import {
   Post,
   Body,
   Get,
+  Put,
   Req,
   BadRequestException,
   Query,
@@ -71,6 +72,15 @@ import {
   GetBankDetailsResponseDto,
   EmailDto,
   CheckDuplicateEmailResponseDto,
+  OwnerProfileResponseDto,
+  OwnerEditProfileDto,
+  OwnerEditProfileResponseDto,
+  ChannelPartnerProfileResponseDto,
+  ChannelPartnerEditProfileDto,
+  ChannelPartnerEditProfileResponseDto,
+  UserProfileResponseDto,
+  UserEditProfileDto,
+  UserEditProfileResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import {
@@ -211,21 +221,43 @@ export class UserController {
   }
 
   @Get('/profile')
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get user profile' })
+  @ApiOperation({ summary: 'Get user profile (Owner or Channel Partner)' })
   @ApiResponse({
     status: 200,
-    description: 'User details',
+    description: 'User profile retrieved successfully',
+    type: UserProfileResponseDto,
   })
-  async getUserProfile(@Req() req: Request) {
+  async getUserProfile(
+    @Req() req: Request,
+  ): Promise<UserProfileResponseDto> {
     if (!req.user?.id) {
       throw new BadRequestException('User not authenticated');
     }
-    const user = await this.userService.getUserById(req.user.id);
-    if (!user) {
-      throw new BadRequestException('User not found');
+    return await this.userService.getUserProfile(req.user.id);
+  }
+
+  @Put('/profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Edit user profile (Owner or Channel Partner)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile updated successfully',
+    type: UserEditProfileResponseDto,
+  })
+  async editUserProfile(
+    @Body() editProfileDto: UserEditProfileDto,
+    @Req() req: Request,
+  ): Promise<UserEditProfileResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
     }
-    return user;
+    return await this.userService.editUserProfile(
+      req.user.id,
+      editProfileDto,
+    );
   }
 
   @Post('/profile-pic')

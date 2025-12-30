@@ -19,3 +19,6 @@ export * from './end-user-properties-search.dto';
 export * from './end-user-channel-partner-list.dto';
 export * from './profile-pic.dto';
 export * from './verification-steps.dto';
+export * from './owner-profile.dto';
+export * from './channel-partner-profile.dto';
+export * from './user-profile.dto';
