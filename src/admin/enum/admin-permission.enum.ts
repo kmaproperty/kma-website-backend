@@ -16,6 +16,9 @@ export enum AdminPermission {
   
   // Dashboard Access
   DASHBOARD = 'DASHBOARD',
+  
+  // Blog Management
+  BLOG_MANAGEMENT = 'BLOG_MANAGEMENT',
 }
 
 

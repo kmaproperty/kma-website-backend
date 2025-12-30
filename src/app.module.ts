@@ -10,6 +10,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { ConfigModule } from './common/config/config.module';
 import { ConfigService } from './common/config/config.service';
 import { AdminModule } from './admin/admin.module';
+import { BlogModule } from './blog/blog.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AdminModule } from './admin/admin.module';
     ContactUsModule,
     UploadsModule,
     AdminModule,
+    BlogModule,
   ],
   controllers: [AppController],
   providers: [AppService],
