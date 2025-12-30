@@ -1,6 +1,9 @@
-import { Controller, Post, Body, Get, Put, Req, Query, Param, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { Controller, Post, Body, Get, Put, Req, Query, Param, BadRequestException, UnauthorizedException, Headers, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiHeader } from '@nestjs/swagger';
 import { UserService } from './user.service';
+import { PropertyViewTrackerService } from './services/property-view-tracker.service';
+import { Public } from '../common/decorators/public.decorator';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import {
   EndUserSignupDto,
   EndUserSignupResponseDto,
@@ -24,15 +27,21 @@ import {
   EndUserChannelPartnerListQueryDto,
   EndUserChannelPartnerListResponseDto,
   EndUserChannelPartnerDetailsResponseDto,
+  EndUserPropertyDetailsResponseDto,
 } from './dto';
 import { Request } from 'express';
 
 @ApiTags('End User')
 @Controller('end-user')
+@UseGuards(JwtAuthGuard)
 export class EndUserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly propertyViewTracker: PropertyViewTrackerService,
+  ) {}
 
   @Post('signup')
+  @Public()
   @ApiOperation({
     summary: 'End User Signup - Send OTP',
     description: 'Create a new end user account. Provide name, email, and phone number. An OTP will be sent to the provided phone number for verification.',
@@ -53,6 +62,7 @@ export class EndUserController {
   }
 
   @Post('verify-otp')
+  @Public()
   @ApiOperation({
     summary: 'End User Verify OTP - Complete Signup',
     description: 'Verify the OTP received on mobile number and complete the end user account creation. Returns access and refresh tokens upon successful verification.',
@@ -73,6 +83,7 @@ export class EndUserController {
   }
 
   @Post('login')
+  @Public()
   @ApiOperation({
     summary: 'End User Login - Send OTP',
     description: 'Login to existing end user account. Provide phone number and an OTP will be sent for verification.',
@@ -93,6 +104,7 @@ export class EndUserController {
   }
 
   @Post('verify-login-otp')
+  @Public()
   @ApiOperation({
     summary: 'End User Verify Login OTP',
     description: 'Verify the OTP received on mobile number and complete the login. Returns access and refresh tokens upon successful verification.',
@@ -222,6 +234,7 @@ export class EndUserController {
   }
 
   @Get('home/cities')
+  @Public()
   @ApiOperation({
     summary: 'Get End User Home Page Cities',
     description: 'Returns featured cities and all cities list for the home page city selection modal. Supports search by city name and location detection via latitude/longitude.',
@@ -238,6 +251,7 @@ export class EndUserController {
   }
 
   @Get('properties')
+  @Public()
   @ApiOperation({
     summary: 'Search Properties',
     description: 'Search and filter properties with various filters including city, search, category, property type, BHK, furnishing, construction status, price range, and location-based search.',
@@ -254,6 +268,7 @@ export class EndUserController {
   }
 
   @Get('channel-partners')
+  @Public()
   @ApiOperation({
     summary: 'List Channel Partners',
     description: 'Search and filter channel partners with options to filter by name, experience, city, and number of properties. Only returns active, non-blocked, and KYC-completed channel partners.',
@@ -270,6 +285,7 @@ export class EndUserController {
   }
 
   @Get('channel-partners/:id')
+  @Public()
   @ApiOperation({
     summary: 'Get Channel Partner Details',
     description: 'Get detailed information about a specific channel partner including profile, statistics (buyers served, experience, property holdings, areas of operation), and contact information.',
@@ -297,6 +313,89 @@ export class EndUserController {
     @Param('id') channelPartnerId: string,
   ): Promise<EndUserChannelPartnerDetailsResponseDto> {
     return await this.userService.getChannelPartnerDetails(channelPartnerId);
+  }
+
+  @Get('properties/:id')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Property Details',
+    description: 'Get detailed information about a specific property. Unauthenticated users can view up to 3 properties, then login is required. Authenticated users have unlimited access.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Property ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - for authenticated users)',
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property details retrieved successfully',
+    type: EndUserPropertyDetailsResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Login required - Maximum free views (3) exceeded',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Property not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property is not available (not approved or deleted)',
+  })
+  async getPropertyDetails(
+    @Param('id') propertyId: string,
+    @Req() req: Request,
+    @Headers('user-agent') userAgent?: string,
+  ): Promise<EndUserPropertyDetailsResponseDto> {
+    // Check if user is authenticated
+    const isAuthenticated = !!(req as any).user?.id;
+
+    // Get client IP address
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      (req.headers['x-real-ip'] as string) ||
+      req.socket?.remoteAddress ||
+      'unknown';
+
+    // Check if user can view property
+    const viewCheck = this.propertyViewTracker.canViewProperty(
+      clientIp,
+      userAgent,
+      isAuthenticated,
+    );
+
+    if (!viewCheck.canView) {
+      throw new UnauthorizedException({
+        message: 'Maximum free property views exceeded. Please login to continue viewing properties.',
+        requiresLogin: true,
+        remainingViews: 0,
+      });
+    }
+
+    // Get property details
+    const propertyDetails =
+      await this.userService.getEndUserPropertyDetails(propertyId);
+
+    // Record the view for unauthenticated users
+    this.propertyViewTracker.recordView(
+      clientIp,
+      userAgent,
+      propertyId,
+      isAuthenticated,
+    );
+
+    // Add remaining views info to response
+    return {
+      ...propertyDetails,
+      remainingViews: viewCheck.remainingViews,
+    };
   }
 }
 

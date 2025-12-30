@@ -31,6 +31,7 @@ export class PropertyRepository {
         'category',
         'city',
         'society',
+        'locality',
         'propertyType',
         'bhkType',
         'builtUpAreaMetadata',
@@ -352,7 +353,7 @@ export class PropertyRepository {
     await this.propertyRepository.delete(id);
   }
 
-  async findEndUserProjects(options: {
+  async findEndUserProperties(options: {
     page: number;
     limit: number;
     sortBy: 'price' | 'createdAt' | 'updatedAt';

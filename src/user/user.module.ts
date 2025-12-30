@@ -22,6 +22,7 @@ import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { DocuSignService } from './services/docusign.service';
 import { EncryptionService } from './services/encryption.service';
+import { PropertyViewTrackerService } from './services/property-view-tracker.service';
 import { UserController } from './user.controller';
 import { ChannelPartnerCodeController } from './channel-partner-code.controller';
 import { EndUserController } from './end-user.controller';
@@ -71,6 +72,7 @@ const repositories = [
     ChannelPartnerCodeService,
     DocuSignService,
     EncryptionService,
+    PropertyViewTrackerService,
     LoggerService,
     ErrorHandlerService,
     AuthMiddleware,

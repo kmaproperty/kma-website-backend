@@ -17,6 +17,7 @@ export * from './docusign.dto';
 export * from './end-user-signup.dto';
 export * from './end-user-properties-search.dto';
 export * from './end-user-channel-partner-list.dto';
+export * from './end-user-property-details.dto';
 export * from './profile-pic.dto';
 export * from './verification-steps.dto';
 export * from './owner-profile.dto';

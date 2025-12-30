@@ -46,6 +46,13 @@ import {
   EndUserPropertiesSearchResponseDto,
   EndUserPropertyListItemDto,
   EndUserPropertyUnitDto,
+  EndUserPropertyDetailsResponseDto,
+  PropertyImageDto,
+  PropertyVideoDto,
+  PropertyLocationDto,
+  PropertyPriceInfoDto,
+  PropertyUnitConfigDto,
+  PropertyPriceListItemDto,
   EndUserChannelPartnerListQueryDto,
   EndUserChannelPartnerListResponseDto,
   ChannelPartnerListItemDto,
@@ -2099,7 +2106,7 @@ export class UserService {
       radius,
     } = query;
 
-    const result = await this.propertyRepository.findEndUserProjects({
+    const result = await this.propertyRepository.findEndUserProperties({
       page,
       limit,
       sortBy,
@@ -2205,6 +2212,204 @@ export class UserService {
       page,
       limit,
       totalPages,
+    };
+  }
+
+  /**
+   * Get Property Details for End User
+   */
+  async getEndUserPropertyDetails(
+    propertyId: string,
+  ): Promise<EndUserPropertyDetailsResponseDto> {
+    const property = await this.propertyRepository.findByIdWithRelations(
+      propertyId,
+    );
+
+    if (!property) {
+      throw new BadRequestException('Property not found');
+    }
+
+    // Check if property is approved and not deleted
+    if (property.status !== 'approved' || property.isDeleted) {
+      throw new BadRequestException('Property is not available');
+    }
+
+    // Build property name/title
+    const bhkName = property.bhkType?.name ?? '';
+    const propertyTypeName = property.propertyType?.name ?? '';
+    const titleParts = [bhkName, propertyTypeName].filter(
+      (part) => part && part.trim().length > 0,
+    );
+    const title =
+      titleParts.join(' ').trim() ||
+      property.propertyDescription?.split('.')[0] ||
+      'Property';
+
+    const name =
+      property.society?.name ||
+      property.propertyDescription?.split('.')[0] ||
+      title;
+
+    // Build address
+    const addressParts: string[] = [];
+    if (property.houseNumber || property.flatNumber) {
+      addressParts.push(property.houseNumber || property.flatNumber || '');
+    }
+    if (property.society?.name) {
+      addressParts.push(property.society.name);
+    }
+    if (property.society?.localityName) {
+      addressParts.push(property.society.localityName);
+    }
+    if (property.locality?.name) {
+      addressParts.push(property.locality.name);
+    }
+    if (property.city?.name) {
+      addressParts.push(property.city.name);
+    }
+    if (property.society?.pincode) {
+      addressParts.push(property.society.pincode);
+    }
+    const address = addressParts.join(', ') || 'Address not available';
+
+    // Get location coordinates (prefer society, then locality, then city)
+    const latitude =
+      property.society?.latitude ??
+      property.locality?.latitude ??
+      property.city?.latitude ??
+      null;
+    const longitude =
+      property.society?.longitude ??
+      property.locality?.longitude ??
+      property.city?.longitude ??
+      null;
+
+    // Process images
+    const images: PropertyImageDto[] =
+      property.photos?.map((photo) => ({
+        fileKey: photo.fileKey,
+        view: photo.view,
+        isCoverImage: photo.isCoverImage,
+      })) || [];
+
+    // Process videos
+    const videos: PropertyVideoDto[] =
+      property.videos?.map((video) => ({
+        fileKey: video.fileKey,
+        view: video.format,
+      })) || [];
+
+    // Build price info
+    const price = property.price ?? property.plotPrice ?? null;
+    const monthlyRent = property.monthlyRent ?? null;
+
+    let displayPrice = 'Price on Request';
+    if (price != null) {
+      // Format price in Indian currency (Lac/Crore)
+      if (price >= 10000000) {
+        displayPrice = `₹${(price / 10000000).toFixed(2)} Crore`;
+      } else if (price >= 100000) {
+        displayPrice = `₹${(price / 100000).toFixed(2)} Lac`;
+      } else {
+        displayPrice = `₹${price.toLocaleString('en-IN')}`;
+      }
+    } else if (monthlyRent != null) {
+      displayPrice = `₹${monthlyRent.toLocaleString('en-IN')}/month`;
+    }
+
+    const priceInfo: PropertyPriceInfoDto = {
+      price: price,
+      monthlyRent: monthlyRent,
+      displayPrice,
+    };
+
+    // Build unit config
+    const areaFromMetadata = property.builtUpAreaMetadata?.superBuiltUpArea
+      ? Number(property.builtUpAreaMetadata.superBuiltUpArea)
+      : null;
+    const area =
+      property.builtUpArea ?? areaFromMetadata ?? property.carpetArea ?? null;
+
+    const areaUnit =
+      property.builtUpAreaUnit ??
+      property.carpetAreaUnit ??
+      (area != null ? 'sq.ft' : null);
+
+    let sizeText: string | null = null;
+    if (area != null && areaUnit) {
+      sizeText = `${area} ${areaUnit === 'sq.ft' ? 'Sq. Ft.' : areaUnit}`;
+      if (property.builtUpAreaMetadata?.carpetArea) {
+        sizeText += ` (Saleable)`;
+      }
+    }
+
+    const unitType = property.bhkType?.name
+      ? `${property.bhkType.name} ${property.propertyType?.name || 'Flats'}`
+      : property.propertyType?.name || 'Property';
+
+    const unitConfig: PropertyUnitConfigDto = {
+      unitType,
+      size: sizeText,
+      numberOfUnits: null, // This would need to come from a project/development entity if available
+    };
+
+    // Build project status
+    let projectStatus = 'Available';
+    if (property.constructionStatus) {
+      const statusMap: Record<string, string> = {
+        ready_to_move: 'Ready to Move',
+        under_construction: 'Under Construction',
+        new_launch: 'New Launch',
+      };
+      projectStatus = statusMap[property.constructionStatus] || projectStatus;
+    }
+
+    // Build price list (simplified - showing current property as one unit)
+    const priceList: PropertyPriceListItemDto[] = [];
+    if (unitType && sizeText) {
+      const priceText =
+        price != null
+          ? `₹${price.toLocaleString('en-IN')}`
+          : monthlyRent != null
+            ? `₹${monthlyRent.toLocaleString('en-IN')}/month`
+            : 'Price on Request';
+      priceList.push({
+        unitType: `${unitType} ${sizeText}`,
+        price: priceText,
+      });
+    }
+
+    // Get total area if available (from propertyAreaAcre)
+    let totalArea: string | null = null;
+    if (property.propertyAreaAcre != null) {
+      totalArea = `${property.propertyAreaAcre} Acres`;
+    }
+
+    return {
+      success: true,
+      id: property.id,
+      name,
+      title,
+      location: {
+        address,
+        latitude: latitude ? Number(latitude) : null,
+        longitude: longitude ? Number(longitude) : null,
+      },
+      logo: null, // Placeholder - can be added from user/developer entity
+      images,
+      videos: videos.length > 0 ? videos : undefined,
+      priceInfo,
+      projectStatus,
+      unitConfig,
+      totalArea,
+      aboutProperty: property.propertyDescription || null,
+      priceList: priceList.length > 0 ? priceList : undefined,
+      category: property.category?.name || null,
+      propertyType: property.propertyType?.name || null,
+      bhkType: property.bhkType?.name || null,
+      constructionStatus: property.constructionStatus || null,
+      furnishingType: property.furnishType || null,
+      listingType: property.listingType?.name || null,
     };
   }
 

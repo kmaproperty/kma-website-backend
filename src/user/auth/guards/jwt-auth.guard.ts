@@ -19,22 +19,46 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+    // Check if route is marked as public (check handler first, then class)
+    const handlerPublic = this.reflector.get<boolean>(
+      IS_PUBLIC_KEY,
       context.getHandler(),
+    );
+    const classPublic = this.reflector.get<boolean>(
+      IS_PUBLIC_KEY,
       context.getClass(),
-    ]);
-
-    if (isPublic) {
-      return true;
-    }
+    );
+    const isPublic = handlerPublic ?? classPublic ?? false;
 
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
 
+    // For public routes, allow access without authentication
+    // But try to authenticate if token is present (for optional auth)
+    if (isPublic) {
+      // If token is present, try to authenticate (but don't fail if invalid)
+      if (token) {
+        try {
+          await this.authenticateToken(request, token);
+        } catch (error) {
+          // If token is invalid or expired, just continue without authentication
+          // This allows unauthenticated access to public routes
+          // User will be treated as unauthenticated
+        }
+      }
+      // Always allow access to public routes
+      return true;
+    }
+
+    // For protected routes, token is required
     if (!token) {
       throw new UnauthorizedException('Authorization token missing');
     }
 
+    return this.authenticateToken(request, token);
+  }
+
+  private async authenticateToken(request: Request, token: string): Promise<boolean> {
     try {
       const secret =
         this.configService.get<string>('JWT_SECRET') || 'fallback-secret-key';
