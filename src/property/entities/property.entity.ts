@@ -140,6 +140,14 @@ export class Property extends BaseEntity {
   })
   deactivationReason: DeactivationReason | null;
 
+  // Timestamp when property was deactivated
+  @Column({
+    type: 'timestamp with time zone',
+    nullable: true,
+    name: 'deactivated_on',
+  })
+  deactivatedOn: Date | null;
+
   @Column({
     type: 'boolean',
     name: 'is_deleted',

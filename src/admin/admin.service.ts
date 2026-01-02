@@ -1234,6 +1234,8 @@ export class AdminService {
       // Keep property unverified when approving - verification is a separate step
       activatedAt: now,
       rejectionReason: null, // Clear rejection reason if property was previously rejected
+      deactivatedOn: null, // Clear deactivatedOn if property was previously deactivated
+      deactivationReason: null, // Clear deactivation reason if property was previously deactivated
     });
 
     return {
@@ -1443,6 +1445,11 @@ export class AdminService {
         expiresAt.setDate(expiresAt.getDate() + 15);
         directUpdates.expiresAt = expiresAt;
         directUpdates.activatedAt = new Date();
+      }
+      // Clear deactivatedOn if status is being changed from deactivated to any other status
+      if (property.status === PropertyStatus.DEACTIVATED && dto.status !== PropertyStatus.DEACTIVATED) {
+        directUpdates.deactivatedOn = null;
+        directUpdates.deactivationReason = null;
       }
       touchedDirect = true;
     }

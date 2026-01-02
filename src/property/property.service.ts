@@ -303,6 +303,9 @@ export class PropertyService {
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
       expiresAt: property.expiresAt ?? null,
+      deactivatedOn: property.deactivatedOn ?? null,
+      expiredOn: property.expiresAt ?? null,
+      isVerified: property.isVerified ?? null,
     };
   }
 
@@ -2412,6 +2415,7 @@ export class PropertyService {
     propertyId: string;
     status: string;
     deactivationReason: DeactivationReason;
+    deactivatedOn: Date;
   }> {
     const property = await this.propertyRepository.findById(propertyId);
     if (!property) {
@@ -2430,10 +2434,12 @@ export class PropertyService {
       throw new BadRequestException('Property is already deactivated');
     }
 
-    // Update property status and deactivation reason
+    // Update property status, deactivation reason, and deactivated timestamp
+    const deactivatedOn = new Date();
     await this.propertyRepository.updateProperty(propertyId, {
       status: PropertyStatus.DEACTIVATED,
       deactivationReason: deactivationReason,
+      deactivatedOn: deactivatedOn,
     });
 
     return {
@@ -2442,6 +2448,7 @@ export class PropertyService {
       propertyId: property.id,
       status: PropertyStatus.DEACTIVATED,
       deactivationReason: deactivationReason,
+      deactivatedOn: deactivatedOn,
     };
   }
 

@@ -748,6 +748,28 @@ export class OwnerPropertyListingItemDto {
     required: false,
   })
   expiresAt?: Date | null;
+
+  @ApiProperty({
+    description: 'Date when property was deactivated (updatedAt when status is deactivated)',
+    example: '2025-08-05T10:15:00.000Z',
+    required: false,
+  })
+  deactivatedOn?: Date | null;
+
+  @ApiProperty({
+    description: 'Expiry date for active properties (alias for expiresAt)',
+    example: '2025-08-05T10:15:00.000Z',
+    required: false,
+  })
+  expiredOn?: Date | null;
+
+  @ApiProperty({
+    description: 'Verification status of the property',
+    example: 'verified',
+    enum: ['verified', 'unverified', 'pending'],
+    required: false,
+  })
+  isVerified?: string | null;
 }
 
 export class OwnerPropertyListingPaginationDto {

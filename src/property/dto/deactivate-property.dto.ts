@@ -44,5 +44,11 @@ export class DeactivatePropertyResponseDto {
     enum: DeactivationReason,
   })
   deactivationReason: DeactivationReason;
+
+  @ApiProperty({
+    description: 'Timestamp when property was deactivated',
+    example: '2025-08-05T10:15:00.000Z',
+  })
+  deactivatedOn: Date;
 }
 
