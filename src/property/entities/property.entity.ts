@@ -18,6 +18,7 @@ import { Ownership } from '../enum/ownership.enum';
 import { AreaUnit } from '../enum/area-unit.enum';
 import { DistanceUnit } from '../enum/distance-unit.enum';
 import { PlotLandType } from '../enum/plot-land-type.enum';
+import { PropertyStatus, DeactivationReason, VerificationStatus } from '../enum/property-status.enum';
 import { User } from '../../user/entities/user.entity';
 
 @Entity('properties')
@@ -97,20 +98,47 @@ export class Property extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  // Property status (lifecycle: draft, pending_review, approved, rejected, expired, inactive)
+  // Property status (lifecycle: draft, pending_review, active, rejected, deactivated)
   @Column({
     type: 'enum',
-    enum: [
-      'draft',
-      'pending_review',
-      'approved',
-      'rejected',
-      'expired',
-      'inactive',
-    ],
-    default: 'draft',
+    enum: PropertyStatus,
+    default: PropertyStatus.DRAFT,
   })
-  status: string;
+  status: PropertyStatus;
+
+  // Rejection reason when property is rejected
+  @Column({
+    type: 'text',
+    nullable: true,
+    name: 'rejection_reason',
+  })
+  rejectionReason: string | null;
+
+  // Verification status
+  @Column({
+    type: 'enum',
+    enum: VerificationStatus,
+    default: VerificationStatus.UNVERIFIED,
+    name: 'is_verified',
+  })
+  isVerified: VerificationStatus;
+
+  // Timestamp when property was activated
+  @Column({
+    type: 'timestamp with time zone',
+    nullable: true,
+    name: 'activated_at',
+  })
+  activatedAt: Date | null;
+
+  // Deactivation reason when property is deactivated
+  @Column({
+    type: 'enum',
+    enum: DeactivationReason,
+    nullable: true,
+    name: 'deactivation_reason',
+  })
+  deactivationReason: DeactivationReason | null;
 
   @Column({
     type: 'boolean',

@@ -535,7 +535,7 @@ export class PropertyResponseDto {
   @ApiProperty({
     description: 'Property status',
     example: 'draft',
-    enum: ['draft', 'pending_review', 'approved', 'rejected', 'expired', 'inactive'],
+    enum: ['draft', 'pending_review', 'active', 'rejected', 'deactivated'],
   })
   status: string;
 
@@ -575,7 +575,7 @@ export class PropertyStatusResponseDto {
   @ApiProperty({
     description: 'Property status',
     example: 'draft',
-    enum: ['draft', 'pending_review', 'approved', 'rejected', 'expired', 'inactive'],
+    enum: ['draft', 'pending_review', 'active', 'rejected', 'deactivated'],
   })
   status: string;
 
@@ -610,10 +610,9 @@ export class OwnerPropertyListingItemDto {
     enum: [
       'draft',
       'pending_review',
-      'approved',
+      'active',
       'rejected',
-      'expired',
-      'inactive',
+      'deactivated',
     ],
   })
   status: string;
@@ -744,7 +743,7 @@ export class OwnerPropertyListingItemDto {
   updatedAt: Date;
 
   @ApiProperty({
-    description: 'Expiry date for approved properties (15 days from approval)',
+    description: 'Expiry date for active properties (15 days from activation)',
     example: '2025-08-05T10:15:00.000Z',
     required: false,
   })
@@ -814,7 +813,7 @@ export class OwnerPropertyDetailResponseDto {
   @ApiProperty({ description: 'Title', example: '2 BHK Apartment' })
   title: string;
 
-  @ApiProperty({ description: 'Status', example: 'approved' })
+  @ApiProperty({ description: 'Status', example: 'active' })
   status: string;
 
   @ApiProperty({ description: 'Area number', example: 444, required: false })
@@ -1030,7 +1029,7 @@ export class PropertyStep2ResponseDto {
   @ApiProperty({
     description: 'Property status',
     example: 'draft',
-    enum: ['draft', 'pending_review', 'approved', 'rejected', 'expired', 'inactive'],
+    enum: ['draft', 'pending_review', 'active', 'rejected', 'deactivated'],
   })
   status: string;
 

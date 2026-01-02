@@ -109,7 +109,7 @@ export class OwnerPropertyListingQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Filter by property status (comma separated, e.g., draft,pending_review,approved,rejected,expired,inactive)',
+      'Filter by property status (comma separated, e.g., draft,pending_review,active,rejected,deactivated)',
     example: 'pending_review,active',
   })
   @IsOptional()

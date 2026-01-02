@@ -27,11 +27,13 @@ import { MasterFurnishing } from './entities/master-furnishing.entity';
 import { MasterAmenity } from './entities/master-amenity.entity';
 import { UnitConfiguration } from './entities/unit-configuration.entity';
 import { Property } from './entities/property.entity';
+import { PropertyRejectionHistory } from './entities/property-rejection-history.entity';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminModule } from '../admin/admin.module';
 import { UserModule } from '../user/user.module';
+import { PropertyRejectionHistoryRepository } from './repositories/property-rejection-history.repository';
 
 @Module({
   imports: [
@@ -48,6 +50,7 @@ import { UserModule } from '../user/user.module';
       MasterAmenity,
       UnitConfiguration,
       Property,
+      PropertyRejectionHistory,
     ]),
     forwardRef(() => AdminModule),
     forwardRef(() => UserModule),
@@ -75,6 +78,7 @@ import { UserModule } from '../user/user.module';
     FurnishingRepository,
     AmenityRepository,
     PropertyRepository,
+    PropertyRejectionHistoryRepository,
     MasterDataSeederService,
     GooglePlacesService,
     JwtAuthGuard,
@@ -89,6 +93,7 @@ import { UserModule } from '../user/user.module';
     FurnishingRepository,
     AmenityRepository,
     GooglePlacesService,
+    PropertyRejectionHistoryRepository,
   ],
 })
 export class PropertyModule implements OnModuleInit {

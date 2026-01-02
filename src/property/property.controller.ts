@@ -27,6 +27,7 @@ import { CreatePropertyStep2Dto } from './dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from './dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
 import { ResetPropertyDto } from './dto/reset-property.dto';
+import { DeactivatePropertyDto, DeactivatePropertyResponseDto } from './dto/deactivate-property.dto';
 import {
   MasterDataResponseDto,
   ReseedMasterDataResponseDto,
@@ -599,6 +600,35 @@ export class PropertyController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.propertyService.resetProperty(body.propertyId, req.user.id);
+  }
+
+  @Post('/deactivate')
+  @ApiOperation({
+    summary: 'Deactivate a property',
+    description:
+      'Deactivates a property with a specified reason. Only the property owner can deactivate their property. Valid reasons: sold, rented, hold, owner_request.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property deactivated successfully',
+    type: DeactivatePropertyResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property not found, already deactivated, or user does not own the property',
+  })
+  async deactivateProperty(
+    @Body() body: DeactivatePropertyDto,
+    @Req() req: Request,
+  ): Promise<DeactivatePropertyResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.deactivateProperty(
+      body.propertyId,
+      body.deactivationReason,
+      req.user.id,
+    );
   }
 
   @Get('/step-1/:propertyId')

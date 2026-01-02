@@ -1,9 +1,10 @@
 import { ApiPropertyOptional, IntersectionType, OmitType, PartialType } from '@nestjs/swagger';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsEnum } from 'class-validator';
 import { CreatePropertyStep1Dto } from '../../property/dto/create-property.dto';
 import { CreatePropertyStep2Dto } from '../../property/dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from '../../property/dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from '../../property/dto/create-property-step4.dto';
+import { PropertyStatus, DeactivationReason } from '../../property/enum/property-status.enum';
 
 const Step1Base = OmitType(CreatePropertyStep1Dto, [
   'propertyId',
@@ -18,15 +19,13 @@ class AdminEditablePropertyFields extends IntersectionType(
   IntersectionType(Step3Base, Step4Base),
 ) {}
 
+// Property statuses aligned with PropertyStatus enum
 const ADMIN_PROPERTY_STATUSES = [
-  'draft',
-  'pending_review',
-  'approved',
-  'rejected',
-  'active',
-  'inactive',
-  'sold',
-  'rented',
+  PropertyStatus.DRAFT,
+  PropertyStatus.PENDING_REVIEW,
+  PropertyStatus.ACTIVE,
+  PropertyStatus.REJECTED,
+  PropertyStatus.DEACTIVATED,
 ] as const;
 
 export type AdminPropertyStatus = (typeof ADMIN_PROPERTY_STATUSES)[number];
@@ -36,12 +35,12 @@ export class AdminUpdatePropertyDto extends PartialType(
 ) {
   @ApiPropertyOptional({
     description: 'Override property status',
-    enum: ADMIN_PROPERTY_STATUSES,
-    example: 'approved',
+    enum: PropertyStatus,
+    example: PropertyStatus.ACTIVE,
   })
   @IsOptional()
-  @IsIn(ADMIN_PROPERTY_STATUSES)
-  status?: AdminPropertyStatus;
+  @IsEnum(PropertyStatus)
+  status?: PropertyStatus;
 
   @ApiPropertyOptional({
     description: 'Override completion step (0-5)',

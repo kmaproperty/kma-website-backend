@@ -491,10 +491,9 @@ export class CreatePropertyStep1Dto {
     enum: [
       'draft',
       'pending_review',
-      'approved',
+      'active',
       'rejected',
-      'expired',
-      'inactive',
+      'deactivated',
     ],
     required: false,
     default: 'draft'
@@ -503,10 +502,9 @@ export class CreatePropertyStep1Dto {
   @IsEnum([
     'draft',
     'pending_review',
-    'approved',
+    'active',
     'rejected',
-    'expired',
-    'inactive',
+    'deactivated',
   ])
   status?: string;
 

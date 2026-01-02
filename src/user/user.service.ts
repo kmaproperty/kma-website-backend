@@ -85,6 +85,7 @@ import {
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
 import { GooglePlacesService } from '../property/services/google-places.service';
+import { PropertyStatus } from '../property/enum/property-status.enum';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
 import { DashboardResponseDto } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
@@ -2229,8 +2230,8 @@ export class UserService {
       throw new BadRequestException('Property not found');
     }
 
-    // Check if property is approved and not deleted
-    if (property.status !== 'approved' || property.isDeleted) {
+    // Check if property is active and not deleted
+    if (property.status !== PropertyStatus.ACTIVE || property.isDeleted) {
       throw new BadRequestException('Property is not available');
     }
 

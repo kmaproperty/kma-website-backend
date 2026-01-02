@@ -24,10 +24,10 @@ export class AdminPropertyListQueryDto {
   @ApiPropertyOptional({
     description: 'Filter by property status',
     example: 'pending_review',
-    enum: ['pending_review', 'approved', 'rejected'],
+    enum: ['draft', 'pending_review', 'active', 'rejected', 'deactivated'],
   })
   @IsOptional()
-  @IsIn(['pending_review', 'approved', 'rejected'])
+  @IsIn(['draft', 'pending_review', 'active', 'rejected', 'deactivated'])
   status?: string;
 }
 

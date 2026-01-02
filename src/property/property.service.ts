@@ -28,6 +28,7 @@ import {
 import { CreatePropertyStep3Dto, FurnishingCountDto, FurnishType, PowerBackupType } from './dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
 import { Property } from './entities/property.entity';
+import { PropertyStatus, DeactivationReason } from './enum/property-status.enum';
 import { MAX_LISTINGS_PER_OWNER } from './constants/property.constants';
 import {
   OwnerPropertyListingQueryDto,
@@ -172,12 +173,11 @@ export class PropertyService {
     );
 
     const defaultStatusBuckets = [
-      'draft',
-      'pending_review',
-      'approved',
-      'rejected',
-      'expired',
-      'inactive',
+      PropertyStatus.DRAFT,
+      PropertyStatus.PENDING_REVIEW,
+      PropertyStatus.ACTIVE,
+      PropertyStatus.REJECTED,
+      PropertyStatus.DEACTIVATED,
     ];
 
     const normalizedCounts = { ...statusCounts };
@@ -925,7 +925,7 @@ export class PropertyService {
       possessionStatus,
       possessionDate,
       facing,
-      status = 'draft',
+      status = PropertyStatus.DRAFT,
       city,
       society,
       locality,
@@ -2382,7 +2382,7 @@ export class PropertyService {
       adminReviewComment: null,
       adminReviewedBy: null,
       adminReviewedAt: null,
-      status: 'draft',
+      status: PropertyStatus.DRAFT,
       completionStep: 0,
     };
 
@@ -2396,6 +2396,52 @@ export class PropertyService {
       status: resetData.status ?? property.status ?? 'draft',
       completionStep,
       progressPercentage: 0,
+    };
+  }
+
+  /**
+   * Deactivate a property with a deactivation reason
+   */
+  async deactivateProperty(
+    propertyId: string,
+    deactivationReason: DeactivationReason,
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    propertyId: string;
+    status: string;
+    deactivationReason: DeactivationReason;
+  }> {
+    const property = await this.propertyRepository.findById(propertyId);
+    if (!property) {
+      throw new BadRequestException(
+        `Property with ID ${propertyId} not found`,
+      );
+    }
+
+    // Verify ownership
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only deactivate your own properties');
+    }
+
+    // Check if property is already deactivated
+    if (property.status === PropertyStatus.DEACTIVATED) {
+      throw new BadRequestException('Property is already deactivated');
+    }
+
+    // Update property status and deactivation reason
+    await this.propertyRepository.updateProperty(propertyId, {
+      status: PropertyStatus.DEACTIVATED,
+      deactivationReason: deactivationReason,
+    });
+
+    return {
+      success: true,
+      message: 'Property deactivated successfully',
+      propertyId: property.id,
+      status: PropertyStatus.DEACTIVATED,
+      deactivationReason: deactivationReason,
     };
   }
 

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Property } from '../entities/property.entity';
+import { PropertyStatus } from '../enum/property-status.enum';
 
 @Injectable()
 export class PropertyRepository {
@@ -54,23 +55,23 @@ export class PropertyRepository {
   }
 
   /**
-   * Count active properties by user ID (approved and not deleted)
+   * Count active properties by user ID (active and not deleted)
    */
   async countActivePropertiesByUserId(userId: string): Promise<number> {
     return await this.propertyRepository.count({
-      where: { userId, status: 'approved', isDeleted: false },
+      where: { userId, status: PropertyStatus.ACTIVE, isDeleted: false },
     });
   }
 
   /**
-   * Find active properties by user ID with all relations (approved and not deleted)
+   * Find active properties by user ID with all relations (active and not deleted)
    */
   async findActivePropertiesByUserId(
     userId: string,
     limit: number = 20,
   ): Promise<Property[]> {
     return await this.propertyRepository.find({
-      where: { userId, status: 'approved', isDeleted: false },
+      where: { userId, status: PropertyStatus.ACTIVE, isDeleted: false },
       relations: [
         'listingType',
         'category',
@@ -108,7 +109,7 @@ export class PropertyRepository {
       .leftJoinAndSelect('property.bhkType', 'bhkType')
       .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
       .where('property.userId = :userId', { userId })
-      .andWhere('property.status = :status', { status: 'approved' })
+      .andWhere('property.status = :status', { status: PropertyStatus.ACTIVE })
       .andWhere('property.isDeleted = false')
       .orderBy('property.createdAt', 'DESC');
 
@@ -394,7 +395,7 @@ export class PropertyRepository {
       .leftJoinAndSelect('property.locality', 'locality')
       .leftJoinAndSelect('property.bhkType', 'bhkType')
       .where('property.isDeleted = false')
-      .andWhere('property.status = :status', { status: 'approved' });
+      .andWhere('property.status = :status', { status: PropertyStatus.ACTIVE });
 
     // Filter by city
     if (filters.cityId) {

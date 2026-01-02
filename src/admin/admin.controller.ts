@@ -198,6 +198,30 @@ export class AdminController {
     );
   }
 
+  @Post('properties/:id/verify')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Verify an active property listing with optional comment' })
+  @ApiResponse({
+    status: 200,
+    description: 'Property verified successfully',
+  })
+  async verifyProperty(
+    @Param('id') propertyId: string,
+    @Body() dto: AdminReviewPropertyDto,
+    @Req() req: Request,
+  ) {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.verifyProperty(
+      propertyId,
+      dto,
+      req.admin.id,
+    );
+  }
+
   @Patch('properties/:id')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
   @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)

@@ -70,6 +70,7 @@ import {
   AdminApproveKycResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
+import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
 import { CityRepository } from '../property/repositories/city.repository';
 import { SocietyRepository } from '../property/repositories/society.repository';
 import { BhkTypeRepository } from '../property/repositories/bhk-type.repository';
@@ -85,6 +86,7 @@ import { AgreementStatus } from '../user/entities/channel-partner-agreement.enti
 import { AdminRole } from './enum/admin-role.enum';
 import { AdminPermission } from './enum/admin-permission.enum';
 import { Property } from '../property/entities/property.entity';
+import { PropertyStatus, VerificationStatus } from '../property/enum/property-status.enum';
 import { MasterCity } from '../property/entities/master-city.entity';
 import { MasterSociety } from '../property/entities/master-society.entity';
 import { MasterBhkType } from '../property/entities/master-bhk-type.entity';
@@ -224,6 +226,7 @@ export class AdminService {
   constructor(
     private readonly adminRepository: AdminRepository,
     private readonly propertyRepository: PropertyRepository,
+    private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
     private readonly cityRepository: CityRepository,
     private readonly societyRepository: SocietyRepository,
     private readonly bhkTypeRepository: BhkTypeRepository,
@@ -1220,19 +1223,24 @@ export class AdminService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 15);
 
+    const now = new Date();
+
     await this.propertyRepository.updateProperty(propertyId, {
-      status: 'approved',
+      status: PropertyStatus.ACTIVE,
       adminReviewComment: dto.comment ?? null,
       adminReviewedBy: adminId,
-      adminReviewedAt: new Date(),
+      adminReviewedAt: now,
       expiresAt,
+      // Keep property unverified when approving - verification is a separate step
+      activatedAt: now,
+      rejectionReason: null, // Clear rejection reason if property was previously rejected
     });
 
     return {
       success: true,
       message: 'Property approved successfully',
       propertyId: property.id,
-      status: 'approved',
+      status: PropertyStatus.ACTIVE,
       adminReviewComment: dto.comment ?? null,
     };
   }
@@ -1245,18 +1253,56 @@ export class AdminService {
     const property = await this.ensurePropertyExists(propertyId);
 
     await this.propertyRepository.updateProperty(propertyId, {
-      status: 'rejected',
+      status: PropertyStatus.REJECTED,
       adminReviewComment: dto.comment,
       adminReviewedBy: adminId,
       adminReviewedAt: new Date(),
+      rejectionReason: dto.comment, // Store rejection reason (for backward compatibility)
+    });
+
+    // Save rejection history
+    await this.propertyRejectionHistoryRepository.create({
+      propertyId: property.id,
+      rejectionReason: dto.comment,
+      adminId: adminId,
     });
 
     return {
       success: true,
       message: 'Property rejected successfully',
       propertyId: property.id,
-      status: 'rejected',
+      status: PropertyStatus.REJECTED,
       adminReviewComment: dto.comment,
+    };
+  }
+
+  async verifyProperty(
+    propertyId: string,
+    dto: AdminReviewPropertyDto,
+    adminId: string,
+  ) {
+    const property = await this.ensurePropertyExists(propertyId);
+
+    // Only allow verification of active properties
+    if (property.status !== PropertyStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Only active properties can be verified',
+      );
+    }
+
+    await this.propertyRepository.updateProperty(propertyId, {
+      isVerified: VerificationStatus.VERIFIED,
+      adminReviewComment: dto.comment ?? property.adminReviewComment,
+      adminReviewedBy: adminId,
+      adminReviewedAt: new Date(),
+    });
+
+    return {
+      success: true,
+      message: 'Property verified successfully',
+      propertyId: property.id,
+      isVerified: VerificationStatus.VERIFIED,
+      adminReviewComment: dto.comment ?? property.adminReviewComment,
     };
   }
 
@@ -1390,11 +1436,13 @@ export class AdminService {
 
     if (dto.status !== undefined && !hasStep1Changes) {
       directUpdates.status = dto.status;
-      // If status is being set to 'approved', set expiry date to 15 days from now
-      if (dto.status === 'approved') {
+      // If status is being set to 'active', set expiry date to 15 days from now and activatedAt
+      // Note: Verification is a separate step, so we don't set isVerified here
+      if (dto.status === PropertyStatus.ACTIVE) {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 15);
         directUpdates.expiresAt = expiresAt;
+        directUpdates.activatedAt = new Date();
       }
       touchedDirect = true;
     }
