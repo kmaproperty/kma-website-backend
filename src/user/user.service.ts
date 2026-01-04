@@ -605,7 +605,7 @@ export class UserService {
       type: 'access_token' | 'refresh_token';
     },
   ): Promise<CreateOwnerResponseDto> {
-    const { name, email, intent, city } = createOwnerDto;
+    const { name, email, intent, city, profilePhotoUrl } = createOwnerDto;
     const { sub: userId, phone } = tokenData;
 
     // Find user by ID (from token) to ensure we're updating the correct user
@@ -642,6 +642,7 @@ export class UserService {
       role: UserRole.OWNER,
       intent: intent || null,
       cities: city || null,
+      profileImage: profilePhotoUrl || null,
     });
 
     if (!updatedUser) {
@@ -686,6 +687,7 @@ export class UserService {
       cities,
       aboutYourSelf,
       intent,
+      profilePhotoUrl,
     } = createChannelPartnerDto;
 
     // Verify phone number matches token
@@ -738,6 +740,7 @@ export class UserService {
       cities: cities || null,
       aboutYourSelf: aboutYourSelf || null,
       intent: intent || null,
+      profileImage: profilePhotoUrl || null,
     });
 
     if (!updatedUser) {
@@ -1352,6 +1355,10 @@ export class UserService {
         step3_bank_details: kycStatus.step3_bank_details,
         step4_docusign_agreement: kycStatus.step4_docusign_agreement,
         kyc_completed: kycStatus.kyc_completed,
+        kyc_progress: kycStatus.kyc_progress,
+        kyc_steps_completed: kycStatus.kyc_steps_completed,
+        kyc_total_steps: kycStatus.kyc_total_steps,
+        kyc_status: kycStatus.kyc_status,
       },
     };
   }
@@ -2757,6 +2764,31 @@ export class UserService {
     // Check DocuSign agreement status
     const agreementStatus = await this.getDocuSignAgreementStatus(userId);
 
+    // Calculate progress
+    // Step 1 is completed if live photo is uploaded (filled), not just approved
+    const step1Completed = !!(user.livePhotoUrl && user.livePhotoUrl.trim().length > 0);
+    const steps = [
+      step1Completed, // Step 1: Live photo uploaded (filled)
+      user.aadhaarVerified, // Step 2
+      user.bankDetailsFilled, // Step 3
+      agreementStatus.docusign_agreement_signed, // Step 4
+    ];
+    const stepsCompleted = steps.filter(Boolean).length;
+    const totalSteps = 4;
+    const progress = Math.round((stepsCompleted / totalSteps) * 100);
+
+    // Determine KYC status
+    let kycStatus: string;
+    if (kycCompleted) {
+      kycStatus = 'completed';
+    } else if (stepsCompleted === totalSteps) {
+      kycStatus = 'under_review'; // All steps done but not approved by admin
+    } else if (stepsCompleted > 0) {
+      kycStatus = 'in_progress';
+    } else {
+      kycStatus = 'not_started';
+    }
+
     return {
       success: true,
       step1_live_photo: {
@@ -2774,6 +2806,10 @@ export class UserService {
         docusign_agreement_signed: agreementStatus.docusign_agreement_signed,
       },
       kyc_completed: kycCompleted,
+      kyc_progress: progress,
+      kyc_steps_completed: stepsCompleted,
+      kyc_total_steps: totalSteps,
+      kyc_status: kycStatus,
     };
   }
 

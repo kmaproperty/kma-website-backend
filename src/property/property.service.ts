@@ -15,6 +15,7 @@ import { PropertyRepository } from './repositories/property.repository';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
 import { UserRepository } from '../user/repositories/user.repository';
+import { UserService } from '../user/user.service';
 import { UserRole } from '../user/enum/user-role.enum';
 import {
   CreatePropertyStep2Dto,
@@ -34,6 +35,7 @@ import {
   OwnerPropertyListingQueryDto,
   OwnerPropertySortBy,
   OwnerPropertySortOrder,
+  OwnerPropertyFilter,
 } from './dto/owner-property-listing-query.dto';
 import {
   OwnerPropertyListingItemDto,
@@ -60,6 +62,8 @@ export class PropertyService {
     private readonly googlePlacesService: GooglePlacesService,
     @Inject(forwardRef(() => UserRepository))
     private readonly userRepository: UserRepository,
+    @Inject(forwardRef(() => UserService))
+    private readonly userService: UserService,
   ) {}
 
   private readonly DEFAULT_TOTAL_STEPS = 4;
@@ -139,12 +143,37 @@ export class PropertyService {
       furnishingTypes,
       projectStatuses,
       statuses,
+      listingStatuses,
+      verificationStatuses,
       minPrice,
       maxPrice,
       search,
+      filter,
       sortBy = OwnerPropertySortBy.CREATED_AT,
       sortOrder = OwnerPropertySortOrder.DESC,
     } = query;
+
+    // Apply quick filter if provided
+    let finalStatuses = statuses;
+    let recentlyExpired = false;
+    
+    if (filter) {
+      switch (filter) {
+        case OwnerPropertyFilter.ALL:
+          // No additional filtering needed
+          break;
+        case OwnerPropertyFilter.PENDING:
+          finalStatuses = [PropertyStatus.DRAFT];
+          break;
+        case OwnerPropertyFilter.UNDER_REVIEW:
+          finalStatuses = [PropertyStatus.PENDING_REVIEW];
+          break;
+        case OwnerPropertyFilter.RECENTLY_EXPIRED:
+          recentlyExpired = true;
+          // Will be handled in repository
+          break;
+      }
+    }
 
     const { items, total, statusCounts } =
       await this.propertyRepository.findOwnerListings({
@@ -159,10 +188,13 @@ export class PropertyService {
           listingTypeIds,
           furnishingTypes,
           projectStatuses,
-          statuses,
+          statuses: finalStatuses,
+          listingStatuses,
+          verificationStatuses,
           minPrice,
           maxPrice,
           search,
+          recentlyExpired,
         },
       });
 
@@ -908,10 +940,27 @@ export class PropertyService {
       throw new BadRequestException('User not found');
     }
 
-    if (user.role === UserRole.CHANNEL_PARTNER && !user.kycCompleted) {
-      throw new BadRequestException(
-        'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
-      );
+    // Check KYC status for channel partners
+    if (user.role === UserRole.CHANNEL_PARTNER) {
+      if (!user.kycCompleted) {
+        // Check if all steps are completed but not approved
+        const agreementStatus = await this.userService.getDocuSignAgreementStatus(userId);
+        const allStepsCompleted =
+          user.livePhotoApproved &&
+          user.aadhaarVerified &&
+          user.bankDetailsFilled &&
+          agreementStatus.docusign_agreement_signed;
+
+        if (allStepsCompleted) {
+          throw new BadRequestException(
+            'Your KYC is under review. You can post property once it is approved.',
+          );
+        } else {
+          throw new BadRequestException(
+            'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
+          );
+        }
+      }
     }
 
     const {
@@ -2399,6 +2448,59 @@ export class PropertyService {
       status: resetData.status ?? property.status ?? 'draft',
       completionStep,
       progressPercentage: 0,
+    };
+  }
+
+  /**
+   * Repost a property - changes status to pending_review for admin approval
+   */
+  async repostProperty(
+    propertyId: string,
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    propertyId: string;
+    status: string;
+  }> {
+    const property = await this.propertyRepository.findById(propertyId);
+    if (!property) {
+      throw new BadRequestException(
+        `Property with ID ${propertyId} not found`,
+      );
+    }
+
+    // Verify ownership
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only repost your own properties');
+    }
+
+    // Check if property can be reposted (must be rejected or deactivated)
+    if (
+      property.status !== PropertyStatus.REJECTED &&
+      property.status !== PropertyStatus.DEACTIVATED
+    ) {
+      throw new BadRequestException(
+        'Only rejected or deactivated properties can be reposted',
+      );
+    }
+
+    // Update property status to pending_review and clear rejection/deactivation fields
+    await this.propertyRepository.updateProperty(propertyId, {
+      status: PropertyStatus.PENDING_REVIEW,
+      rejectionReason: null, // Clear rejection reason
+      deactivationReason: null, // Clear deactivation reason
+      deactivatedOn: null, // Clear deactivation timestamp
+      adminReviewComment: null, // Clear previous admin review comment
+      adminReviewedBy: null, // Clear previous reviewer
+      adminReviewedAt: null, // Clear previous review timestamp
+    });
+
+    return {
+      success: true,
+      message: 'Property reposted successfully. It has been sent for admin review.',
+      propertyId: property.id,
+      status: PropertyStatus.PENDING_REVIEW,
     };
   }
 

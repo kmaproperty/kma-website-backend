@@ -89,6 +89,15 @@ export class CreateChannelPartnerDto {
   @IsEnum(UserIntent, { message: 'Intent must be either SELL or RENT' })
   @IsOptional()
   intent?: UserIntent;
+
+  @ApiProperty({
+    description: 'Profile photo URL',
+    example: 'https://example.com/profile-photo.jpg',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  profilePhotoUrl?: string;
 }
 
 export class CreateChannelPartnerResponseDto {

@@ -193,6 +193,10 @@ export class PropertyRepository {
         );
         qb.addOrderBy('property.createdAt', 'DESC');
         break;
+      case 'expiresAt':
+        qb.addOrderBy('property.expiresAt', sortOrder, 'NULLS LAST');
+        qb.addOrderBy('property.createdAt', 'DESC');
+        break;
       case 'updatedAt':
         qb.addOrderBy('property.updatedAt', sortOrder);
         qb.addOrderBy('property.createdAt', 'DESC');
@@ -208,7 +212,7 @@ export class PropertyRepository {
     userId: string;
     page: number;
     limit: number;
-    sortBy: 'createdAt' | 'price' | 'updatedAt';
+    sortBy: 'createdAt' | 'price' | 'updatedAt' | 'expiresAt';
     sortOrder: 'ASC' | 'DESC';
     filters?: {
       categoryIds?: string[];
@@ -217,9 +221,12 @@ export class PropertyRepository {
       furnishingTypes?: string[];
       projectStatuses?: string[];
       statuses?: string[];
+      listingStatuses?: string[];
+      verificationStatuses?: string[];
       minPrice?: number;
       maxPrice?: number;
       search?: string;
+      recentlyExpired?: boolean;
     };
   }): Promise<{
     items: Property[];
@@ -284,6 +291,42 @@ export class PropertyRepository {
       });
     }
 
+    // Handle listing status filters (active, expired, deactivated)
+    if (filters.listingStatuses?.length) {
+      const conditions: string[] = [];
+      const params: Record<string, any> = {};
+      const now = new Date();
+
+      if (filters.listingStatuses.includes('active')) {
+        conditions.push('property.status = :activeStatus');
+        params.activeStatus = 'active';
+      }
+
+      if (filters.listingStatuses.includes('expired')) {
+        conditions.push(
+          '(property.status = :expiredActiveStatus AND property.expiresAt IS NOT NULL AND property.expiresAt < :expiredNow)',
+        );
+        params.expiredActiveStatus = 'active';
+        params.expiredNow = now;
+      }
+
+      if (filters.listingStatuses.includes('deactivated')) {
+        conditions.push('property.status = :deactivatedStatus');
+        params.deactivatedStatus = 'deactivated';
+      }
+
+      if (conditions.length > 0) {
+        qb.andWhere(`(${conditions.join(' OR ')})`, params);
+      }
+    }
+
+    // Handle verification status filters
+    if (filters.verificationStatuses?.length) {
+      qb.andWhere('property.is_verified IN (:...verificationStatuses)', {
+        verificationStatuses: filters.verificationStatuses,
+      });
+    }
+
     if (filters.minPrice != null) {
       qb.andWhere(
         '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) )',
@@ -304,6 +347,14 @@ export class PropertyRepository {
         '(property.id ILIKE :searchTerm OR CAST(property.createdAt AS TEXT) ILIKE :searchTerm)',
         { searchTerm: `%${searchTerm}%` },
       );
+    }
+
+    if (filters.recentlyExpired) {
+      // Properties that have expired (expiresAt < now) and were active
+      const now = new Date();
+      qb.andWhere('property.expiresAt IS NOT NULL')
+        .andWhere('property.expiresAt < :now', { now })
+        .andWhere('property.status = :activeStatus', { activeStatus: 'active' });
     }
 
     const total = await qb.clone().getCount();

@@ -84,6 +84,30 @@ export class KycStatusDto {
     example: false,
   })
   kyc_completed: boolean;
+
+  @ApiProperty({
+    description: 'KYC progress percentage (0-100)',
+    example: 75,
+  })
+  kyc_progress: number;
+
+  @ApiProperty({
+    description: 'Number of completed steps out of 4',
+    example: 3,
+  })
+  kyc_steps_completed: number;
+
+  @ApiProperty({
+    description: 'Total number of KYC steps',
+    example: 4,
+  })
+  kyc_total_steps: number;
+
+  @ApiProperty({
+    description: 'KYC status text: completed, under_review, in_progress, not_started',
+    example: 'under_review',
+  })
+  kyc_status: string;
 }
 
 export class DashboardResponseDto {

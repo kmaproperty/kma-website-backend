@@ -28,6 +28,7 @@ import { CreatePropertyStep3Dto } from './dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
 import { ResetPropertyDto } from './dto/reset-property.dto';
 import { DeactivatePropertyDto, DeactivatePropertyResponseDto } from './dto/deactivate-property.dto';
+import { RepostPropertyDto, RepostPropertyResponseDto } from './dto/repost-property.dto';
 import {
   MasterDataResponseDto,
   ReseedMasterDataResponseDto,
@@ -627,6 +628,34 @@ export class PropertyController {
     return await this.propertyService.deactivateProperty(
       body.propertyId,
       body.deactivationReason,
+      req.user.id,
+    );
+  }
+
+  @Post('/repost')
+  @ApiOperation({
+    summary: 'Repost a property for admin review',
+    description:
+      'Reposts a rejected or deactivated property by changing its status to pending_review. The property will be sent to admin for approval. Only rejected or deactivated properties can be reposted.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property reposted successfully',
+    type: RepostPropertyResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property not found, cannot be reposted, or user does not own the property',
+  })
+  async repostProperty(
+    @Body() body: RepostPropertyDto,
+    @Req() req: Request,
+  ): Promise<RepostPropertyResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.repostProperty(
+      body.propertyId,
       req.user.id,
     );
   }

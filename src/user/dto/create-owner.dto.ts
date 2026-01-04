@@ -55,6 +55,15 @@ export class CreateOwnerDto {
   @IsString()
   @IsOptional()
   city?: string;
+
+  @ApiProperty({
+    description: 'Profile photo URL',
+    example: 'https://example.com/profile-photo.jpg',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  profilePhotoUrl?: string;
 }
 
 export class CreateOwnerResponseDto {

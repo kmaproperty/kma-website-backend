@@ -27,11 +27,19 @@ export enum OwnerPropertySortBy {
   CREATED_AT = 'createdAt',
   PRICE = 'price',
   UPDATED_AT = 'updatedAt',
+  EXPIRES_AT = 'expiresAt',
 }
 
 export enum OwnerPropertySortOrder {
   ASC = 'ASC',
   DESC = 'DESC',
+}
+
+export enum OwnerPropertyFilter {
+  ALL = 'all',
+  PENDING = 'pending',
+  UNDER_REVIEW = 'under_review',
+  RECENTLY_EXPIRED = 'recently_expired',
 }
 
 export class OwnerPropertyListingQueryDto {
@@ -118,6 +126,33 @@ export class OwnerPropertyListingQueryDto {
   statuses?: string[];
 
   @ApiPropertyOptional({
+    description: 'Filter by listing status: active, expired, deactivated (comma separated)',
+    example: 'active,expired',
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsString({ each: true })
+  listingStatuses?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by verification status: verified, unverified (comma separated)',
+    example: 'verified',
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsString({ each: true })
+  verificationStatuses?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Quick filter option: all (all listings), pending (draft state), under_review (pending_review status), recently_expired (expired active properties)',
+    example: 'pending',
+    enum: OwnerPropertyFilter,
+  })
+  @IsOptional()
+  @IsEnum(OwnerPropertyFilter)
+  filter?: OwnerPropertyFilter;
+
+  @ApiPropertyOptional({
     description: 'Minimum price',
     example: 1000000,
   })
@@ -144,7 +179,7 @@ export class OwnerPropertyListingQueryDto {
   search?: string;
 
   @ApiPropertyOptional({
-    description: 'Sort by field',
+    description: 'Sort by field: createdAt (Last Added), price (Price), updatedAt, expiresAt (Expiry Date)',
     enum: OwnerPropertySortBy,
     default: OwnerPropertySortBy.CREATED_AT,
   })
