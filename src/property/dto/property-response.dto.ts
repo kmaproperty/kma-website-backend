@@ -594,6 +594,17 @@ export class PropertyStatusResponseDto {
   progressPercentage: number;
 }
 
+export class PropertyMediaItemDto {
+  @ApiProperty({ description: 'S3 file key', example: 'properties/uuid/image1.jpg' })
+  fileKey: string;
+
+  @ApiProperty({ description: 'View or label', example: 'living_room', required: false })
+  view?: string;
+
+  @ApiProperty({ description: 'Whether this is cover image', example: true, required: false })
+  isCoverImage?: boolean;
+}
+
 export class OwnerPropertyListingItemDto {
   @ApiProperty({ description: 'Property ID', example: '17840748' })
   id: string;
@@ -696,6 +707,13 @@ export class OwnerPropertyListingItemDto {
     required: false,
   })
   coverPhotoKey?: string | null;
+
+  @ApiProperty({
+    description: 'All property photos',
+    type: [PropertyMediaItemDto],
+    required: false,
+  })
+  photos?: PropertyMediaItemDto[];
 
   @ApiProperty({
     description: 'Society / locality / city formatted string',
@@ -815,17 +833,6 @@ export class OwnerPropertyListingResponseDto {
     total: number;
     byStatus: Record<string, number>;
   };
-}
-
-export class PropertyMediaItemDto {
-  @ApiProperty({ description: 'S3 file key', example: 'properties/uuid/image1.jpg' })
-  fileKey: string;
-
-  @ApiProperty({ description: 'View or label', example: 'living_room', required: false })
-  view?: string;
-
-  @ApiProperty({ description: 'Whether this is cover image', example: true, required: false })
-  isCoverImage?: boolean;
 }
 
 export class OwnerPropertyDetailResponseDto {

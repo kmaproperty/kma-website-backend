@@ -42,6 +42,7 @@ import {
   OwnerPropertyListingResponseDto,
   OwnerPropertyDetailResponseDto,
   CityResponseDto,
+  PropertyMediaItemDto,
 } from './dto/property-response.dto';
 
 @Injectable()
@@ -253,6 +254,14 @@ export class PropertyService {
       property.photos?.[0] ??
       null;
 
+    // Map all photos to PropertyMediaItemDto format
+    const photos: PropertyMediaItemDto[] =
+      property.photos?.map((photo) => ({
+        fileKey: photo.fileKey,
+        view: photo.view,
+        isCoverImage: photo.isCoverImage ?? false,
+      })) ?? [];
+
     const areaFromMetadata = property.builtUpAreaMetadata?.superBuiltUpArea
       ? Number(property.builtUpAreaMetadata.superBuiltUpArea)
       : null;
@@ -327,6 +336,7 @@ export class PropertyService {
         videos: property.videos?.length ?? 0,
       },
       coverPhotoKey: coverPhoto?.fileKey ?? null,
+      photos,
       address: addressParts.length ? addressParts.join(', ') : null,
       area,
       areaUnit,
