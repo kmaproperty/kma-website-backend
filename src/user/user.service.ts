@@ -95,6 +95,7 @@ import { CityRepository } from '../property/repositories/city.repository';
 import { PropertyListingTypeRepository } from '../property/repositories/property-listing-type.repository';
 import { PropertyCategoryNewRepository } from '../property/repositories/property-category-new.repository';
 import { PropertyTypeRepository } from '../property/repositories/property-type.repository';
+import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
 import { GooglePlacesService } from '../property/services/google-places.service';
 import { PropertyStatus } from '../property/enum/property-status.enum';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
@@ -133,6 +134,7 @@ export class UserService {
     private readonly propertyListingTypeRepository: PropertyListingTypeRepository,
     private readonly propertyCategoryRepository: PropertyCategoryNewRepository,
     private readonly propertyTypeRepository: PropertyTypeRepository,
+    private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
   ) {}
 
   /**
@@ -2409,6 +2411,13 @@ export class UserService {
       totalArea = `${property.propertyAreaAcre} Acres`;
     }
 
+    // Fetch latest rejection reason from rejection history table
+    const latestRejectionHistory =
+      await this.propertyRejectionHistoryRepository.findLatestByPropertyId(
+        property.id,
+      );
+    const rejectionReason = latestRejectionHistory?.rejectionReason || null;
+
     return {
       success: true,
       id: property.id,
@@ -2434,6 +2443,8 @@ export class UserService {
       constructionStatus: property.constructionStatus || null,
       furnishingType: property.furnishType || null,
       listingType: property.listingType?.name || null,
+      rejectionReason,
+      expiresAt: property.expiresAt || null,
     };
   }
 
