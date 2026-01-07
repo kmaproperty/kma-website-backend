@@ -32,6 +32,7 @@ import {
   SendOtpForContactUsResponseDto,
   SubmitContactUsDto,
   ContactUsResponseDto,
+  PropertyMasterDataResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -454,6 +455,21 @@ export class EndUserController {
     // Pass endUserId (null if not logged in) to service
     // Service will handle OTP verification for non-logged in users
     return await this.userService.submitContactUs(submitDto, endUserId);
+  }
+
+  @Get('property-master-data')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Property Master Data',
+    description: 'Get hierarchical structure of property listing types, categories, and property types. Property types are dependent on both listing type and category.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property master data retrieved successfully',
+    type: PropertyMasterDataResponseDto,
+  })
+  async getPropertyMasterData(): Promise<PropertyMasterDataResponseDto> {
+    return await this.userService.getPropertyMasterData();
   }
 }
 

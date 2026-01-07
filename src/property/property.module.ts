@@ -94,6 +94,9 @@ import { PropertyRejectionHistoryRepository } from './repositories/property-reje
     AmenityRepository,
     GooglePlacesService,
     PropertyRejectionHistoryRepository,
+    PropertyListingTypeRepository,
+    PropertyCategoryNewRepository,
+    PropertyTypeRepository,
   ],
 })
 export class PropertyModule implements OnModuleInit {

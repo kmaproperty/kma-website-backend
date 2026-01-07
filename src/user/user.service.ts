@@ -85,9 +85,16 @@ import {
   SendOtpForContactUsResponseDto,
   SubmitContactUsDto,
   ContactUsResponseDto,
+  PropertyMasterDataResponseDto,
+  ListingTypeItemDto,
+  CategoryItemDto,
+  PropertyTypeItemDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
+import { PropertyListingTypeRepository } from '../property/repositories/property-listing-type.repository';
+import { PropertyCategoryNewRepository } from '../property/repositories/property-category-new.repository';
+import { PropertyTypeRepository } from '../property/repositories/property-type.repository';
 import { GooglePlacesService } from '../property/services/google-places.service';
 import { PropertyStatus } from '../property/enum/property-status.enum';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
@@ -123,6 +130,9 @@ export class UserService {
     private readonly bankDetailsRepository: BankDetailsRepository,
     private readonly encryptionService: EncryptionService,
     private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
+    private readonly propertyListingTypeRepository: PropertyListingTypeRepository,
+    private readonly propertyCategoryRepository: PropertyCategoryNewRepository,
+    private readonly propertyTypeRepository: PropertyTypeRepository,
   ) {}
 
   /**
@@ -3200,5 +3210,82 @@ export class UserService {
       // Release query runner
       await queryRunner.release();
     }
+  }
+
+  /**
+   * Get property master data (listing types, categories, and property types)
+   * Structure: Listing Types -> Categories -> Property Types
+   */
+  async getPropertyMasterData(): Promise<PropertyMasterDataResponseDto> {
+    // Fetch all listing types
+    const listingTypes = await this.propertyListingTypeRepository.findAll();
+
+    // Fetch all categories
+    const categories = await this.propertyCategoryRepository.findAll();
+
+    // Fetch all property types with their relations
+    const propertyTypes = await this.propertyTypeRepository.findAll();
+
+    // Build the hierarchical structure
+    const listingTypeItems: ListingTypeItemDto[] = listingTypes.map(
+      (listingType) => {
+        // For each listing type, get categories that have property types for this listing type
+        const categoryMap = new Map<string, CategoryItemDto>();
+
+        // Filter property types for this listing type
+        const propertyTypesForListingType = propertyTypes.filter(
+          (pt) => pt.listingTypeId === listingType.id,
+        );
+
+        // Group property types by category
+        propertyTypesForListingType.forEach((propertyType) => {
+          const categoryId = propertyType.categoryId;
+
+          if (!categoryMap.has(categoryId)) {
+            const category = categories.find((c) => c.id === categoryId);
+            if (category) {
+              categoryMap.set(categoryId, {
+                id: category.id,
+                name: category.name,
+                code: category.code,
+                propertyTypes: [],
+              });
+            }
+          }
+
+          const categoryItem = categoryMap.get(categoryId);
+          if (categoryItem) {
+            categoryItem.propertyTypes.push({
+              id: propertyType.id,
+              name: propertyType.name,
+              code: propertyType.code,
+            });
+          }
+        });
+
+        // Convert map to array and filter out categories with no property types
+        const categoryItems = Array.from(categoryMap.values()).filter(
+          (cat) => cat.propertyTypes.length > 0,
+        );
+
+        return {
+          id: listingType.id,
+          name: listingType.name,
+          code: listingType.code,
+          categories: categoryItems,
+        };
+      },
+    );
+
+    // Filter out listing types with no categories
+    const filteredListingTypes = listingTypeItems.filter(
+      (lt) => lt.categories.length > 0,
+    );
+
+    return {
+      success: true,
+      message: 'Property master data retrieved successfully',
+      data: filteredListingTypes,
+    };
   }
 }

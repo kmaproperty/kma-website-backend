@@ -24,3 +24,4 @@ export * from './owner-profile.dto';
 export * from './channel-partner-profile.dto';
 export * from './user-profile.dto';
 export * from './contact-us.dto';
+export * from './property-master-data.dto';
