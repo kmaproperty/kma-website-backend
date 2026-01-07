@@ -2283,6 +2283,7 @@ export class AdminService {
   /**
    * Approve or reject KYC for channel partner
    * This sets the kycCompleted flag directly, overriding automatic checks
+   * When rejected (approved = false), resets admin-approval steps to mark status as rejected
    */
   async approveKyc(
     dto: AdminApproveKycDto,
@@ -2298,10 +2299,21 @@ export class AdminService {
       throw new BadRequestException('User is not a channel partner');
     }
 
-    // Update KYC completion status
-    await this.userRepository.update(dto.userId, {
-      kycCompleted: dto.approved,
-    });
+    if (dto.approved) {
+      // Approve KYC - set kycCompleted to true
+      await this.userRepository.update(dto.userId, {
+        kycCompleted: true,
+      });
+    } else {
+      // Reject KYC - set kycCompleted to false and reset admin-approval steps
+      // This marks the status as rejected instead of under_review
+      await this.userRepository.update(dto.userId, {
+        kycCompleted: false,
+        livePhotoApproved: false, // Reset live photo approval
+        // Note: We don't reset aadhaarVerified, bankDetailsFilled, or docusignAgreementSigned
+        // as those are user actions, not admin approvals
+      });
+    }
 
     // Get updated KYC status
     const kycStatus = await this.userService.getVerificationStepsStatus(dto.userId);

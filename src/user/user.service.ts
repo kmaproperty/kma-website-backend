@@ -2810,7 +2810,13 @@ export class UserService {
     if (kycCompleted) {
       kycStatus = 'completed';
     } else if (stepsCompleted === totalSteps) {
-      kycStatus = 'under_review'; // All steps done but not approved by admin
+      // Check if KYC was explicitly rejected (all steps done but livePhotoApproved is false)
+      // This happens when admin rejects KYC after all steps were completed
+      if (!user.livePhotoApproved && user.livePhotoUrl) {
+        kycStatus = 'rejected'; // KYC was rejected by admin
+      } else {
+        kycStatus = 'under_review'; // All steps done but not approved by admin
+      }
     } else if (stepsCompleted > 0) {
       kycStatus = 'in_progress';
     } else {
