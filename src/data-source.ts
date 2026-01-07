@@ -20,6 +20,7 @@ import { Lead } from './admin/entities/lead.entity';
 import { LeadNote } from './admin/entities/lead-note.entity';
 import { LeadPropertyContact } from './admin/entities/lead-property-contact.entity';
 import { BankDetails } from './user/entities/bank-details.entity';
+import { ContactUsKmaQuery } from './user/entities/contact-us-kma-query.entity';
 
 // Load environment variables
 config();
@@ -56,6 +57,7 @@ export const AppDataSource = new DataSource({
     LeadNote,
     LeadPropertyContact,
     BankDetails,
+    ContactUsKmaQuery,
   ],
   migrations: ['src/migration/*.ts'],
   subscribers: [],

@@ -17,6 +17,7 @@ import { UnitConfiguration } from '../../property/entities/unit-configuration.en
 import { Property } from '../../property/entities/property.entity';
 import { ContactUs } from '../../contact-us/entities/contact-us.entity';
 import { Admin } from '../../admin/entities/admin.entity';
+import { ContactUsKmaQuery } from '../../user/entities/contact-us-kma-query.entity';
 
 @Injectable()
 export class ConfigService implements TypeOrmOptionsFactory {
@@ -98,6 +99,7 @@ export class ConfigService implements TypeOrmOptionsFactory {
         Property,
         Admin,
         ContactUs,
+        ContactUsKmaQuery,
       ],
       autoLoadEntities: true,
       ...(useSSL && {

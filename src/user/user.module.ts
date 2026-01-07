@@ -9,6 +9,7 @@ import { ChannelPartnerAgreement } from './entities/channel-partner-agreement.en
 import { Lead } from './entities/lead.entity';
 import { UserRoleHistory } from './entities/user-role-history.entity';
 import { BankDetails } from './entities/bank-details.entity';
+import { ContactUsKmaQuery } from './entities/contact-us-kma-query.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
@@ -18,6 +19,7 @@ import { Property } from '../property/entities/property.entity';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { LeadRepository } from './repositories/lead.repository';
 import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
+import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { DocuSignService } from './services/docusign.service';
@@ -32,7 +34,7 @@ import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { AdminModule } from '../admin/admin.module';
 import { PropertyModule } from '../property/property.module';
 
-const entities = [User, Otp, ChannelPartnerCode, ChannelPartnerAgreement, Lead, UserRoleHistory, Property, BankDetails];
+const entities = [User, Otp, ChannelPartnerCode, ChannelPartnerAgreement, Lead, UserRoleHistory, Property, BankDetails, ContactUsKmaQuery];
 const repositories = [
   UserRepository,
   OtpRepository,
@@ -42,6 +44,7 @@ const repositories = [
   PropertyRepository,
   LeadRepository,
   UserRoleHistoryRepository,
+  ContactUsKmaQueryRepository,
 ];
 
 @Module({

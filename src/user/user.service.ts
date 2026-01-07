@@ -81,6 +81,10 @@ import {
   UserProfileResponseDto,
   UserEditProfileDto,
   UserEditProfileResponseDto,
+  SendOtpForContactUsDto,
+  SendOtpForContactUsResponseDto,
+  SubmitContactUsDto,
+  ContactUsResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { CityRepository } from '../property/repositories/city.repository';
@@ -96,6 +100,7 @@ import { ChannelPartnerAgreementRepository } from './repositories/channel-partne
 import { AgreementStatus } from './entities/channel-partner-agreement.entity';
 import { BankDetailsRepository } from './repositories/bank-details.repository';
 import { EncryptionService } from './services/encryption.service';
+import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 
 @Injectable()
 export class UserService {
@@ -117,6 +122,7 @@ export class UserService {
     private readonly agreementRepository: ChannelPartnerAgreementRepository,
     private readonly bankDetailsRepository: BankDetailsRepository,
     private readonly encryptionService: EncryptionService,
+    private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
   ) {}
 
   /**
@@ -3073,5 +3079,126 @@ export class UserService {
       areas_of_operation_list: areasOfOperationList,
       active_properties: mappedActiveProperties,
     };
+  }
+
+  /**
+   * Send OTP for contact us (for non-logged in users)
+   */
+  async sendOtpForContactUs(
+    sendOtpDto: SendOtpForContactUsDto,
+  ): Promise<SendOtpForContactUsResponseDto> {
+    const { phone } = sendOtpDto;
+    return await this.sendOtp({ phone });
+  }
+
+  /**
+   * Submit contact us query (for both logged in and non-logged in users)
+   * If logged in: endUserId is provided, no OTP needed
+   * If not logged in: endUserId is null, OTP is required
+   */
+  async submitContactUs(
+    submitDto: SubmitContactUsDto,
+    endUserId: string | null = null,
+  ): Promise<ContactUsResponseDto> {
+    const { name, phone, email, otp } = submitDto;
+
+    // If user is logged in, verify the user exists and is an end user
+    if (endUserId) {
+      const user = await this.userRepository.findById(endUserId);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      if (user.role !== UserRole.END_USER) {
+        throw new BadRequestException('Only end users can submit contact us queries');
+      }
+
+      // Create contact us query for logged in user
+      const contactUsQuery = await this.contactUsKmaQueryRepository.create({
+        name,
+        phoneNumber: phone,
+        email: email || null,
+        endUserId, // Map to logged in end user
+      });
+
+      return {
+        success: true,
+        message: 'Contact us query submitted successfully',
+        contactUsQueryId: contactUsQuery.id,
+      };
+    }
+
+    // If not logged in, OTP is required
+    if (!otp) {
+      throw new BadRequestException(
+        'OTP is required for non-logged in users. Please provide OTP or use /end-user/contact-us/send-otp to get one.',
+      );
+    }
+
+    // Find the OTP record for this phone
+    const otpRecord = await this.otpRepository.findActiveByPhone(phone);
+
+    if (!otpRecord) {
+      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
+    }
+
+    // Check if OTP has expired
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
+    }
+
+    // Check if OTP is already used
+    if (otpRecord.isUsed) {
+      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
+    }
+
+    // Check if too many attempts
+    if (otpRecord.attempts >= 3) {
+      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
+    }
+
+    // Validate OTP code
+    if (otpRecord.otpCode !== otp) {
+      await this.otpRepository.incrementAttempts(otpRecord.id);
+      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
+    }
+
+    // Use transaction to ensure atomicity
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Mark OTP as used
+      await queryRunner.manager.update(
+        'otps',
+        { id: otpRecord.id },
+        { isUsed: true },
+      );
+
+      // Create contact us query for non-logged in user
+      const contactUsQuery = await this.contactUsKmaQueryRepository.create({
+        name,
+        phoneNumber: phone,
+        email: email || null,
+        endUserId: null, // Not logged in
+      });
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+
+      return {
+        success: true,
+        message: 'Contact us query submitted successfully',
+        contactUsQueryId: contactUsQuery.id,
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
+    }
   }
 }

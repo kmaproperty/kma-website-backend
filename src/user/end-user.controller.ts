@@ -28,6 +28,10 @@ import {
   EndUserChannelPartnerListResponseDto,
   EndUserChannelPartnerDetailsResponseDto,
   EndUserPropertyDetailsResponseDto,
+  SendOtpForContactUsDto,
+  SendOtpForContactUsResponseDto,
+  SubmitContactUsDto,
+  ContactUsResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -396,6 +400,60 @@ export class EndUserController {
       ...propertyDetails,
       remainingViews: viewCheck.remainingViews,
     };
+  }
+
+  @Post('contact-us/send-otp')
+  @Public()
+  @ApiOperation({
+    summary: 'Send OTP for Contact Us (Non-logged in users)',
+    description: 'Send OTP to phone number for contact us verification. This is for non-logged in users who want to submit a contact us query.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+    type: SendOtpForContactUsResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid phone number',
+  })
+  async sendOtpForContactUs(
+    @Body() sendOtpDto: SendOtpForContactUsDto,
+  ): Promise<SendOtpForContactUsResponseDto> {
+    return await this.userService.sendOtpForContactUs(sendOtpDto);
+  }
+
+  @Post('contact-us')
+  @Public()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Submit Contact Us Query (For both logged in and non-logged in users)',
+    description: 'Submit a contact us query. This endpoint works for both logged in and non-logged in users. If you are logged in, provide the Bearer token and the query will be mapped to your user ID (no OTP required). If you are not logged in, you must provide the OTP code received via /end-user/contact-us/send-otp endpoint.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contact us query submitted successfully',
+    type: ContactUsResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid data, invalid OTP (for non-logged in), expired OTP, or user not found',
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - for authenticated users)',
+    required: false,
+  })
+  async submitContactUs(
+    @Req() req: Request,
+    @Body() submitDto: SubmitContactUsDto,
+  ): Promise<ContactUsResponseDto> {
+    // Check if user is authenticated
+    const endUserId = req.user?.id || null;
+    
+    // Pass endUserId (null if not logged in) to service
+    // Service will handle OTP verification for non-logged in users
+    return await this.userService.submitContactUs(submitDto, endUserId);
   }
 }
 
