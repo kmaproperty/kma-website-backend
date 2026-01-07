@@ -18,6 +18,10 @@ import { LeadRepository } from './repositories/lead.repository';
 import { LeadNoteRepository } from './repositories/lead-note.repository';
 import { LeadPropertyContactRepository } from './repositories/lead-property-contact.repository';
 import { LeadService } from './services/lead.service';
+import { ContactUs } from '../contact-us/entities/contact-us.entity';
+import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
+import { ContactUsKmaQuery } from '../user/entities/contact-us-kma-query.entity';
+import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
 
 @Module({
   imports: [
@@ -30,6 +34,8 @@ import { LeadService } from './services/lead.service';
       Lead,
       LeadNote,
       LeadPropertyContact,
+      ContactUs,
+      ContactUsKmaQuery,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -50,6 +56,8 @@ import { LeadService } from './services/lead.service';
     LeadNoteRepository,
     LeadPropertyContactRepository,
     LeadService,
+    ContactUsRepository,
+    ContactUsKmaQueryRepository,
   ],
   exports: [AdminService, AdminRepository, LeadService],
 })

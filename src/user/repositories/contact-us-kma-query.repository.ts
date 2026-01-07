@@ -36,6 +36,32 @@ export class ContactUsKmaQueryRepository {
   }
 
   /**
+   * Get all contact us KMA queries with pagination and search
+   */
+  async findAllWithSearch(
+    skip: number = 0,
+    take: number = 10,
+    search?: string,
+  ): Promise<{ items: ContactUsKmaQuery[]; total: number }> {
+    const queryBuilder = this.contactUsKmaQueryRepository
+      .createQueryBuilder('query')
+      .leftJoinAndSelect('query.endUser', 'endUser');
+
+    if (search) {
+      queryBuilder.where(
+        '(LOWER(query.name) LIKE LOWER(:search) OR LOWER(query.email) LIKE LOWER(:search) OR query.phoneNumber LIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    queryBuilder.orderBy('query.createdAt', 'DESC');
+    queryBuilder.skip(skip).take(take);
+
+    const [items, total] = await queryBuilder.getManyAndCount();
+    return { items, total };
+  }
+
+  /**
    * Get total count of contact us KMA queries
    */
   async count(): Promise<number> {

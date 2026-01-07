@@ -441,6 +441,7 @@ export class PropertyService {
       progressPercentage,
       rejectionReason,
       expiresAt: property.expiresAt || null,
+      isVerified: property.isVerified || null,
     };
   }
 

@@ -30,6 +30,30 @@ export class ContactUsRepository {
   }
 
   /**
+   * Get all contact submissions with pagination and search
+   */
+  async findAllWithSearch(
+    skip: number = 0,
+    take: number = 10,
+    search?: string,
+  ): Promise<{ items: ContactUs[]; total: number }> {
+    const queryBuilder = this.contactUsRepository.createQueryBuilder('contact');
+
+    if (search) {
+      queryBuilder.where(
+        '(LOWER(contact.firstName) LIKE LOWER(:search) OR LOWER(contact.lastName) LIKE LOWER(:search) OR LOWER(contact.email) LIKE LOWER(:search) OR contact.phoneNumber LIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    queryBuilder.orderBy('contact.createdAt', 'DESC');
+    queryBuilder.skip(skip).take(take);
+
+    const [items, total] = await queryBuilder.getManyAndCount();
+    return { items, total };
+  }
+
+  /**
    * Get total count of contact submissions
    */
   async count(): Promise<number> {

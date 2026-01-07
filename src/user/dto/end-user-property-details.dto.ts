@@ -260,5 +260,13 @@ export class EndUserPropertyDetailsResponseDto {
     required: false,
   })
   expiresAt?: Date | null;
+
+  @ApiPropertyOptional({
+    description: 'Verification status of the property',
+    example: 'verified',
+    enum: ['verified', 'unverified', 'pending'],
+    required: false,
+  })
+  isVerified?: string | null;
 }
 

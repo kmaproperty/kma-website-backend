@@ -82,6 +82,10 @@ import {
   AdminApproveKycDto,
   AdminApproveKycRequestDto,
   AdminApproveKycResponseDto,
+  AdminContactUsListQueryDto,
+  AdminContactUsListResponseDto,
+  AdminContactUsKmaQueryListQueryDto,
+  AdminContactUsKmaQueryListResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -1147,6 +1151,39 @@ export class AdminController {
       { ...dto, userId },
       req.admin.id,
     );
+  }
+
+  // Contact Us management endpoints
+  @Get('contact-us')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List contact us submissions with pagination and search' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of contact us submissions',
+    type: AdminContactUsListResponseDto,
+  })
+  async listContactUs(
+    @Query() query: AdminContactUsListQueryDto,
+  ): Promise<AdminContactUsListResponseDto> {
+    return this.adminService.listContactUs(query);
+  }
+
+  @Get('contact-us-kma-queries')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List contact us KMA queries with pagination and search' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of contact us KMA queries',
+    type: AdminContactUsKmaQueryListResponseDto,
+  })
+  async listContactUsKmaQueries(
+    @Query() query: AdminContactUsKmaQueryListQueryDto,
+  ): Promise<AdminContactUsKmaQueryListResponseDto> {
+    return this.adminService.listContactUsKmaQueries(query);
   }
 }
 

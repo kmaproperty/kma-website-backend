@@ -68,6 +68,12 @@ import {
   AdminApproveLivePhotoResponseDto,
   AdminApproveKycDto,
   AdminApproveKycResponseDto,
+  AdminContactUsListQueryDto,
+  AdminContactUsListResponseDto,
+  ContactUsResponseDto,
+  AdminContactUsKmaQueryListQueryDto,
+  AdminContactUsKmaQueryListResponseDto,
+  ContactUsKmaQueryResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
@@ -80,6 +86,8 @@ import { AmenityRepository } from '../property/repositories/amenity.repository';
 import { ChannelPartnerCodeRepository } from '../user/repositories/channel-partner-code.repository';
 import { ChannelPartnerAgreementRepository } from '../user/repositories/channel-partner-agreement.repository';
 import { UserRepository } from '../user/repositories/user.repository';
+import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
+import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
 import { UserService } from '../user/user.service';
 import { PropertyService } from '../property/property.service';
 import { AgreementStatus } from '../user/entities/channel-partner-agreement.entity';
@@ -240,6 +248,8 @@ export class AdminService {
     private readonly propertyService: PropertyService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly contactUsRepository: ContactUsRepository,
+    private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
   ) {}
 
   private getJwtSecret(): string {
@@ -2309,6 +2319,87 @@ export class AdminService {
         step3_bank_details: kycStatus.step3_bank_details,
         step4_docusign_agreement: kycStatus.step4_docusign_agreement,
       },
+    };
+  }
+
+  /**
+   * List contact us submissions with pagination and search
+   */
+  async listContactUs(
+    query: AdminContactUsListQueryDto,
+  ): Promise<AdminContactUsListResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const { items: contacts, total } =
+      await this.contactUsRepository.findAllWithSearch(
+        skip,
+        limit,
+        query.search,
+      );
+
+    const data: ContactUsResponseDto[] = contacts.map((contact) => ({
+      id: contact.id,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      phoneNumber: contact.phoneNumber,
+      message: contact.message,
+      createdAt: contact.createdAt,
+      updatedAt: contact.updatedAt,
+    }));
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  /**
+   * List contact us KMA queries with pagination and search
+   */
+  async listContactUsKmaQueries(
+    query: AdminContactUsKmaQueryListQueryDto,
+  ): Promise<AdminContactUsKmaQueryListResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const { items: queries, total } =
+      await this.contactUsKmaQueryRepository.findAllWithSearch(
+        skip,
+        limit,
+        query.search,
+      );
+
+    const data: ContactUsKmaQueryResponseDto[] = queries.map((q) => ({
+      id: q.id,
+      name: q.name,
+      phoneNumber: q.phoneNumber,
+      email: q.email,
+      endUserId: q.endUserId,
+      endUser: q.endUser
+        ? {
+            id: q.endUser.id,
+            name: q.endUser.name,
+            email: q.endUser.email,
+            phone: q.endUser.phone,
+          }
+        : null,
+      createdAt: q.createdAt,
+      updatedAt: q.updatedAt,
+    }));
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
     };
   }
 }
