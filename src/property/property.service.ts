@@ -12,6 +12,7 @@ import { LocalityRepository } from './repositories/locality.repository';
 import { FurnishingRepository } from './repositories/furnishing.repository';
 import { AmenityRepository } from './repositories/amenity.repository';
 import { PropertyRepository } from './repositories/property.repository';
+import { PropertyRejectionHistoryRepository } from './repositories/property-rejection-history.repository';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
 import { UserRepository } from '../user/repositories/user.repository';
@@ -59,6 +60,7 @@ export class PropertyService {
     private readonly furnishingRepository: FurnishingRepository,
     private readonly amenityRepository: AmenityRepository,
     private readonly propertyRepository: PropertyRepository,
+    private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
     private readonly masterDataSeederService: MasterDataSeederService,
     private readonly googlePlacesService: GooglePlacesService,
     @Inject(forwardRef(() => UserRepository))
@@ -389,6 +391,13 @@ export class PropertyService {
     const createdOn = property.createdAt.toISOString().split('T')[0];
     const lastAddedOn = property.updatedAt.toISOString().split('T')[0];
 
+    // Fetch latest rejection reason from rejection history table
+    const latestRejectionHistory =
+      await this.propertyRejectionHistoryRepository.findLatestByPropertyId(
+        property.id,
+      );
+    const rejectionReason = latestRejectionHistory?.rejectionReason || null;
+
     return {
       id: property.id,
       title,
@@ -430,6 +439,8 @@ export class PropertyService {
       lastAddedOn,
       completionStep,
       progressPercentage,
+      rejectionReason,
+      expiresAt: property.expiresAt || null,
     };
   }
 

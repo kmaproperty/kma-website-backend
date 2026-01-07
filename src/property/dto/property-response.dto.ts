@@ -886,6 +886,20 @@ export class OwnerPropertyDetailResponseDto {
 
   @ApiProperty({ description: 'Progress percentage', example: 60 })
   progressPercentage: number;
+
+  @ApiPropertyOptional({
+    description: 'Rejection reason (if property was rejected)',
+    example: 'Incomplete property information',
+    required: false,
+  })
+  rejectionReason?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Expiry date for active properties (15 days from activation)',
+    example: '2025-08-05T10:15:00.000Z',
+    required: false,
+  })
+  expiresAt?: Date | null;
 }
 
 // Property Step 2 Response DTO
