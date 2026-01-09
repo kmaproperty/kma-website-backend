@@ -74,6 +74,13 @@ import {
   AdminContactUsKmaQueryListQueryDto,
   AdminContactUsKmaQueryListResponseDto,
   ContactUsKmaQueryResponseDto,
+  AdminPropertyVerificationListQueryDto,
+  AdminPropertyVerificationListResponseDto,
+  AdminPropertyVerificationDetailResponseDto,
+  AdminApprovePropertyVerificationDto,
+  AdminRejectPropertyVerificationDto,
+  AdminPropertyVerificationActionResponseDto,
+  PropertyVerificationRequestItemDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
@@ -88,6 +95,11 @@ import { ChannelPartnerAgreementRepository } from '../user/repositories/channel-
 import { UserRepository } from '../user/repositories/user.repository';
 import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
+import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
+import {
+  PropertyVerificationRequest,
+  PropertyVerificationStatus,
+} from '../property/entities/property-verification-request.entity';
 import { UserService } from '../user/user.service';
 import { PropertyService } from '../property/property.service';
 import { AgreementStatus } from '../user/entities/channel-partner-agreement.entity';
@@ -250,6 +262,7 @@ export class AdminService {
     private readonly configService: ConfigService,
     private readonly contactUsRepository: ContactUsRepository,
     private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
+    private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
   ) {}
 
   private getJwtSecret(): string {
@@ -2418,6 +2431,199 @@ export class AdminService {
       total,
       page,
       limit,
+    };
+  }
+
+  /**
+   * List property verification requests with pagination and filtering
+   */
+  async listPropertyVerifications(
+    query: AdminPropertyVerificationListQueryDto,
+  ): Promise<AdminPropertyVerificationListResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const { items, total } =
+      await this.propertyVerificationRequestRepository.findAllWithPagination(
+        skip,
+        limit,
+        query.status,
+      );
+
+    const data: PropertyVerificationRequestItemDto[] = items.map((request) => {
+      // Build property title
+      const propertyTitleParts = [
+        request.property.bhkType?.name,
+        request.property.propertyType?.name,
+      ].filter(Boolean);
+      const propertyTitle =
+        propertyTitleParts.join(' ') ||
+        request.property.propertyDescription ||
+        'Property';
+
+      return {
+        id: request.id,
+        propertyId: request.propertyId,
+        propertyTitle,
+        requestedBy: request.requestedBy,
+        requestedByName: request.requestedByUser?.name || null,
+        verificationToken: request.verificationToken,
+        status: request.status,
+        livePhotosCount: request.livePhotos?.length || 0,
+        liveVideosCount: request.liveVideos?.length || 0,
+        createdAt: request.createdAt,
+        submittedAt: request.submittedAt,
+        reviewedBy: request.reviewedBy,
+        reviewedByName: request.reviewedByUser?.name || null,
+        reviewedAt: request.reviewedAt,
+        rejectionReason: request.rejectionReason,
+      };
+    });
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  /**
+   * Get property verification request details
+   */
+  async getPropertyVerificationDetail(
+    verificationRequestId: string,
+  ): Promise<AdminPropertyVerificationDetailResponseDto> {
+    const request = await this.propertyVerificationRequestRepository.findById(
+      verificationRequestId,
+    );
+    if (!request) {
+      throw new BadRequestException('Verification request not found');
+    }
+
+    // Build property title
+    const propertyTitleParts = [
+      request.property.bhkType?.name,
+      request.property.propertyType?.name,
+    ].filter(Boolean);
+    const propertyTitle =
+      propertyTitleParts.join(' ') ||
+      request.property.propertyDescription ||
+      'Property';
+
+    const data: PropertyVerificationRequestItemDto & {
+      livePhotos: Array<{
+        fileKey: string;
+        view?: string;
+        uploadedAt: Date;
+      }>;
+      liveVideos: Array<{
+        fileKey: string;
+        format?: string;
+        uploadedAt: Date;
+      }>;
+    } = {
+      id: request.id,
+      propertyId: request.propertyId,
+      propertyTitle,
+      requestedBy: request.requestedBy,
+      requestedByName: request.requestedByUser?.name || null,
+      verificationToken: request.verificationToken,
+      status: request.status,
+      livePhotosCount: request.livePhotos?.length || 0,
+      liveVideosCount: request.liveVideos?.length || 0,
+      createdAt: request.createdAt,
+      submittedAt: request.submittedAt,
+      reviewedBy: request.reviewedBy,
+      reviewedByName: request.reviewedByUser?.name || null,
+      reviewedAt: request.reviewedAt,
+      rejectionReason: request.rejectionReason,
+      livePhotos: request.livePhotos || [],
+      liveVideos: request.liveVideos || [],
+    };
+
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  /**
+   * Approve property verification request
+   */
+  async approvePropertyVerification(
+    verificationRequestId: string,
+    dto: AdminApprovePropertyVerificationDto,
+    adminId: string,
+  ): Promise<AdminPropertyVerificationActionResponseDto> {
+    const request = await this.propertyVerificationRequestRepository.findById(
+      verificationRequestId,
+    );
+    if (!request) {
+      throw new BadRequestException('Verification request not found');
+    }
+
+    if (request.status !== PropertyVerificationStatus.SUBMITTED) {
+      throw new BadRequestException(
+        'Only submitted verification requests can be approved',
+      );
+    }
+
+    // Update verification request status
+    await this.propertyVerificationRequestRepository.update(request.id, {
+      status: PropertyVerificationStatus.APPROVED,
+      reviewedBy: adminId,
+      reviewedAt: new Date(),
+    });
+
+    // Update property: mark as verified and set listing score to 100%
+    await this.propertyRepository.updateProperty(request.propertyId, {
+      isVerified: VerificationStatus.VERIFIED,
+      listingScore: 100.0,
+    });
+
+    return {
+      success: true,
+      message: 'Property verification approved successfully',
+      verificationRequestId: request.id,
+    };
+  }
+
+  /**
+   * Reject property verification request
+   */
+  async rejectPropertyVerification(
+    verificationRequestId: string,
+    dto: AdminRejectPropertyVerificationDto,
+    adminId: string,
+  ): Promise<AdminPropertyVerificationActionResponseDto> {
+    const request = await this.propertyVerificationRequestRepository.findById(
+      verificationRequestId,
+    );
+    if (!request) {
+      throw new BadRequestException('Verification request not found');
+    }
+
+    if (request.status !== PropertyVerificationStatus.SUBMITTED) {
+      throw new BadRequestException(
+        'Only submitted verification requests can be rejected',
+      );
+    }
+
+    // Update verification request status
+    await this.propertyVerificationRequestRepository.update(request.id, {
+      status: PropertyVerificationStatus.REJECTED,
+      rejectionReason: dto.rejectionReason,
+      reviewedBy: adminId,
+      reviewedAt: new Date(),
+    });
+
+    return {
+      success: true,
+      message: 'Property verification rejected successfully',
+      verificationRequestId: request.id,
     };
   }
 }

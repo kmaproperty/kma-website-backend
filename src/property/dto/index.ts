@@ -11,3 +11,4 @@ export * from './owner-property-listing-query.dto';
 
 // Response DTOs
 export * from './property-response.dto';
+export * from './property-verification.dto';

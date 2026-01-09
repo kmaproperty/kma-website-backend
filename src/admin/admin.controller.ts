@@ -86,6 +86,12 @@ import {
   AdminContactUsListResponseDto,
   AdminContactUsKmaQueryListQueryDto,
   AdminContactUsKmaQueryListResponseDto,
+  AdminPropertyVerificationListQueryDto,
+  AdminPropertyVerificationListResponseDto,
+  AdminPropertyVerificationDetailResponseDto,
+  AdminApprovePropertyVerificationDto,
+  AdminRejectPropertyVerificationDto,
+  AdminPropertyVerificationActionResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -1184,6 +1190,89 @@ export class AdminController {
     @Query() query: AdminContactUsKmaQueryListQueryDto,
   ): Promise<AdminContactUsKmaQueryListResponseDto> {
     return this.adminService.listContactUsKmaQueries(query);
+  }
+
+  // Property Verification management endpoints
+  @Get('property-verifications')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List property verification requests with pagination and filtering' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of property verification requests',
+    type: AdminPropertyVerificationListResponseDto,
+  })
+  async listPropertyVerifications(
+    @Query() query: AdminPropertyVerificationListQueryDto,
+  ): Promise<AdminPropertyVerificationListResponseDto> {
+    return this.adminService.listPropertyVerifications(query);
+  }
+
+  @Get('property-verifications/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get property verification request details' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification request details',
+    type: AdminPropertyVerificationDetailResponseDto,
+  })
+  async getPropertyVerificationDetail(
+    @Param('id') verificationRequestId: string,
+  ): Promise<AdminPropertyVerificationDetailResponseDto> {
+    return this.adminService.getPropertyVerificationDetail(verificationRequestId);
+  }
+
+  @Post('property-verifications/:id/approve')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Approve property verification request' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification request approved successfully',
+    type: AdminPropertyVerificationActionResponseDto,
+  })
+  async approvePropertyVerification(
+    @Param('id') verificationRequestId: string,
+    @Body() dto: AdminApprovePropertyVerificationDto,
+    @Req() req: Request,
+  ): Promise<AdminPropertyVerificationActionResponseDto> {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.approvePropertyVerification(
+      verificationRequestId,
+      dto,
+      req.admin.id,
+    );
+  }
+
+  @Post('property-verifications/:id/reject')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Reject property verification request' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification request rejected successfully',
+    type: AdminPropertyVerificationActionResponseDto,
+  })
+  async rejectPropertyVerification(
+    @Param('id') verificationRequestId: string,
+    @Body() dto: AdminRejectPropertyVerificationDto,
+    @Req() req: Request,
+  ): Promise<AdminPropertyVerificationActionResponseDto> {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.rejectPropertyVerification(
+      verificationRequestId,
+      dto,
+      req.admin.id,
+    );
   }
 }
 

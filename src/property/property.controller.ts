@@ -57,6 +57,12 @@ import {
 } from './dto/property-query.dto';
 import { OwnerPropertyListingQueryDto } from './dto/owner-property-listing-query.dto';
 import {
+  RequestPropertyVerificationDto,
+  RequestPropertyVerificationResponseDto,
+  SubmitPropertyVerificationMediaDto,
+  SubmitPropertyVerificationMediaResponseDto,
+} from './dto/property-verification.dto';
+import {
   CreatePropertyLeadDto,
   CreatePropertyLeadResponseDto,
 } from './dto/create-property-lead.dto';
@@ -707,5 +713,25 @@ export class PropertyController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.propertyService.getPropertyStep2Details(propertyId, req.user.id);
+  }
+
+  @Post('request-verification')
+  @ApiOperation({
+    summary: 'Request property verification',
+    description: 'Generates a verification link for the property. Owner/channel partner can use this link to upload live photos and videos.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification request created successfully',
+    type: RequestPropertyVerificationResponseDto,
+  })
+  async requestPropertyVerification(
+    @Body() body: RequestPropertyVerificationDto,
+    @Req() req: Request,
+  ): Promise<RequestPropertyVerificationResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.requestPropertyVerification(body, req.user.id);
   }
 }

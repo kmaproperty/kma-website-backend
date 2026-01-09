@@ -22,6 +22,8 @@ import { ContactUs } from '../contact-us/entities/contact-us.entity';
 import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
 import { ContactUsKmaQuery } from '../user/entities/contact-us-kma-query.entity';
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
+import { PropertyVerificationRequest } from '../property/entities/property-verification-request.entity';
+import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 
 @Module({
   imports: [
@@ -36,6 +38,7 @@ import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma
       LeadPropertyContact,
       ContactUs,
       ContactUsKmaQuery,
+      PropertyVerificationRequest,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -58,6 +61,7 @@ import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma
     LeadService,
     ContactUsRepository,
     ContactUsKmaQueryRepository,
+    PropertyVerificationRequestRepository,
   ],
   exports: [AdminService, AdminRepository, LeadService],
 })

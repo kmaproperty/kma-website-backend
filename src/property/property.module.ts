@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PropertyController } from './property.controller';
+import { PropertyVerificationController } from './property-verification.controller';
 import { PropertyService } from './property.service';
 import { PropertyListingTypeRepository } from './repositories/property-listing-type.repository';
 import { PropertyCategoryNewRepository } from './repositories/property-category-new.repository';
@@ -28,12 +29,14 @@ import { MasterAmenity } from './entities/master-amenity.entity';
 import { UnitConfiguration } from './entities/unit-configuration.entity';
 import { Property } from './entities/property.entity';
 import { PropertyRejectionHistory } from './entities/property-rejection-history.entity';
+import { PropertyVerificationRequest } from './entities/property-verification-request.entity';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminModule } from '../admin/admin.module';
 import { UserModule } from '../user/user.module';
 import { PropertyRejectionHistoryRepository } from './repositories/property-rejection-history.repository';
+import { PropertyVerificationRequestRepository } from './repositories/property-verification-request.repository';
 
 @Module({
   imports: [
@@ -51,6 +54,7 @@ import { PropertyRejectionHistoryRepository } from './repositories/property-reje
       UnitConfiguration,
       Property,
       PropertyRejectionHistory,
+      PropertyVerificationRequest,
     ]),
     forwardRef(() => AdminModule),
     forwardRef(() => UserModule),
@@ -64,7 +68,7 @@ import { PropertyRejectionHistoryRepository } from './repositories/property-reje
       inject: [ConfigService],
     }),
   ],
-  controllers: [PropertyController],
+  controllers: [PropertyController, PropertyVerificationController],
   providers: [
     PropertyService,
     PropertyListingTypeRepository,
@@ -79,6 +83,7 @@ import { PropertyRejectionHistoryRepository } from './repositories/property-reje
     AmenityRepository,
     PropertyRepository,
     PropertyRejectionHistoryRepository,
+    PropertyVerificationRequestRepository,
     MasterDataSeederService,
     GooglePlacesService,
     JwtAuthGuard,
@@ -94,6 +99,7 @@ import { PropertyRejectionHistoryRepository } from './repositories/property-reje
     AmenityRepository,
     GooglePlacesService,
     PropertyRejectionHistoryRepository,
+    PropertyVerificationRequestRepository,
     PropertyListingTypeRepository,
     PropertyCategoryNewRepository,
     PropertyTypeRepository,

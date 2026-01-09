@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { IsNull } from 'typeorm';
 import { PropertyCompletionStep } from './enum/property-completion-step.enum';
 import { PropertyListingTypeRepository } from './repositories/property-listing-type.repository';
@@ -13,6 +15,7 @@ import { FurnishingRepository } from './repositories/furnishing.repository';
 import { AmenityRepository } from './repositories/amenity.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from './repositories/property-rejection-history.repository';
+import { PropertyVerificationRequestRepository } from './repositories/property-verification-request.repository';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
 import { UserRepository } from '../user/repositories/user.repository';
@@ -29,7 +32,14 @@ import {
 } from './dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto, FurnishingCountDto, FurnishType, PowerBackupType } from './dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
+import {
+  RequestPropertyVerificationDto,
+  RequestPropertyVerificationResponseDto,
+  SubmitPropertyVerificationMediaDto,
+  SubmitPropertyVerificationMediaResponseDto,
+} from './dto/property-verification.dto';
 import { Property } from './entities/property.entity';
+import { PropertyVerificationRequest, PropertyVerificationStatus } from './entities/property-verification-request.entity';
 import { PropertyStatus, DeactivationReason, VerificationStatus } from './enum/property-status.enum';
 import { MAX_LISTINGS_PER_OWNER } from './constants/property.constants';
 import {
@@ -61,8 +71,10 @@ export class PropertyService {
     private readonly amenityRepository: AmenityRepository,
     private readonly propertyRepository: PropertyRepository,
     private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
+    private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
     private readonly masterDataSeederService: MasterDataSeederService,
     private readonly googlePlacesService: GooglePlacesService,
+    private readonly configService: ConfigService,
     @Inject(forwardRef(() => UserRepository))
     private readonly userRepository: UserRepository,
     @Inject(forwardRef(() => UserService))
@@ -3013,6 +3025,102 @@ export class PropertyService {
       progressPercentage,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
+    };
+  }
+
+  /**
+   * Request property verification - generates a verification link
+   */
+  async requestPropertyVerification(
+    dto: RequestPropertyVerificationDto,
+    userId: string,
+  ): Promise<RequestPropertyVerificationResponseDto> {
+    const property = await this.propertyRepository.findById(dto.propertyId);
+    if (!property) {
+      throw new BadRequestException('Property not found');
+    }
+
+    if (property.userId !== userId) {
+      throw new BadRequestException('You can only request verification for your own properties');
+    }
+
+    // Check if property is active
+    if (property.status !== PropertyStatus.ACTIVE) {
+      throw new BadRequestException('Only active properties can be verified');
+    }
+
+    // Check if there's already a pending request
+    const existingPending = await this.propertyVerificationRequestRepository.findPendingByPropertyId(dto.propertyId);
+    if (existingPending) {
+      throw new BadRequestException('A pending verification request already exists for this property');
+    }
+
+    // Generate unique verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+
+    // Get frontend URL from config (default to placeholder if not set)
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://example.com';
+    const verificationLink = `${frontendUrl}/verify-property/${verificationToken}`;
+
+    // Create verification request
+    const verificationRequest = await this.propertyVerificationRequestRepository.create({
+      propertyId: dto.propertyId,
+      requestedBy: userId,
+      verificationToken,
+      status: PropertyVerificationStatus.PENDING,
+    });
+
+    return {
+      success: true,
+      message: 'Verification request created successfully. Use the link to upload live photos/videos.',
+      verificationRequestId: verificationRequest.id,
+      verificationToken,
+      verificationLink,
+    };
+  }
+
+  /**
+   * Submit property verification media using verification token (public endpoint)
+   */
+  async submitPropertyVerificationMedia(
+    dto: SubmitPropertyVerificationMediaDto,
+  ): Promise<SubmitPropertyVerificationMediaResponseDto> {
+    // Find verification request by token
+    const verificationRequest = await this.propertyVerificationRequestRepository.findByToken(dto.verificationToken);
+    if (!verificationRequest) {
+      throw new BadRequestException('Invalid verification token');
+    }
+
+    // Check if request is in pending status
+    if (verificationRequest.status !== PropertyVerificationStatus.PENDING) {
+      throw new BadRequestException('This verification request is no longer pending');
+    }
+
+    // Prepare media data with timestamps
+    const livePhotos = dto.livePhotos.map(photo => ({
+      fileKey: photo.fileKey,
+      view: photo.view,
+      uploadedAt: new Date(),
+    }));
+
+    const liveVideos = dto.liveVideos?.map(video => ({
+      fileKey: video.fileKey,
+      format: video.format,
+      uploadedAt: new Date(),
+    })) || null;
+
+    // Update verification request with media
+    await this.propertyVerificationRequestRepository.update(verificationRequest.id, {
+      livePhotos,
+      liveVideos,
+      status: PropertyVerificationStatus.SUBMITTED,
+      submittedAt: new Date(),
+    });
+
+    return {
+      success: true,
+      message: 'Verification media submitted successfully. Waiting for admin approval.',
+      verificationRequestId: verificationRequest.id,
     };
   }
 }
