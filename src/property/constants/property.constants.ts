@@ -1,2 +1,2 @@
-export const MAX_LISTINGS_PER_OWNER = 5;
+export const MAX_LISTINGS_PER_OWNER = 3;
 

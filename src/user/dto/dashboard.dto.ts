@@ -5,10 +5,10 @@ export class FreeListingInfoDto {
   @ApiProperty({ description: 'Number of listings used', example: 1 })
   used: number;
 
-  @ApiProperty({ description: 'Total free listings allowed (null when unlimited)', example: 5, nullable: true })
+  @ApiProperty({ description: 'Total free listings allowed (null when unlimited)', example: 3, nullable: true })
   total: number | null;
 
-  @ApiProperty({ description: 'Remaining free listings (null when unlimited)', example: 4, nullable: true })
+  @ApiProperty({ description: 'Remaining free listings (null when unlimited)', example: 2, nullable: true })
   remaining: number | null;
 
   @ApiProperty({ description: 'Whether posting is unlimited', example: false })
