@@ -30,7 +30,7 @@ import {
 import { CreatePropertyStep3Dto, FurnishingCountDto, FurnishType, PowerBackupType } from './dto/create-property-step3.dto';
 import { CreatePropertyStep4Dto } from './dto/create-property-step4.dto';
 import { Property } from './entities/property.entity';
-import { PropertyStatus, DeactivationReason } from './enum/property-status.enum';
+import { PropertyStatus, DeactivationReason, VerificationStatus } from './enum/property-status.enum';
 import { MAX_LISTINGS_PER_OWNER } from './constants/property.constants';
 import {
   OwnerPropertyListingQueryDto,
@@ -70,6 +70,26 @@ export class PropertyService {
   ) {}
 
   private readonly DEFAULT_TOTAL_STEPS = 4;
+
+  /**
+   * Calculate listing score based on completion step and verification status.
+   * - 80% when all steps are completed (completionStep === 5)
+   * - 100% when property is verified (isVerified === 'verified')
+   */
+  private calculateListingScore(
+    completionStep: number,
+    isVerified: VerificationStatus,
+  ): number {
+    const isCompleted = completionStep >= PropertyCompletionStep.COMPLETED;
+    const isVerifiedStatus = isVerified === VerificationStatus.VERIFIED;
+
+    if (isCompleted && isVerifiedStatus) {
+      return 100.0;
+    } else if (isCompleted) {
+      return 80.0;
+    }
+    return 0.0;
+  }
 
   /**
    * Calculate progress percentage based on completion step and total steps.
@@ -1429,10 +1449,12 @@ export class PropertyService {
         }
 
         const targetCompletionStep = PropertyCompletionStep.STEP_1;
-        updateData.completionStep =
+        const newCompletionStep =
           previouslyCompletedStep > targetCompletionStep
             ? previouslyCompletedStep
             : targetCompletionStep;
+        updateData.completionStep = newCompletionStep;
+        updateData.listingScore = this.calculateListingScore(newCompletionStep, property.isVerified);
 
         // Update the property
         await this.propertyRepository.updateProperty(propertyId, updateData);
@@ -1705,8 +1727,11 @@ export class PropertyService {
     // Build update object with only provided fields
     const previouslyCompletedStep = property.completionStep ?? 0;
     const targetCompletionStep = PropertyCompletionStep.STEP_2;
+    const newCompletionStep = Math.max(previouslyCompletedStep, targetCompletionStep);
+    const listingScore = this.calculateListingScore(newCompletionStep, property.isVerified);
     const updateData: any = {
-      completionStep: Math.max(previouslyCompletedStep, targetCompletionStep),
+      completionStep: newCompletionStep,
+      listingScore,
     };
 
     if (dto.floorNumber !== undefined) {
@@ -2001,8 +2026,11 @@ export class PropertyService {
     // Build update object with only provided fields
     const previouslyCompletedStep = property.completionStep ?? 0;
     const targetCompletionStep = PropertyCompletionStep.STEP_3;
+    const newCompletionStep = Math.max(previouslyCompletedStep, targetCompletionStep);
+    const listingScore = this.calculateListingScore(newCompletionStep, property.isVerified);
     const updateData: any = {
-      completionStep: Math.max(previouslyCompletedStep, targetCompletionStep),
+      completionStep: newCompletionStep,
+      listingScore,
     };
 
     if (dto.additionalRooms !== undefined) {
@@ -2259,8 +2287,12 @@ export class PropertyService {
     const targetCompletionStep = PropertyCompletionStep.STEP_4;
 
     // Build update object
+    const newCompletionStep = Math.max(previouslyCompletedStep, targetCompletionStep);
+    const listingScore = this.calculateListingScore(newCompletionStep, property.isVerified);
+    
     const updateData: any = {
-      completionStep: Math.max(previouslyCompletedStep, targetCompletionStep),
+      completionStep: newCompletionStep,
+      listingScore,
       status: 'pending_review',
       photos: dto.photos.map(p => ({
         fileKey: p.fileKey,
@@ -2458,6 +2490,7 @@ export class PropertyService {
       adminReviewedAt: null,
       status: PropertyStatus.DRAFT,
       completionStep: 0,
+      listingScore: 0,
     };
 
     await this.propertyRepository.updateProperty(propertyId, resetData);

@@ -1302,8 +1302,14 @@ export class AdminService {
       );
     }
 
+    // Calculate listing score: 100% if all steps completed and verified, 80% if just completed
+    const completionStep = property.completionStep ?? 0;
+    const isCompleted = completionStep >= 5; // PropertyCompletionStep.COMPLETED = 5
+    const listingScore = isCompleted ? 100.0 : 0.0; // 100% when all steps completed AND verified
+
     await this.propertyRepository.updateProperty(propertyId, {
       isVerified: VerificationStatus.VERIFIED,
+      listingScore,
       adminReviewComment: dto.comment ?? property.adminReviewComment,
       adminReviewedBy: adminId,
       adminReviewedAt: new Date(),

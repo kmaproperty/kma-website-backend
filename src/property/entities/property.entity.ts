@@ -123,6 +123,17 @@ export class Property extends BaseEntity {
   })
   isVerified: VerificationStatus;
 
+  // Listing score (0-100): 80% when all steps completed, 100% when verified
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+    name: 'listing_score',
+    comment: 'Listing score: 80% when all steps completed, 100% when verified',
+  })
+  listingScore: number;
+
   // Timestamp when property was activated
   @Column({
     type: 'timestamp with time zone',
