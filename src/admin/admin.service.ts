@@ -74,6 +74,11 @@ import {
   AdminContactUsKmaQueryListQueryDto,
   AdminContactUsKmaQueryListResponseDto,
   ContactUsKmaQueryResponseDto,
+  AdminKmaRatingReviewListQueryDto,
+  AdminKmaRatingReviewListResponseDto,
+  KmaRatingReviewResponseDto,
+  AdminApproveRatingReviewDto,
+  AdminApproveRatingReviewResponseDto,
   AdminPropertyVerificationListQueryDto,
   AdminPropertyVerificationListResponseDto,
   AdminPropertyVerificationDetailResponseDto,
@@ -95,6 +100,7 @@ import { ChannelPartnerAgreementRepository } from '../user/repositories/channel-
 import { UserRepository } from '../user/repositories/user.repository';
 import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
+import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 import {
   PropertyVerificationRequest,
@@ -262,6 +268,7 @@ export class AdminService {
     private readonly configService: ConfigService,
     private readonly contactUsRepository: ContactUsRepository,
     private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
+    private readonly kmaRatingReviewRepository: KmaRatingReviewRepository,
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
   ) {}
 
@@ -2431,6 +2438,86 @@ export class AdminService {
       total,
       page,
       limit,
+    };
+  }
+
+  /**
+   * List KMA ratings and reviews with pagination and search
+   */
+  async listKmaRatingReviews(
+    query: AdminKmaRatingReviewListQueryDto,
+  ): Promise<AdminKmaRatingReviewListResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const { items: ratingReviews, total } =
+      await this.kmaRatingReviewRepository.findAllWithSearch(
+        skip,
+        limit,
+        query.search,
+        query.isApproved,
+      );
+
+    const data: KmaRatingReviewResponseDto[] = ratingReviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      review: r.review,
+      name: r.name,
+      phoneNumber: r.phoneNumber,
+      email: r.email,
+      endUserId: r.endUserId,
+      endUser: r.endUser
+        ? {
+            id: r.endUser.id,
+            name: r.endUser.name,
+            email: r.endUser.email,
+            phone: r.endUser.phone,
+          }
+        : null,
+      isApproved: r.isApproved,
+      approvedById: r.approvedById,
+      approvedAt: r.approvedAt,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  /**
+   * Approve or disapprove rating review for home page display
+   */
+  async approveRatingReview(
+    ratingReviewId: string,
+    dto: AdminApproveRatingReviewDto,
+    adminId: string,
+    isApproved: boolean,
+  ): Promise<AdminApproveRatingReviewResponseDto> {
+    const ratingReview = await this.kmaRatingReviewRepository.findById(ratingReviewId);
+    if (!ratingReview) {
+      throw new BadRequestException('Rating review not found');
+    }
+
+    // Update rating review approval status
+    await this.kmaRatingReviewRepository.update(ratingReviewId, {
+      isApproved,
+      approvedById: isApproved ? adminId : null,
+      approvedAt: isApproved ? new Date() : null,
+    });
+
+    return {
+      success: true,
+      message: isApproved
+        ? 'Rating review approved for home page display'
+        : 'Rating review removed from home page display',
+      ratingReviewId: ratingReview.id,
     };
   }
 

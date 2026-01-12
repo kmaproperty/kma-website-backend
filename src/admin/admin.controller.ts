@@ -86,6 +86,10 @@ import {
   AdminContactUsListResponseDto,
   AdminContactUsKmaQueryListQueryDto,
   AdminContactUsKmaQueryListResponseDto,
+  AdminKmaRatingReviewListQueryDto,
+  AdminKmaRatingReviewListResponseDto,
+  AdminApproveRatingReviewDto,
+  AdminApproveRatingReviewResponseDto,
   AdminPropertyVerificationListQueryDto,
   AdminPropertyVerificationListResponseDto,
   AdminPropertyVerificationDetailResponseDto,
@@ -1190,6 +1194,94 @@ export class AdminController {
     @Query() query: AdminContactUsKmaQueryListQueryDto,
   ): Promise<AdminContactUsKmaQueryListResponseDto> {
     return this.adminService.listContactUsKmaQueries(query);
+  }
+
+  @Get('rating-reviews')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List KMA ratings and reviews with pagination and search' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of KMA ratings and reviews',
+    type: AdminKmaRatingReviewListResponseDto,
+  })
+  async listKmaRatingReviews(
+    @Query() query: AdminKmaRatingReviewListQueryDto,
+  ): Promise<AdminKmaRatingReviewListResponseDto> {
+    return this.adminService.listKmaRatingReviews(query);
+  }
+
+  @Post('rating-reviews/:id/approve')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Approve rating review for home page display' })
+  @ApiParam({
+    name: 'id',
+    description: 'Rating review ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rating review approved successfully',
+    type: AdminApproveRatingReviewResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Rating review not found',
+  })
+  async approveRatingReview(
+    @Param('id') ratingReviewId: string,
+    @Body() dto: AdminApproveRatingReviewDto,
+    @Req() req: Request,
+  ): Promise<AdminApproveRatingReviewResponseDto> {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.approveRatingReview(
+      ratingReviewId,
+      dto,
+      req.admin.id,
+      true, // isApproved = true
+    );
+  }
+
+  @Post('rating-reviews/:id/disapprove')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Disapprove rating review (remove from home page display)' })
+  @ApiParam({
+    name: 'id',
+    description: 'Rating review ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rating review disapproved successfully',
+    type: AdminApproveRatingReviewResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Rating review not found',
+  })
+  async disapproveRatingReview(
+    @Param('id') ratingReviewId: string,
+    @Body() dto: AdminApproveRatingReviewDto,
+    @Req() req: Request,
+  ): Promise<AdminApproveRatingReviewResponseDto> {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.approveRatingReview(
+      ratingReviewId,
+      dto,
+      req.admin.id,
+      false, // isApproved = false
+    );
   }
 
   // Property Verification management endpoints

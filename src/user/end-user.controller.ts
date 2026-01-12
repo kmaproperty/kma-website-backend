@@ -32,6 +32,8 @@ import {
   SendOtpForContactUsResponseDto,
   SubmitContactUsDto,
   ContactUsResponseDto,
+  SubmitRatingReviewDto,
+  SubmitRatingReviewResponseDto,
   PropertyMasterDataResponseDto,
 } from './dto';
 import { Request } from 'express';
@@ -455,6 +457,39 @@ export class EndUserController {
     // Pass endUserId (null if not logged in) to service
     // Service will handle OTP verification for non-logged in users
     return await this.userService.submitContactUs(submitDto, endUserId);
+  }
+
+  @Post('rating-review')
+  @Public()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Submit Rating and Review for KMA (For both logged in and non-logged in users)',
+    description: 'Submit a rating and review for KMA. This endpoint works for both logged in and non-logged in users. If you are logged in, provide the Bearer token and the rating/review will be mapped to your user ID (no OTP required). If you are not logged in, you must provide the OTP code received via /end-user/contact-us/send-otp endpoint.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rating and review submitted successfully',
+    type: SubmitRatingReviewResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid data, invalid OTP (for non-logged in), expired OTP, or user not found',
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - for authenticated users)',
+    required: false,
+  })
+  async submitRatingReview(
+    @Req() req: Request,
+    @Body() submitDto: SubmitRatingReviewDto,
+  ): Promise<SubmitRatingReviewResponseDto> {
+    // Check if user is authenticated
+    const endUserId = req.user?.id || null;
+    
+    // Pass endUserId (null if not logged in) to service
+    // Service will handle OTP verification for non-logged in users
+    return await this.userService.submitRatingReview(submitDto, endUserId);
   }
 
   @Get('property-master-data')

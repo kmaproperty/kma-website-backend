@@ -85,6 +85,8 @@ import {
   SendOtpForContactUsResponseDto,
   SubmitContactUsDto,
   ContactUsResponseDto,
+  SubmitRatingReviewDto,
+  SubmitRatingReviewResponseDto,
   PropertyMasterDataResponseDto,
   ListingTypeItemDto,
   CategoryItemDto,
@@ -109,6 +111,7 @@ import { AgreementStatus } from './entities/channel-partner-agreement.entity';
 import { BankDetailsRepository } from './repositories/bank-details.repository';
 import { EncryptionService } from './services/encryption.service';
 import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
+import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
 
 @Injectable()
 export class UserService {
@@ -131,6 +134,7 @@ export class UserService {
     private readonly bankDetailsRepository: BankDetailsRepository,
     private readonly encryptionService: EncryptionService,
     private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
+    private readonly kmaRatingReviewRepository: KmaRatingReviewRepository,
     private readonly propertyListingTypeRepository: PropertyListingTypeRepository,
     private readonly propertyCategoryRepository: PropertyCategoryNewRepository,
     private readonly propertyTypeRepository: PropertyTypeRepository,
@@ -3219,6 +3223,119 @@ export class UserService {
         success: true,
         message: 'Contact us query submitted successfully',
         contactUsQueryId: contactUsQuery.id,
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Submit rating and review for KMA (for both logged in and non-logged in end users)
+   */
+  async submitRatingReview(
+    submitDto: SubmitRatingReviewDto,
+    endUserId: string | null = null,
+  ): Promise<SubmitRatingReviewResponseDto> {
+    const { rating, review, name, phone, email, otp } = submitDto;
+
+    // If user is logged in, verify the user exists and is an end user
+    if (endUserId) {
+      const user = await this.userRepository.findById(endUserId);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      if (user.role !== UserRole.END_USER) {
+        throw new BadRequestException('Only end users can submit ratings and reviews');
+      }
+
+      // Create rating and review for logged in user
+      const ratingReview = await this.kmaRatingReviewRepository.create({
+        rating,
+        review: review || null,
+        name,
+        phoneNumber: phone,
+        email: email || null,
+        endUserId, // Map to logged in end user
+      });
+
+      return {
+        success: true,
+        message: 'Rating and review submitted successfully',
+        ratingReviewId: ratingReview.id,
+      };
+    }
+
+    // If not logged in, OTP is required
+    if (!otp) {
+      throw new BadRequestException(
+        'OTP is required for non-logged in users. Please provide OTP or use /end-user/contact-us/send-otp to get one.',
+      );
+    }
+
+    // Find the OTP record for this phone
+    const otpRecord = await this.otpRepository.findActiveByPhone(phone);
+
+    if (!otpRecord) {
+      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
+    }
+
+    // Check if OTP has expired
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
+    }
+
+    // Check if OTP is already used
+    if (otpRecord.isUsed) {
+      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
+    }
+
+    // Check if too many attempts
+    if (otpRecord.attempts >= 3) {
+      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
+    }
+
+    // Validate OTP code
+    if (otpRecord.otpCode !== otp) {
+      await this.otpRepository.incrementAttempts(otpRecord.id);
+      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
+    }
+
+    // Use transaction to ensure atomicity
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Mark OTP as used
+      await queryRunner.manager.update(
+        'otps',
+        { id: otpRecord.id },
+        { isUsed: true },
+      );
+
+      // Create rating and review for non-logged in user
+      const ratingReview = await this.kmaRatingReviewRepository.create({
+        rating,
+        review: review || null,
+        name,
+        phoneNumber: phone,
+        email: email || null,
+        endUserId: null, // Not logged in
+      });
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+
+      return {
+        success: true,
+        message: 'Rating and review submitted successfully',
+        ratingReviewId: ratingReview.id,
       };
     } catch (error) {
       // Rollback transaction on error

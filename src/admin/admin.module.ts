@@ -22,6 +22,8 @@ import { ContactUs } from '../contact-us/entities/contact-us.entity';
 import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
 import { ContactUsKmaQuery } from '../user/entities/contact-us-kma-query.entity';
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
+import { KmaRatingReview } from '../user/entities/kma-rating-review.entity';
+import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
 import { PropertyVerificationRequest } from '../property/entities/property-verification-request.entity';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 
@@ -38,6 +40,7 @@ import { PropertyVerificationRequestRepository } from '../property/repositories/
       LeadPropertyContact,
       ContactUs,
       ContactUsKmaQuery,
+      KmaRatingReview,
       PropertyVerificationRequest,
     ]),
     JwtModule.registerAsync({
@@ -61,6 +64,7 @@ import { PropertyVerificationRequestRepository } from '../property/repositories/
     LeadService,
     ContactUsRepository,
     ContactUsKmaQueryRepository,
+    KmaRatingReviewRepository,
     PropertyVerificationRequestRepository,
   ],
   exports: [AdminService, AdminRepository, LeadService],
