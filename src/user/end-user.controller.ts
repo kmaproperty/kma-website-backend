@@ -34,6 +34,7 @@ import {
   ContactUsResponseDto,
   SubmitRatingReviewDto,
   SubmitRatingReviewResponseDto,
+  HomePageReviewsResponseDto,
   PropertyMasterDataResponseDto,
 } from './dto';
 import { Request } from 'express';
@@ -490,6 +491,21 @@ export class EndUserController {
     // Pass endUserId (null if not logged in) to service
     // Service will handle OTP verification for non-logged in users
     return await this.userService.submitRatingReview(submitDto, endUserId);
+  }
+
+  @Get('home/reviews')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Home Page Reviews',
+    description: 'Get top 5 approved reviews and ratings for home page display with statistics (total count and average rating).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Home page reviews retrieved successfully',
+    type: HomePageReviewsResponseDto,
+  })
+  async getHomePageReviews(): Promise<HomePageReviewsResponseDto> {
+    return await this.userService.getHomePageReviews();
   }
 
   @Get('property-master-data')

@@ -87,6 +87,9 @@ import {
   ContactUsResponseDto,
   SubmitRatingReviewDto,
   SubmitRatingReviewResponseDto,
+  HomePageReviewsResponseDto,
+  HomePageReviewItemDto,
+  HomePageReviewsStatisticsDto,
   PropertyMasterDataResponseDto,
   ListingTypeItemDto,
   CategoryItemDto,
@@ -3421,6 +3424,41 @@ export class UserService {
       success: true,
       message: 'Property master data retrieved successfully',
       data: filteredListingTypes,
+    };
+  }
+
+  /**
+   * Get home page reviews (top 5 approved reviews with statistics)
+   */
+  async getHomePageReviews(): Promise<HomePageReviewsResponseDto> {
+    const [reviews, statistics] = await Promise.all([
+      this.kmaRatingReviewRepository.findTopApprovedReviews(5),
+      this.kmaRatingReviewRepository.getApprovedReviewsStatistics(),
+    ]);
+
+    const reviewItems: HomePageReviewItemDto[] = reviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      review: r.review,
+      name: r.name,
+      email: r.email,
+      endUser: r.endUser
+        ? {
+            id: r.endUser.id,
+            name: r.endUser.name,
+            email: r.endUser.email,
+          }
+        : null,
+      createdAt: r.createdAt,
+    }));
+
+    return {
+      success: true,
+      reviews: reviewItems,
+      statistics: {
+        totalCount: statistics.totalCount,
+        averageRating: statistics.averageRating,
+      },
     };
   }
 }

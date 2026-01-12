@@ -96,5 +96,44 @@ export class KmaRatingReviewRepository {
   ): Promise<void> {
     await this.kmaRatingReviewRepository.update(id, data);
   }
+
+  /**
+   * Get top approved reviews for home page (sorted by approvedAt DESC, limit 5)
+   */
+  async findTopApprovedReviews(limit: number = 5): Promise<KmaRatingReview[]> {
+    return await this.kmaRatingReviewRepository.find({
+      where: { isApproved: true },
+      relations: ['endUser'],
+      order: { approvedAt: 'DESC', createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Get statistics for approved reviews
+   */
+  async getApprovedReviewsStatistics(): Promise<{
+    totalCount: number;
+    averageRating: number;
+  }> {
+    const queryBuilder = this.kmaRatingReviewRepository
+      .createQueryBuilder('ratingReview')
+      .where('ratingReview.isApproved = :isApproved', { isApproved: true });
+
+    const totalCount = await queryBuilder.getCount();
+
+    const result = await queryBuilder
+      .select('AVG(ratingReview.rating)', 'averageRating')
+      .getRawOne();
+
+    const averageRating = result?.averageRating
+      ? parseFloat(result.averageRating)
+      : 0;
+
+    return {
+      totalCount,
+      averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
+    };
+  }
 }
 
