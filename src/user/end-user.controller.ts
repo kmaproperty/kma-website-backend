@@ -496,11 +496,10 @@ export class EndUserController {
   }
 
   @Post('rating-review')
-  @Public()
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary: 'Submit Rating and Review for KMA (For both logged in and non-logged in users)',
-    description: 'Submit a rating and review for KMA. This endpoint works for both logged in and non-logged in users. If you are logged in, provide the Bearer token and the rating/review will be mapped to your user ID (no OTP required). If you are not logged in, you must provide the OTP code received via /end-user/contact-us/send-otp endpoint.',
+    summary: 'Submit Rating and Review for KMA (Logged in users only)',
+    description: 'Submit a rating and review for KMA. This endpoint requires authentication. Only end users can submit ratings and reviews.',
   })
   @ApiResponse({
     status: 200,
@@ -509,23 +508,21 @@ export class EndUserController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - Invalid data, invalid OTP (for non-logged in), expired OTP, or user not found',
+    description: 'Bad request - Invalid data or user not found',
   })
-  @ApiHeader({
-    name: 'Authorization',
-    description: 'Bearer token (optional - for authenticated users)',
-    required: false,
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Authentication required',
   })
   async submitRatingReview(
     @Req() req: Request,
     @Body() submitDto: SubmitRatingReviewDto,
   ): Promise<SubmitRatingReviewResponseDto> {
-    // Check if user is authenticated
-    const endUserId = req.user?.id || null;
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
     
-    // Pass endUserId (null if not logged in) to service
-    // Service will handle OTP verification for non-logged in users
-    return await this.userService.submitRatingReview(submitDto, endUserId);
+    return await this.userService.submitRatingReview(submitDto, req.user.id);
   }
 
   @Get('home/reviews')

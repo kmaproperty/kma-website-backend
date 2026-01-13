@@ -3422,116 +3422,40 @@ export class UserService {
   }
 
   /**
-   * Submit rating and review for KMA (for both logged in and non-logged in end users)
+   * Submit rating and review for KMA (for logged in end users only)
    */
   async submitRatingReview(
     submitDto: SubmitRatingReviewDto,
-    endUserId: string | null = null,
+    endUserId: string,
   ): Promise<SubmitRatingReviewResponseDto> {
-    const { rating, review, name, phone, email, otp } = submitDto;
+    const { rating, review } = submitDto;
 
-    // If user is logged in, verify the user exists and is an end user
-    if (endUserId) {
-      const user = await this.userRepository.findById(endUserId);
-      if (!user) {
-        throw new BadRequestException('User not found');
-      }
-
-      if (user.role !== UserRole.END_USER) {
-        throw new BadRequestException('Only end users can submit ratings and reviews');
-      }
-
-      // Create rating and review for logged in user
-      const ratingReview = await this.kmaRatingReviewRepository.create({
-        rating,
-        review: review || null,
-        name,
-        phoneNumber: phone,
-        email: email || null,
-        endUserId, // Map to logged in end user
-      });
-
-      return {
-        success: true,
-        message: 'Rating and review submitted successfully',
-        ratingReviewId: ratingReview.id,
-      };
+    // Verify the user exists and is an end user
+    const user = await this.userRepository.findById(endUserId);
+    if (!user) {
+      throw new BadRequestException('User not found');
     }
 
-    // If not logged in, OTP is required
-    if (!otp) {
-      throw new BadRequestException(
-        'OTP is required for non-logged in users. Please provide OTP or use /end-user/contact-us/send-otp to get one.',
-      );
+    if (user.role !== UserRole.END_USER) {
+      throw new BadRequestException('Only end users can submit ratings and reviews');
     }
 
-    // Find the OTP record for this phone
-    const otpRecord = await this.otpRepository.findActiveByPhone(phone);
+    // Create rating and review for logged in user
+    // Get user information from authenticated user profile
+    const ratingReview = await this.kmaRatingReviewRepository.create({
+      rating,
+      review: review || null,
+      name: user.name || 'User',
+      phoneNumber: user.phone,
+      email: user.email || null,
+      endUserId, // Map to logged in end user
+    });
 
-    if (!otpRecord) {
-      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
-    }
-
-    // Check if OTP has expired
-    if (new Date() > otpRecord.expiresAt) {
-      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
-    }
-
-    // Check if OTP is already used
-    if (otpRecord.isUsed) {
-      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
-    }
-
-    // Check if too many attempts
-    if (otpRecord.attempts >= 3) {
-      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
-    }
-
-    // Validate OTP code
-    if (otpRecord.otpCode !== otp) {
-      await this.otpRepository.incrementAttempts(otpRecord.id);
-      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
-    }
-
-    // Use transaction to ensure atomicity
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // Mark OTP as used
-      await queryRunner.manager.update(
-        'otps',
-        { id: otpRecord.id },
-        { isUsed: true },
-      );
-
-      // Create rating and review for non-logged in user
-      const ratingReview = await this.kmaRatingReviewRepository.create({
-        rating,
-        review: review || null,
-        name,
-        phoneNumber: phone,
-        email: email || null,
-        endUserId: null, // Not logged in
-      });
-
-      // Commit transaction
-      await queryRunner.commitTransaction();
-
-      return {
-        success: true,
-        message: 'Rating and review submitted successfully',
-        ratingReviewId: ratingReview.id,
-      };
-    } catch (error) {
-      // Rollback transaction on error
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      // Release query runner
-      await queryRunner.release();
-    }
+    return {
+      success: true,
+      message: 'Rating and review submitted successfully',
+      ratingReviewId: ratingReview.id,
+    };
   }
 
   /**
