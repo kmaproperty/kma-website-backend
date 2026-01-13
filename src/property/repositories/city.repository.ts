@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository, ILike, DataSource } from 'typeorm';
 import { MasterCity } from '../entities/master-city.entity';
+import { PropertyStatus } from '../enum/property-status.enum';
 
 @Injectable()
 export class CityRepository {
   constructor(
     @InjectRepository(MasterCity)
     private readonly cityRepository: Repository<MasterCity>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(): Promise<MasterCity[]> {
@@ -77,5 +79,57 @@ export class CityRepository {
 
   async deleteCity(id: string): Promise<void> {
     await this.cityRepository.softDelete(id);
+  }
+
+  /**
+   * Get top cities by active property count
+   * Returns top cities with at least 1 active property, ordered by property count descending
+   */
+  async findTopCitiesByPropertyCount(limit: number = 5): Promise<Array<MasterCity & { propertyCount: number }>> {
+    const result = await this.dataSource
+      .createQueryBuilder()
+      .select('city.id', 'id')
+      .addSelect('city.name', 'name')
+      .addSelect('city.code', 'code')
+      .addSelect('city.state', 'state')
+      .addSelect('city.latitude', 'latitude')
+      .addSelect('city.longitude', 'longitude')
+      .addSelect('city.is_featured', 'isFeatured')
+      .addSelect('city.icon', 'icon')
+      .addSelect('city.imageUrl', 'imageUrl')
+      .addSelect('city.created_at', 'createdAt')
+      .addSelect('city.updated_at', 'updatedAt')
+      .addSelect('city.deleted_at', 'deletedAt')
+      .addSelect('COUNT(property.id)', 'propertyCount')
+      .from('master_cities', 'city')
+      .leftJoin('properties', 'property', 'property.cityId = city.id AND property.status = :status AND property.isDeleted = false', { status: PropertyStatus.ACTIVE })
+      .where('city.deleted_at IS NULL')
+      .groupBy('city.id')
+      .having('COUNT(property.id) > 0')
+      .orderBy('COUNT(property.id)', 'DESC')
+      .limit(limit)
+      .getRawMany();
+
+    // Map raw results to entity-like objects with propertyCount
+    return result.map((row) => {
+      const city = this.cityRepository.create({
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        state: row.state,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        isFeatured: row.isFeatured,
+        icon: row.icon,
+        imageUrl: row.imageUrl,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        deletedAt: row.deletedAt,
+      });
+      return {
+        ...city,
+        propertyCount: parseInt(row.propertyCount, 10),
+      };
+    });
   }
 }

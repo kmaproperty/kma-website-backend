@@ -20,4 +20,10 @@ export class MasterCity extends BaseEntity {
 
   @Column({ name: 'is_featured', type: 'boolean', default: false })
   isFeatured: boolean;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  icon: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  imageUrl: string | null;
 }

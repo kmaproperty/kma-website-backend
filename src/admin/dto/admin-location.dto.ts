@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -13,7 +13,6 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { PartialType } from '@nestjs/mapped-types';
 
 export class AdminCityListQueryDto {
   @ApiPropertyOptional({
@@ -65,6 +64,12 @@ export class AdminCityResponseDto {
 
   @ApiProperty()
   isFeatured: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  icon: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  imageUrl: string | null;
 
   @ApiProperty()
   createdAt: Date;
@@ -126,6 +131,24 @@ export class AdminCreateCityDto {
   @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'City icon URL',
+    example: 'https://example.com/icons/gurgaon.png',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  icon?: string;
+
+  @ApiPropertyOptional({
+    description: 'City image URL',
+    example: 'https://example.com/images/gurgaon.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string;
 }
 
 export class AdminUpdateCityDto extends PartialType(AdminCreateCityDto) {}

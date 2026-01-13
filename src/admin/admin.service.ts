@@ -481,6 +481,8 @@ export class AdminService {
       latitude: dto.latitude ?? null,
       longitude: dto.longitude ?? null,
       isFeatured: dto.isFeatured ?? false,
+      icon: dto.icon ?? null,
+      imageUrl: dto.imageUrl ?? null,
     });
 
     return {
@@ -514,6 +516,8 @@ export class AdminService {
       code: normalizedCode ?? dto.code ?? city.code,
       state: dto.state?.trim() ?? dto.state,
       isFeatured: dto.isFeatured !== undefined ? dto.isFeatured : city.isFeatured,
+      icon: dto.icon !== undefined ? dto.icon : city.icon,
+      imageUrl: dto.imageUrl !== undefined ? dto.imageUrl : city.imageUrl,
     });
 
     const updated = await this.ensureCityExists(cityId);
@@ -1585,6 +1589,8 @@ export class AdminService {
           ? null
           : Number(city.longitude),
       isFeatured: city.isFeatured ?? false,
+      icon: city.icon ?? null,
+      imageUrl: city.imageUrl ?? null,
       createdAt: city.createdAt,
       updatedAt: city.updatedAt,
     };

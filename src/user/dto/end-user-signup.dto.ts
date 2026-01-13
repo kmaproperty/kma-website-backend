@@ -483,11 +483,11 @@ export class CityItemDto {
   state?: string | null;
 
   @ApiProperty({
-    description: 'City icon/image URL',
+    description: 'City icon URL',
     example: 'https://example.com/icons/delhi.png',
     required: false,
   })
-  iconUrl?: string | null;
+  icon?: string | null;
 
   @ApiProperty({
     description: 'City latitude',
@@ -502,6 +502,71 @@ export class CityItemDto {
     required: false,
   })
   longitude?: number | null;
+}
+
+export class EndUserTopCityItemDto {
+  @ApiProperty({
+    description: 'City ID',
+    example: 'uuid-string',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'City name',
+    example: 'Delhi',
+  })
+  name: string;
+
+  @ApiProperty({
+    description: 'City code',
+    example: 'DEL',
+  })
+  code: string;
+
+  @ApiProperty({
+    description: 'State name',
+    example: 'Delhi',
+    required: false,
+  })
+  state?: string | null;
+
+  @ApiProperty({
+    description: 'City latitude',
+    example: 28.6139,
+    required: false,
+  })
+  latitude?: number | null;
+
+  @ApiProperty({
+    description: 'City longitude',
+    example: 77.2090,
+    required: false,
+  })
+  longitude?: number | null;
+
+  @ApiProperty({
+    description: 'City image URL',
+    example: 'https://example.com/images/delhi.jpg',
+    required: false,
+  })
+  imageUrl?: string | null;
+
+  @ApiProperty({
+    description: 'Number of active properties in the city',
+    example: 150,
+  })
+  propertyCount: number;
+}
+
+export class EndUserTopCitiesResponseDto {
+  @ApiProperty({ description: 'Success status', example: true })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'List of top cities by property count',
+    type: [EndUserTopCityItemDto],
+  })
+  cities: EndUserTopCityItemDto[];
 }
 
 export class EndUserCitiesQueryDto {

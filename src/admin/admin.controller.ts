@@ -351,6 +351,11 @@ export class AdminController {
   @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a city' })
+  @ApiResponse({
+    status: 200,
+    description: 'City updated successfully',
+    type: AdminCityResponseDto,
+  })
   async updateCity(
     @Param('id') cityId: string,
     @Body() dto: AdminUpdateCityDto,

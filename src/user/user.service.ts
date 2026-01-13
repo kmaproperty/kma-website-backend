@@ -49,6 +49,8 @@ import {
   EndUserPropertyUnitDto,
   EndUserTopPropertiesQueryDto,
   EndUserTopPropertiesResponseDto,
+  EndUserTopCityItemDto,
+  EndUserTopCitiesResponseDto,
   EndUserPropertyDetailsResponseDto,
   PropertyImageDto,
   PropertyVideoDto,
@@ -2087,7 +2089,7 @@ export class UserService {
       state: city.state,
       latitude: city.latitude ? parseFloat(city.latitude.toString()) : null,
       longitude: city.longitude ? parseFloat(city.longitude.toString()) : null,
-      iconUrl: null, // Can be added later if city icons are stored
+      icon: city.icon ?? null,
     });
 
     // Get featured cities from database
@@ -2390,6 +2392,31 @@ export class UserService {
       success: true,
       properties,
       total: result.total,
+    };
+  }
+
+  /**
+   * Get top cities by property count
+   * Returns top 5 cities with maximum active properties
+   */
+  async getTopCities(): Promise<EndUserTopCitiesResponseDto> {
+    const limit = 5; // Top 5 cities as per requirement
+    const citiesWithCounts = await this.cityRepository.findTopCitiesByPropertyCount(limit);
+
+    const cities: EndUserTopCityItemDto[] = citiesWithCounts.map((city) => ({
+      id: city.id,
+      name: city.name,
+      code: city.code,
+      state: city.state ?? null,
+      latitude: city.latitude ? parseFloat(city.latitude.toString()) : null,
+      longitude: city.longitude ? parseFloat(city.longitude.toString()) : null,
+      imageUrl: city.imageUrl ?? null,
+      propertyCount: city.propertyCount,
+    }));
+
+    return {
+      success: true,
+      cities,
     };
   }
 
