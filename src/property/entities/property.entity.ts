@@ -166,6 +166,13 @@ export class Property extends BaseEntity {
   })
   isDeleted: boolean;
 
+  @Column({
+    type: 'boolean',
+    name: 'is_top',
+    default: false,
+  })
+  isTop: boolean;
+
   // Step 2 fields
   @Column({ type: 'int', nullable: true })
   floorNumber: number | null;

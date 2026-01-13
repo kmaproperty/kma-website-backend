@@ -82,6 +82,12 @@ import {
   AdminApproveKycDto,
   AdminApproveKycRequestDto,
   AdminApproveKycResponseDto,
+  AdminMarkTopPropertyDto,
+  AdminMarkTopPropertyResponseDto,
+  AdminRemoveTopPropertyDto,
+  AdminRemoveTopPropertyResponseDto,
+  AdminTopPropertiesListQueryDto,
+  AdminTopPropertiesListResponseDto,
   AdminContactUsListQueryDto,
   AdminContactUsListResponseDto,
   AdminContactUsKmaQueryListQueryDto,
@@ -150,6 +156,22 @@ export class AdminController {
     @Query() query: AdminPropertyListQueryDto,
   ): Promise<AdminPropertyListResponseDto> {
     return this.adminService.listProperties(query);
+  }
+
+  @Get('properties/top')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List top properties with pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'Top properties list retrieved successfully',
+    type: AdminTopPropertiesListResponseDto,
+  })
+  async listTopProperties(
+    @Query() query: AdminTopPropertiesListQueryDto,
+  ): Promise<AdminTopPropertiesListResponseDto> {
+    return this.adminService.listTopProperties(query);
   }
 
   @Get('properties/:id')
@@ -1366,5 +1388,50 @@ export class AdminController {
       req.admin.id,
     );
   }
+
+  @Post('properties/:id/mark-top')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Mark property as top property' })
+  @ApiParam({
+    name: 'id',
+    description: 'Property ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property marked as top successfully',
+    type: AdminMarkTopPropertyResponseDto,
+  })
+  async markTopProperty(
+    @Param('id') propertyId: string,
+  ): Promise<AdminMarkTopPropertyResponseDto> {
+    return this.adminService.markTopProperty({ propertyId });
+  }
+
+  @Post('properties/:id/remove-top')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Remove property from top properties' })
+  @ApiParam({
+    name: 'id',
+    description: 'Property ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property removed from top successfully',
+    type: AdminRemoveTopPropertyResponseDto,
+  })
+  async removeTopProperty(
+    @Param('id') propertyId: string,
+  ): Promise<AdminRemoveTopPropertyResponseDto> {
+    return this.adminService.removeTopProperty({ propertyId });
+  }
+
 }
 

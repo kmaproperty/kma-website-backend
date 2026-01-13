@@ -570,4 +570,57 @@ export class PropertyRepository {
       total,
     };
   }
+
+  /**
+   * Find top properties with pagination and optional city filter
+   */
+  async findTopProperties(options: {
+    page: number;
+    limit: number;
+    cityId?: string;
+    status?: PropertyStatus;
+  }): Promise<{
+    items: Property[];
+    total: number;
+  }> {
+    const { page, limit, cityId, status } = options;
+
+    const qb = this.propertyRepository
+      .createQueryBuilder('property')
+      .leftJoinAndSelect('property.user', 'user')
+      .leftJoinAndSelect('property.listingType', 'listingType')
+      .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
+      .where('property.isDeleted = false')
+      .andWhere('property.isTop = true')
+      .orderBy('property.createdAt', 'DESC');
+
+    // Filter by status if provided
+    if (status) {
+      qb.andWhere('property.status = :status', { status });
+    }
+
+    // Filter by city if provided
+    if (cityId) {
+      qb.andWhere('property.cityId = :cityId', { cityId });
+    }
+
+    // Get total count
+    const total = await qb.clone().getCount();
+
+    // Apply pagination
+    qb.skip((page - 1) * limit).take(limit);
+
+    const items = await qb.getMany();
+
+    return {
+      items,
+      total,
+    };
+  }
 }

@@ -24,6 +24,8 @@ import {
   EndUserCitiesQueryDto,
   EndUserPropertiesSearchQueryDto,
   EndUserPropertiesSearchResponseDto,
+  EndUserTopPropertiesQueryDto,
+  EndUserTopPropertiesResponseDto,
   EndUserChannelPartnerListQueryDto,
   EndUserChannelPartnerListResponseDto,
   EndUserChannelPartnerDetailsResponseDto,
@@ -273,6 +275,23 @@ export class EndUserController {
     @Query() query: EndUserPropertiesSearchQueryDto,
   ): Promise<EndUserPropertiesSearchResponseDto> {
     return await this.userService.searchEndUserProperties(query);
+  }
+
+  @Get('top-properties')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Top Properties',
+    description: 'Returns top 5 properties filtered by city. Only returns active properties marked as top.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Top properties retrieved successfully',
+    type: EndUserTopPropertiesResponseDto,
+  })
+  async getTopProperties(
+    @Query() query: EndUserTopPropertiesQueryDto,
+  ): Promise<EndUserTopPropertiesResponseDto> {
+    return await this.userService.getTopProperties(query);
   }
 
   @Get('channel-partners')

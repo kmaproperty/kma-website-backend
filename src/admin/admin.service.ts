@@ -68,6 +68,12 @@ import {
   AdminApproveLivePhotoResponseDto,
   AdminApproveKycDto,
   AdminApproveKycResponseDto,
+  AdminMarkTopPropertyDto,
+  AdminMarkTopPropertyResponseDto,
+  AdminRemoveTopPropertyDto,
+  AdminRemoveTopPropertyResponseDto,
+  AdminTopPropertiesListQueryDto,
+  AdminTopPropertiesListResponseDto,
   AdminContactUsListQueryDto,
   AdminContactUsListResponseDto,
   ContactUsResponseDto,
@@ -2714,6 +2720,72 @@ export class AdminService {
       success: true,
       message: 'Property verification rejected successfully',
       verificationRequestId: request.id,
+    };
+  }
+
+  /**
+   * Mark property as top
+   */
+  async markTopProperty(
+    dto: AdminMarkTopPropertyDto,
+  ): Promise<AdminMarkTopPropertyResponseDto> {
+    const property = await this.ensurePropertyExists(dto.propertyId);
+
+    await this.propertyRepository.updateProperty(dto.propertyId, {
+      isTop: true,
+    });
+
+    return {
+      success: true,
+      message: 'Property marked as top successfully',
+      propertyId: dto.propertyId,
+      isTop: true,
+    };
+  }
+
+  /**
+   * Remove property from top
+   */
+  async removeTopProperty(
+    dto: AdminRemoveTopPropertyDto,
+  ): Promise<AdminRemoveTopPropertyResponseDto> {
+    const property = await this.ensurePropertyExists(dto.propertyId);
+
+    await this.propertyRepository.updateProperty(dto.propertyId, {
+      isTop: false,
+    });
+
+    return {
+      success: true,
+      message: 'Property removed from top successfully',
+      propertyId: dto.propertyId,
+      isTop: false,
+    };
+  }
+
+  /**
+   * List top properties with pagination and optional city filter
+   */
+  async listTopProperties(
+    query: AdminTopPropertiesListQueryDto,
+  ): Promise<AdminTopPropertiesListResponseDto> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+
+    const { items, total } = await this.propertyRepository.findTopProperties({
+      page,
+      limit,
+      cityId: query.cityId,
+    });
+
+    const data = items.map((property) => this.formatPropertyData(property));
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
     };
   }
 }

@@ -8,6 +8,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
@@ -335,5 +336,29 @@ export class EndUserPropertiesSearchResponseDto {
 
   @ApiProperty({ description: 'Total number of pages', example: 5 })
   totalPages: number;
+}
+
+export class EndUserTopPropertiesQueryDto {
+  @ApiProperty({
+    description: 'City ID to filter top properties',
+    example: 'uuid-city-id',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  cityId: string;
+}
+
+export class EndUserTopPropertiesResponseDto {
+  @ApiProperty({ description: 'Success status', example: true })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'List of top properties',
+    type: [EndUserPropertyListItemDto],
+  })
+  properties: EndUserPropertyListItemDto[];
+
+  @ApiProperty({ description: 'Total number of top properties', example: 5 })
+  total: number;
 }
 
