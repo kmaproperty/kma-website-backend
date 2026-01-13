@@ -2,6 +2,7 @@ import { Entity, Column } from 'typeorm';
 import { BaseEntity } from '../../common/database/base.entity';
 import { UserRole } from '../enum/user-role.enum';
 import { UserIntent } from '../enum/user-intent.enum';
+import { KycStatus } from '../enum/kyc-status.enum';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -181,4 +182,14 @@ export class User extends BaseEntity {
     default: false,
   })
   kycCompleted: boolean;
+
+  // KYC Status (pending, in_review, approved, rejected)
+  @Column({
+    name: 'kyc_status',
+    type: 'enum',
+    enum: KycStatus,
+    default: KycStatus.PENDING,
+    nullable: true,
+  })
+  kycStatus: KycStatus | null;
 }

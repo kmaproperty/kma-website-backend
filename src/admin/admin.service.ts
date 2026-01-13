@@ -122,6 +122,7 @@ import { MasterAmenity } from '../property/entities/master-amenity.entity';
 import { ChannelPartnerCode } from '../user/entities/channel-partner-code.entity';
 import { User } from '../user/entities/user.entity';
 import { UserRole } from '../user/enum/user-role.enum';
+import { KycStatus } from '../user/enum/kyc-status.enum';
 import { CreatePropertyStep1Dto } from '../property/dto/create-property.dto';
 import { CreatePropertyStep2Dto } from '../property/dto/create-property-step2.dto';
 import { CreatePropertyStep3Dto } from '../property/dto/create-property-step3.dto';
@@ -2326,15 +2327,17 @@ export class AdminService {
     }
 
     if (dto.approved) {
-      // Approve KYC - set kycCompleted to true
+      // Approve KYC - set kycCompleted to true and status to APPROVED
       await this.userRepository.update(dto.userId, {
         kycCompleted: true,
+        kycStatus: KycStatus.APPROVED,
+        livePhotoApproved: true, // Ensure live photo is marked as approved
       });
     } else {
-      // Reject KYC - set kycCompleted to false and reset admin-approval steps
-      // This marks the status as rejected instead of under_review
+      // Reject KYC - set kycCompleted to false, status to REJECTED
       await this.userRepository.update(dto.userId, {
         kycCompleted: false,
+        kycStatus: KycStatus.REJECTED,
         livePhotoApproved: false, // Reset live photo approval
         // Note: We don't reset aadhaarVerified, bankDetailsFilled, or docusignAgreementSigned
         // as those are user actions, not admin approvals

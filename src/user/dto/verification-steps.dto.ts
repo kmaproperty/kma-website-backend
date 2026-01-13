@@ -240,8 +240,8 @@ export class VerificationStepsStatusResponseDto {
   kyc_total_steps: number;
 
   @ApiProperty({
-    description: 'KYC status text: completed, under_review, in_progress, not_started',
-    example: 'under_review',
+    description: 'KYC status: pending, in_review, approved, rejected',
+    example: 'in_review',
   })
   kyc_status: string;
 }

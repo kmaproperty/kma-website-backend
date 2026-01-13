@@ -6,6 +6,7 @@ import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
 import { User } from './entities/user.entity';
 import { UserRole } from './enum/user-role.enum';
+import { KycStatus } from './enum/kyc-status.enum';
 import { JwtPayload, RefreshTokenPayload } from './types/jwt-payload.interface';
 import { USER_MESSAGES } from './constants/user.messages';
 import {
@@ -168,6 +169,19 @@ export class UserService {
     dto: UpgradeToChannelPartnerDto,
     userId: string,
   ): Promise<UpgradeToChannelPartnerResponseDto> {
+    const {
+      name,
+      email,
+      phone,
+      channelPartnerCode,
+      firmName,
+      businessSince,
+      cities,
+      aboutYourSelf,
+      intent,
+      profilePhotoUrl,
+    } = dto;
+
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new BadRequestException('User not found');
@@ -182,19 +196,22 @@ export class UserService {
       throw new BadRequestException('Only OWNERs can be upgraded');
     }
 
-    // Validate channel partner code
-    const validCode =
-      await this.channelPartnerCodeRepository.findByCode(
-        dto.channelPartnerCode,
-      );
-    if (!validCode) {
-      throw new BadRequestException('Invalid channel partner code');
+    // Validate channel partner code if provided
+    if (channelPartnerCode) {
+      const validCode =
+        await this.channelPartnerCodeRepository.findByCode(channelPartnerCode);
+      if (!validCode) {
+        throw new BadRequestException('Invalid channel partner code');
+      }
     }
+
+    // Use provided phone or existing user phone
+    const phoneToUse = phone || user.phone;
 
     // Check if a CHANNEL_PARTNER with the same phone already exists
     // This prevents violating the unique constraint UQ_users_phone_role
     const existingChannelPartner = await this.userRepository.findByPhoneAndRole(
-      user.phone,
+      phoneToUse,
       UserRole.CHANNEL_PARTNER,
     );
     if (existingChannelPartner && existingChannelPartner.id !== user.id) {
@@ -203,22 +220,50 @@ export class UserService {
       );
     }
 
+    // Check if email is already used by another user
+    if (email) {
+      const existingUserByEmail = await this.userRepository.findByEmail(email);
+      if (existingUserByEmail && existingUserByEmail.id !== user.id) {
+        throw new BadRequestException(
+          USER_MESSAGES.USER.EMAIL_ALREADY_REGISTERED,
+        );
+      }
+    }
+
+    // Build update object with only provided fields
+    const updateData: Partial<User> = {
+      role: UserRole.CHANNEL_PARTNER,
+    };
+
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email || null;
+    if (phone !== undefined) updateData.phone = phone;
+    if (channelPartnerCode !== undefined) updateData.channelPartnerCode = channelPartnerCode || null;
+    if (firmName !== undefined) updateData.firmName = firmName || null;
+    if (businessSince !== undefined) updateData.businessSince = businessSince || null;
+    if (cities !== undefined) updateData.cities = cities || null;
+    if (aboutYourSelf !== undefined) updateData.aboutYourSelf = aboutYourSelf || null;
+    if (intent !== undefined) updateData.intent = intent || null;
+    if (profilePhotoUrl !== undefined) updateData.profileImage = profilePhotoUrl || null;
+
     // Update role and persist history in a transaction
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
       await queryRunner.manager.update(
-        'users',
+        User,
         { id: user.id },
-        { role: UserRole.CHANNEL_PARTNER, channelPartnerCode: dto.channelPartnerCode },
+        updateData,
       );
-      await this.userRoleHistoryRepository.create({
-        userId: user.id,
-        fromRole: UserRole.OWNER,
-        toRole: UserRole.CHANNEL_PARTNER,
-        channelPartnerCode: dto.channelPartnerCode,
-      });
+      if (channelPartnerCode) {
+        await this.userRoleHistoryRepository.create({
+          userId: user.id,
+          fromRole: UserRole.OWNER,
+          toRole: UserRole.CHANNEL_PARTNER,
+          channelPartnerCode: channelPartnerCode,
+        });
+      }
       await queryRunner.commitTransaction();
     } catch (e) {
       await queryRunner.rollbackTransaction();
@@ -2765,18 +2810,44 @@ export class UserService {
     // Check DocuSign agreement status (might be updated in agreement table)
     const agreementStatus = await this.getDocuSignAgreementStatus(userId);
 
-    // Check if all 4 steps are completed
-    const isKycCompleted =
-      user.livePhotoApproved && // Step 1: Live photo approved by admin
-      user.aadhaarVerified && // Step 2: Aadhaar verified
-      user.bankDetailsFilled && // Step 3: Bank details filled
-      agreementStatus.docusign_agreement_signed; // Step 4: DocuSign agreement signed
+    // Check if all 4 user steps are completed (not including admin approval)
+    const step1Completed = !!(user.livePhotoUrl && user.livePhotoUrl.trim().length > 0);
+    const allUserStepsCompleted =
+      step1Completed && // Step 1: Live photo uploaded (user action)
+      user.aadhaarVerified && // Step 2: Aadhaar verified (user action)
+      user.bankDetailsFilled && // Step 3: Bank details filled (user action)
+      agreementStatus.docusign_agreement_signed; // Step 4: DocuSign signed (user action)
 
-    // Update KYC status if it has changed
+    // Determine KYC status based on current state
+    // Only auto-update status if it's not already APPROVED or REJECTED (to preserve admin decisions)
+    let newKycStatus: KycStatus | null = null;
+    
+    if (user.kycStatus === KycStatus.APPROVED || user.kycStatus === KycStatus.REJECTED) {
+      // Don't override admin decisions (APPROVED or REJECTED) - preserve the status
+      newKycStatus = user.kycStatus;
+    } else if (allUserStepsCompleted) {
+      // All 4 user steps completed → set to IN_REVIEW (waiting for admin approval)
+      newKycStatus = KycStatus.IN_REVIEW;
+    } else {
+      // Some or no steps completed → set to PENDING
+      newKycStatus = KycStatus.PENDING;
+    }
+
+    // KYC is completed only if status is APPROVED
+    const isKycCompleted = newKycStatus === KycStatus.APPROVED;
+
+    // Update KYC status and completion flag if changed
+    const updateData: Partial<User> = {};
     if (user.kycCompleted !== isKycCompleted) {
-      await this.userRepository.update(userId, {
-        kycCompleted: isKycCompleted,
-      });
+      updateData.kycCompleted = isKycCompleted;
+    }
+    // Only update status if it's different and we're not preserving an admin decision
+    if (user.kycStatus !== newKycStatus && newKycStatus !== null) {
+      updateData.kycStatus = newKycStatus;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await this.userRepository.update(userId, updateData);
     }
 
     return isKycCompleted;
@@ -2812,23 +2883,9 @@ export class UserService {
     const totalSteps = 4;
     const progress = Math.round((stepsCompleted / totalSteps) * 100);
 
-    // Determine KYC status
-    let kycStatus: string;
-    if (kycCompleted) {
-      kycStatus = 'completed';
-    } else if (stepsCompleted === totalSteps) {
-      // Check if KYC was explicitly rejected (all steps done but livePhotoApproved is false)
-      // This happens when admin rejects KYC after all steps were completed
-      if (!user.livePhotoApproved && user.livePhotoUrl) {
-        kycStatus = 'rejected'; // KYC was rejected by admin
-      } else {
-        kycStatus = 'under_review'; // All steps done but not approved by admin
-      }
-    } else if (stepsCompleted > 0) {
-      kycStatus = 'in_progress';
-    } else {
-      kycStatus = 'not_started';
-    }
+    // Use the stored kycStatus from database, or determine it if not set
+    const kycStatusValue = user.kycStatus || KycStatus.PENDING;
+    const kycStatusString = kycStatusValue;
 
     return {
       success: true,
@@ -2850,7 +2907,7 @@ export class UserService {
       kyc_progress: progress,
       kyc_steps_completed: stepsCompleted,
       kyc_total_steps: totalSteps,
-      kyc_status: kycStatus,
+      kyc_status: kycStatusString,
     };
   }
 
