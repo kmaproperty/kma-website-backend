@@ -102,6 +102,8 @@ import {
   HomePageResponseDto,
   AboutUsDataDto,
   HomePageStatisticsDto,
+  PropertyTypeExploreResponseDto,
+  PropertyTypeExploreItemDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { Property } from '../property/entities/property.entity';
@@ -3672,6 +3674,46 @@ export class UserService {
         totalActiveProperties,
         propertiesListedLast24Hours,
       },
+    };
+  }
+
+  /**
+   * Get property types with their active property counts for explore section
+   */
+  async getPropertyTypesExplore(): Promise<PropertyTypeExploreResponseDto> {
+    // Get all property types
+    const propertyTypes = await this.propertyTypeRepository.findAll();
+
+    // Get property counts for each property type in parallel
+    const propertyTypesWithCounts = await Promise.all(
+      propertyTypes.map(async (propertyType) => {
+        const propertyCount = await this.dataSource
+          .getRepository(Property)
+          .count({
+            where: {
+              propertyTypeId: propertyType.id,
+              status: PropertyStatus.ACTIVE,
+              isDeleted: false,
+            },
+          });
+
+        return {
+          id: propertyType.id,
+          name: propertyType.name,
+          code: propertyType.code,
+          propertyCount,
+        };
+      }),
+    );
+
+    // Filter out property types with 0 properties and sort by count descending
+    const filteredAndSorted = propertyTypesWithCounts
+      .filter((item) => item.propertyCount > 0)
+      .sort((a, b) => b.propertyCount - a.propertyCount);
+
+    return {
+      success: true,
+      propertyTypes: filteredAndSorted,
     };
   }
 }

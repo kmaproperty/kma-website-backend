@@ -40,6 +40,7 @@ import {
   HomePageReviewsResponseDto,
   PropertyMasterDataResponseDto,
   HomePageResponseDto,
+  PropertyTypeExploreResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -569,6 +570,21 @@ export class EndUserController {
   })
   async getHomePageData(): Promise<HomePageResponseDto> {
     return await this.userService.getHomePageData();
+  }
+
+  @Get('property-types/explore')
+  @Public()
+  @ApiOperation({
+    summary: 'Explore Property Types',
+    description: 'Get all property types with their active property counts. Returns property types sorted by property count (descending), excluding types with zero properties.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property types with counts retrieved successfully',
+    type: PropertyTypeExploreResponseDto,
+  })
+  async getPropertyTypesExplore(): Promise<PropertyTypeExploreResponseDto> {
+    return await this.userService.getPropertyTypesExplore();
   }
 }
 
