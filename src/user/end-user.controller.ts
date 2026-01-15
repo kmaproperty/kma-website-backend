@@ -39,6 +39,7 @@ import {
   SubmitRatingReviewResponseDto,
   HomePageReviewsResponseDto,
   PropertyMasterDataResponseDto,
+  HomePageResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -529,7 +530,7 @@ export class EndUserController {
   @Public()
   @ApiOperation({
     summary: 'Get Home Page Reviews',
-    description: 'Get top 5 approved reviews and ratings for home page display with statistics (total count and average rating).',
+    description: 'Get top approved reviews and ratings for home page display with statistics (total count and average rating), profile pictures, and trust message. Returns minimum 4 reviews with profile images for display.',
   })
   @ApiResponse({
     status: 200,
@@ -553,6 +554,21 @@ export class EndUserController {
   })
   async getPropertyMasterData(): Promise<PropertyMasterDataResponseDto> {
     return await this.userService.getPropertyMasterData();
+  }
+
+  @Get('home/about-us')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Home Page About Us Data',
+    description: 'Get About Us content and home page statistics including total owners, channel partners, users, active properties, and properties listed in last 24 hours.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Home page data retrieved successfully',
+    type: HomePageResponseDto,
+  })
+  async getHomePageData(): Promise<HomePageResponseDto> {
+    return await this.userService.getHomePageData();
   }
 }
 

@@ -15,4 +15,5 @@ export * from './admin-contact-us.dto';
 export * from './admin-property-verification.dto';
 export * from './admin-rating-review.dto';
 export * from './admin-top-property.dto';
+export * from './admin-about-us.dto';
 

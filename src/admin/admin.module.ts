@@ -26,6 +26,8 @@ import { KmaRatingReview } from '../user/entities/kma-rating-review.entity';
 import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
 import { PropertyVerificationRequest } from '../property/entities/property-verification-request.entity';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
+import { AboutUs } from './entities/about-us.entity';
+import { AboutUsRepository } from './repositories/about-us.repository';
 
 @Module({
   imports: [
@@ -42,6 +44,7 @@ import { PropertyVerificationRequestRepository } from '../property/repositories/
       ContactUsKmaQuery,
       KmaRatingReview,
       PropertyVerificationRequest,
+      AboutUs,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -66,8 +69,9 @@ import { PropertyVerificationRequestRepository } from '../property/repositories/
     ContactUsKmaQueryRepository,
     KmaRatingReviewRepository,
     PropertyVerificationRequestRepository,
+    AboutUsRepository,
   ],
-  exports: [AdminService, AdminRepository, LeadService],
+  exports: [AdminService, AdminRepository, LeadService, AboutUsRepository],
 })
 export class AdminModule {}
 

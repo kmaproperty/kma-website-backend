@@ -22,13 +22,21 @@ export class HomePageReviewItemDto {
       id: 'uuid-string',
       name: 'John Doe',
       email: 'john.doe@example.com',
+      profileImage: 'https://example.com/profile-pic.jpg',
     },
   })
   endUser?: {
     id: string;
     name: string | null;
     email: string | null;
+    profileImage: string | null;
   } | null;
+
+  @ApiPropertyOptional({
+    description: 'Profile picture URL (from endUser or null)',
+    example: 'https://example.com/profile-pic.jpg',
+  })
+  profileImage?: string | null;
 
   @ApiProperty({ description: 'Created at', example: '2025-01-20T10:15:00.000Z' })
   createdAt: Date;
@@ -47,7 +55,7 @@ export class HomePageReviewsResponseDto {
   success: boolean;
 
   @ApiProperty({
-    description: 'Top 5 approved reviews for home page',
+    description: 'Top approved reviews for home page (minimum 4)',
     type: [HomePageReviewItemDto],
   })
   reviews: HomePageReviewItemDto[];
@@ -57,5 +65,11 @@ export class HomePageReviewsResponseDto {
     type: HomePageReviewsStatisticsDto,
   })
   statistics: HomePageReviewsStatisticsDto;
+
+  @ApiProperty({
+    description: 'Trust message text',
+    example: 'Trusted By Client around the World',
+  })
+  trustedByText: string;
 }
 

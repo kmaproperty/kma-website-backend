@@ -99,8 +99,12 @@ import {
   ListingTypeItemDto,
   CategoryItemDto,
   PropertyTypeItemDto,
+  HomePageResponseDto,
+  AboutUsDataDto,
+  HomePageStatisticsDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
+import { Property } from '../property/entities/property.entity';
 import { CityRepository } from '../property/repositories/city.repository';
 import { PropertyListingTypeRepository } from '../property/repositories/property-listing-type.repository';
 import { PropertyCategoryNewRepository } from '../property/repositories/property-category-new.repository';
@@ -120,6 +124,7 @@ import { BankDetailsRepository } from './repositories/bank-details.repository';
 import { EncryptionService } from './services/encryption.service';
 import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
+import { AboutUsRepository } from '../admin/repositories/about-us.repository';
 
 @Injectable()
 export class UserService {
@@ -147,6 +152,7 @@ export class UserService {
     private readonly propertyCategoryRepository: PropertyCategoryNewRepository,
     private readonly propertyTypeRepository: PropertyTypeRepository,
     private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
+    private readonly aboutUsRepository: AboutUsRepository,
   ) {}
 
   /**
@@ -3549,21 +3555,26 @@ export class UserService {
       this.kmaRatingReviewRepository.getApprovedReviewsStatistics(),
     ]);
 
-    const reviewItems: HomePageReviewItemDto[] = reviews.map((r) => ({
-      id: r.id,
-      rating: r.rating,
-      review: r.review,
-      name: r.name,
-      email: r.email,
-      endUser: r.endUser
-        ? {
-            id: r.endUser.id,
-            name: r.endUser.name,
-            email: r.endUser.email,
-          }
-        : null,
-      createdAt: r.createdAt,
-    }));
+    const reviewItems: HomePageReviewItemDto[] = reviews.map((r) => {
+      const profileImage = r.endUser?.profileImage ?? null;
+      return {
+        id: r.id,
+        rating: r.rating,
+        review: r.review,
+        name: r.name,
+        email: r.email,
+        endUser: r.endUser
+          ? {
+              id: r.endUser.id,
+              name: r.endUser.name,
+              email: r.endUser.email,
+              profileImage: r.endUser.profileImage,
+            }
+          : null,
+        profileImage,
+        createdAt: r.createdAt,
+      };
+    });
 
     return {
       success: true,
@@ -3571,6 +3582,95 @@ export class UserService {
       statistics: {
         totalCount: statistics.totalCount,
         averageRating: statistics.averageRating,
+      },
+      trustedByText: 'Trusted By Client around the World',
+    };
+  }
+
+  /**
+   * Get home page data including About Us and statistics
+   */
+  async getHomePageData(): Promise<HomePageResponseDto> {
+    // Get About Us data (latest entry)
+    const aboutUsEntries = await this.aboutUsRepository.findAll();
+    const aboutUs: AboutUsDataDto | null =
+      aboutUsEntries.length > 0
+        ? {
+            heading: aboutUsEntries[0].heading,
+            description: aboutUsEntries[0].description,
+          }
+        : null;
+
+    // Calculate 24 hours ago
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    // Get statistics in parallel
+    const [
+      totalOwners,
+      totalChannelPartners,
+      totalUsers,
+      totalActiveProperties,
+      propertiesListedLast24Hours,
+    ] = await Promise.all([
+      // Total Owners
+      this.dataSource
+        .getRepository(User)
+        .count({
+          where: {
+            role: UserRole.OWNER,
+            isActive: true,
+            isBlocked: false,
+          },
+        }),
+      // Total Channel Partners
+      this.dataSource
+        .getRepository(User)
+        .count({
+          where: {
+            role: UserRole.CHANNEL_PARTNER,
+            isActive: true,
+            isBlocked: false,
+          },
+        }),
+      // Total Users/Clients (end users only - active, non-blocked)
+      this.dataSource
+        .getRepository(User)
+        .count({
+          where: {
+            role: UserRole.END_USER,
+            isActive: true,
+            isBlocked: false,
+          },
+        }),
+      // Total Active Properties
+      this.dataSource
+        .getRepository(Property)
+        .count({
+          where: {
+            status: PropertyStatus.ACTIVE,
+            isDeleted: false,
+          },
+        }),
+      // Properties listed in last 24 hours (active properties approved in last 24 hours)
+      this.dataSource
+        .getRepository(Property)
+        .createQueryBuilder('property')
+        .where('property.status = :status', { status: PropertyStatus.ACTIVE })
+        .andWhere('property.activatedAt >= :date', { date: twentyFourHoursAgo })
+        .andWhere('property.isDeleted = :isDeleted', { isDeleted: false })
+        .getCount(),
+    ]);
+
+    return {
+      success: true,
+      aboutUs,
+      statistics: {
+        totalOwners,
+        totalChannelPartners,
+        totalUsers,
+        totalActiveProperties,
+        propertiesListedLast24Hours,
       },
     };
   }

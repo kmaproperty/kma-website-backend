@@ -102,6 +102,11 @@ import {
   AdminApprovePropertyVerificationDto,
   AdminRejectPropertyVerificationDto,
   AdminPropertyVerificationActionResponseDto,
+  AdminAboutUsListQueryDto,
+  AdminAboutUsListResponseDto,
+  AdminAboutUsResponseDto,
+  AdminCreateAboutUsDto,
+  AdminUpdateAboutUsDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -1436,6 +1441,66 @@ export class AdminController {
     @Param('id') propertyId: string,
   ): Promise<AdminRemoveTopPropertyResponseDto> {
     return this.adminService.removeTopProperty({ propertyId });
+  }
+
+  // About Us management endpoints
+  @Get('about-us')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List About Us entries with pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of About Us entries',
+    type: AdminAboutUsListResponseDto,
+  })
+  async listAboutUs(
+    @Query() query: AdminAboutUsListQueryDto,
+  ): Promise<AdminAboutUsListResponseDto> {
+    return this.adminService.listAboutUs(query);
+  }
+
+  @Post('about-us')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create About Us entry' })
+  @ApiResponse({
+    status: 201,
+    description: 'About Us entry created successfully',
+    type: AdminAboutUsResponseDto,
+  })
+  async createAboutUs(
+    @Body() dto: AdminCreateAboutUsDto,
+  ): Promise<{ success: boolean; data: AdminAboutUsResponseDto }> {
+    return this.adminService.createAboutUs(dto);
+  }
+
+  @Patch('about-us/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update About Us entry' })
+  @ApiParam({
+    name: 'id',
+    description: 'About Us entry ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'About Us entry updated successfully',
+    type: AdminAboutUsResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'About Us entry not found',
+  })
+  async updateAboutUs(
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateAboutUsDto,
+  ): Promise<{ success: boolean; data: AdminAboutUsResponseDto }> {
+    return this.adminService.updateAboutUs(id, dto);
   }
 
 }

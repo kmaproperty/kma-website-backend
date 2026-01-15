@@ -92,6 +92,11 @@ import {
   AdminRejectPropertyVerificationDto,
   AdminPropertyVerificationActionResponseDto,
   PropertyVerificationRequestItemDto,
+  AdminAboutUsListQueryDto,
+  AdminAboutUsListResponseDto,
+  AdminAboutUsResponseDto,
+  AdminCreateAboutUsDto,
+  AdminUpdateAboutUsDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
@@ -108,6 +113,8 @@ import { ContactUsRepository } from '../contact-us/repositories/contact-us.repos
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
+import { AboutUsRepository } from './repositories/about-us.repository';
+import { AboutUs } from './entities/about-us.entity';
 import {
   PropertyVerificationRequest,
   PropertyVerificationStatus,
@@ -277,6 +284,7 @@ export class AdminService {
     private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
     private readonly kmaRatingReviewRepository: KmaRatingReviewRepository,
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
+    private readonly aboutUsRepository: AboutUsRepository,
   ) {}
 
   private getJwtSecret(): string {
@@ -2792,6 +2800,102 @@ export class AdminService {
       total,
       page,
       limit,
+    };
+  }
+
+  /**
+   * List About Us entries with pagination
+   */
+  async listAboutUs(
+    query: AdminAboutUsListQueryDto,
+  ): Promise<AdminAboutUsListResponseDto> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+
+    const allAboutUs = await this.aboutUsRepository.findAll();
+    const total = allAboutUs.length;
+
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedItems = allAboutUs.slice(startIndex, endIndex);
+
+    const data: AdminAboutUsResponseDto[] = paginatedItems.map((item) => ({
+      id: item.id,
+      heading: item.heading,
+      description: item.description,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }));
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  /**
+   * Create About Us entry
+   */
+  async createAboutUs(
+    dto: AdminCreateAboutUsDto,
+  ): Promise<{ success: boolean; data: AdminAboutUsResponseDto }> {
+    const aboutUs = await this.aboutUsRepository.create({
+      heading: dto.heading.trim(),
+      description: dto.description.trim(),
+    });
+
+    return {
+      success: true,
+      data: {
+        id: aboutUs.id,
+        heading: aboutUs.heading,
+        description: aboutUs.description,
+        createdAt: aboutUs.createdAt,
+        updatedAt: aboutUs.updatedAt,
+      },
+    };
+  }
+
+  /**
+   * Update About Us entry
+   */
+  async updateAboutUs(
+    id: string,
+    dto: AdminUpdateAboutUsDto,
+  ): Promise<{ success: boolean; data: AdminAboutUsResponseDto }> {
+    const aboutUs = await this.aboutUsRepository.findById(id);
+    if (!aboutUs) {
+      throw new BadRequestException('About Us entry not found');
+    }
+
+    const updateData: Partial<AboutUs> = {};
+    if (dto.heading !== undefined) {
+      updateData.heading = dto.heading.trim();
+    }
+    if (dto.description !== undefined) {
+      updateData.description = dto.description.trim();
+    }
+
+    await this.aboutUsRepository.update(id, updateData);
+
+    const updated = await this.aboutUsRepository.findById(id);
+    if (!updated) {
+      throw new BadRequestException('Failed to retrieve updated About Us entry');
+    }
+
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        heading: updated.heading,
+        description: updated.description,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      },
     };
   }
 }
