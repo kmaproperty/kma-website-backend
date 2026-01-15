@@ -611,6 +611,12 @@ export class EndUserHomePageResponseDto {
   featuredCities: CityItemDto[];
 
   @ApiProperty({
+    description: 'All cities available in the system',
+    type: [CityItemDto],
+  })
+  allCities: CityItemDto[];
+
+  @ApiProperty({
     description: 'Detected city based on search query or latitude/longitude (if provided)',
     type: CityItemDto,
     required: false,

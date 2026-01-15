@@ -2094,23 +2094,27 @@ export class UserService {
 
     // Get featured cities from database
     const featuredCitiesFromDb = await this.cityRepository.findFeatured();
-    const featuredCities = featuredCitiesFromDb.map(mapCityToDto);
+    let featuredCities = featuredCitiesFromDb.map(mapCityToDto);
 
-    // Detect city based on search or latitude/longitude
-    let detectedCity: CityItemDto | null = null;
+    // Get all cities from database
+    const allCitiesFromDb = await this.cityRepository.findAll();
+    let allCities = allCitiesFromDb.map(mapCityToDto);
 
-    // Priority 1: If search is provided, use search results
+    // Filter both featuredCities and allCities based on search query (if provided)
     if (search && search.trim()) {
-      const searchResults = await this.cityRepository.searchByName(
-        search.trim(),
-        1,
+      const searchQuery = search.trim().toLowerCase();
+      featuredCities = featuredCities.filter((city) =>
+        city.name.toLowerCase().includes(searchQuery),
       );
-      if (searchResults.length > 0) {
-        detectedCity = mapCityToDto(searchResults[0]);
-      }
+      allCities = allCities.filter((city) =>
+        city.name.toLowerCase().includes(searchQuery),
+      );
     }
-    // Priority 2: If no search but lat/long provided, detect by location
-    else if (latitude !== undefined && longitude !== undefined) {
+    // If search is empty, both arrays already contain all cities
+
+    // Detect city based on latitude/longitude (only for location detection)
+    let detectedCity: CityItemDto | null = null;
+    if (latitude !== undefined && longitude !== undefined) {
       const allCitiesForDetection = await this.cityRepository.findAll();
 
       // Find the nearest city using Haversine formula
@@ -2151,6 +2155,7 @@ export class UserService {
     return {
       success: true,
       featuredCities,
+      allCities,
       detectedCity,
     };
   }
