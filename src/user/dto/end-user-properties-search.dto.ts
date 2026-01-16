@@ -187,6 +187,16 @@ export class EndUserPropertiesSearchQueryDto {
   @IsOptional()
   @IsEnum(EndUserPropertiesSortOrder)
   sortOrder: EndUserPropertiesSortOrder = EndUserPropertiesSortOrder.DESC;
+
+  @ApiPropertyOptional({
+    description: 'Filter by posted by user role (comma separated) - OWNER, CHANNEL_PARTNER, or ALL to get all properties',
+    example: 'OWNER,CHANNEL_PARTNER',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsString({ each: true })
+  postedBy?: string[];
 }
 
 // Response DTOs
@@ -210,6 +220,41 @@ export class EndUserPropertyUnitDto {
   price: string;
 }
 
+export class EndUserPropertyImageDto {
+  @ApiProperty({
+    description: 'Image file key/URL',
+    example: 'https://example.com/property-image.jpg',
+  })
+  fileKey: string;
+
+  @ApiProperty({
+    description: 'Image view type',
+    example: 'exterior',
+  })
+  view: string;
+
+  @ApiProperty({
+    description: 'Is this the cover image',
+    example: true,
+    required: false,
+  })
+  isCoverImage?: boolean;
+}
+
+export class EndUserPropertyVideoDto {
+  @ApiProperty({
+    description: 'Video file key/URL',
+    example: 'https://example.com/property-video.mp4',
+  })
+  fileKey: string;
+
+  @ApiProperty({
+    description: 'Video format',
+    example: 'mp4',
+  })
+  format: string;
+}
+
 export class EndUserPropertyListItemDto {
   @ApiProperty({ description: 'Property ID', example: 'uuid-string' })
   id: string;
@@ -231,11 +276,25 @@ export class EndUserPropertyListItemDto {
   description?: string;
 
   @ApiProperty({
-    description: 'Primary image URL',
+    description: 'Primary image URL (cover image or first image)',
     example: 'https://example.com/property-image.jpg',
     required: false,
   })
   imageUrl?: string | null;
+
+  @ApiProperty({
+    description: 'All property images',
+    type: [EndUserPropertyImageDto],
+    required: false,
+  })
+  images?: EndUserPropertyImageDto[];
+
+  @ApiProperty({
+    description: 'All property videos',
+    type: [EndUserPropertyVideoDto],
+    required: false,
+  })
+  videos?: EndUserPropertyVideoDto[];
 
   @ApiProperty({
     description: 'Is RERA registered',

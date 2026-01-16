@@ -47,6 +47,8 @@ import {
   EndUserPropertiesSearchResponseDto,
   EndUserPropertyListItemDto,
   EndUserPropertyUnitDto,
+  EndUserPropertyImageDto,
+  EndUserPropertyVideoDto,
   EndUserTopPropertiesQueryDto,
   EndUserTopPropertiesResponseDto,
   EndUserTopCityItemDto,
@@ -104,6 +106,7 @@ import {
   HomePageStatisticsDto,
   PropertyTypeExploreResponseDto,
   PropertyTypeExploreItemDto,
+  PropertyTypeExploreQueryDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { Property } from '../property/entities/property.entity';
@@ -2199,6 +2202,7 @@ export class UserService {
       latitude,
       longitude,
       radius,
+      postedBy,
     } = query;
 
     const result = await this.propertyRepository.findEndUserProperties({
@@ -2219,14 +2223,16 @@ export class UserService {
         latitude,
         longitude,
         radius,
+        postedBy,
       },
     });
 
     // Map properties to response DTO
     const properties: EndUserPropertyListItemDto[] = result.items.map(
       (property) => {
-        // Get primary image (cover image or first image)
+        // Get primary image (cover image or first image) and all images
         let imageUrl: string | null = null;
+        let images: EndUserPropertyImageDto[] | undefined = undefined;
         if (property.photos && property.photos.length > 0) {
           const coverImage = property.photos.find((p) => p.isCoverImage);
           const firstPhoto = property.photos[0];
@@ -2234,6 +2240,22 @@ export class UserService {
           // Note: You may need to generate full URL from fileKey using S3Service
           // For now, returning fileKey - adjust based on your URL generation logic
           imageUrl = selectedPhoto.fileKey || null;
+          
+          // Map all images
+          images = property.photos.map((photo) => ({
+            fileKey: photo.fileKey,
+            view: photo.view,
+            isCoverImage: photo.isCoverImage || false,
+          }));
+        }
+
+        // Map all videos
+        let videos: EndUserPropertyVideoDto[] | undefined = undefined;
+        if (property.videos && property.videos.length > 0) {
+          videos = property.videos.map((video) => ({
+            fileKey: video.fileKey,
+            format: video.format,
+          }));
         }
 
         // Build address
@@ -2283,6 +2305,8 @@ export class UserService {
           address,
           description: property.propertyDescription || undefined,
           imageUrl,
+          images: images,
+          videos: videos,
           isReraRegistered: false, // Add RERA field to Property entity if needed
           constructionStatus: property.constructionStatus || null,
           category: property.category?.name || null,
@@ -2330,13 +2354,30 @@ export class UserService {
     // Map properties to response DTO (reuse the same mapping logic as searchEndUserProperties)
     const properties: EndUserPropertyListItemDto[] = result.items.map(
       (property) => {
-        // Get primary image (cover image or first image)
+        // Get primary image (cover image or first image) and all images
         let imageUrl: string | null = null;
+        let images: EndUserPropertyImageDto[] | undefined = undefined;
         if (property.photos && property.photos.length > 0) {
           const coverImage = property.photos.find((p) => p.isCoverImage);
           const firstPhoto = property.photos[0];
           const selectedPhoto = coverImage || firstPhoto;
           imageUrl = selectedPhoto.fileKey || null;
+          
+          // Map all images
+          images = property.photos.map((photo) => ({
+            fileKey: photo.fileKey,
+            view: photo.view,
+            isCoverImage: photo.isCoverImage || false,
+          }));
+        }
+
+        // Map all videos
+        let videos: EndUserPropertyVideoDto[] | undefined = undefined;
+        if (property.videos && property.videos.length > 0) {
+          videos = property.videos.map((video) => ({
+            fileKey: video.fileKey,
+            format: video.format,
+          }));
         }
 
         // Build address
@@ -2386,6 +2427,8 @@ export class UserService {
           address,
           description: property.propertyDescription || undefined,
           imageUrl,
+          images: images,
+          videos: videos,
           isReraRegistered: false,
           constructionStatus: property.constructionStatus || null,
           category: property.category?.name || null,
@@ -3552,9 +3595,19 @@ export class UserService {
    * Get home page reviews (top 5 approved reviews with statistics)
    */
   async getHomePageReviews(): Promise<HomePageReviewsResponseDto> {
-    const [reviews, statistics] = await Promise.all([
+    const [reviews, statistics, totalEndUsers] = await Promise.all([
       this.kmaRatingReviewRepository.findTopApprovedReviews(5),
       this.kmaRatingReviewRepository.getApprovedReviewsStatistics(),
+      // Count total end users (active, non-blocked)
+      this.dataSource
+        .getRepository(User)
+        .count({
+          where: {
+            role: UserRole.END_USER,
+            isActive: true,
+            isBlocked: false,
+          },
+        }),
     ]);
 
     const reviewItems: HomePageReviewItemDto[] = reviews.map((r) => {
@@ -3584,6 +3637,7 @@ export class UserService {
       statistics: {
         totalCount: statistics.totalCount,
         averageRating: statistics.averageRating,
+        totalEndUsers,
       },
       trustedByText: 'Trusted By Client around the World',
     };
@@ -3680,21 +3734,50 @@ export class UserService {
   /**
    * Get property types with their active property counts for explore section
    */
-  async getPropertyTypesExplore(): Promise<PropertyTypeExploreResponseDto> {
-    // Get all property types
-    const propertyTypes = await this.propertyTypeRepository.findAll();
+  async getPropertyTypesExplore(
+    query?: PropertyTypeExploreQueryDto,
+  ): Promise<PropertyTypeExploreResponseDto> {
+    const { cityId, propertyTypeId, listingTypeId } = query || {};
+
+    // Get property types with filters
+    let propertyTypes = await this.propertyTypeRepository.findAll();
+
+    // Filter by listing type if provided
+    if (listingTypeId) {
+      propertyTypes = propertyTypes.filter(
+        (pt) => pt.listingTypeId === listingTypeId,
+      );
+    }
+
+    // Filter by specific property type if provided
+    if (propertyTypeId) {
+      propertyTypes = propertyTypes.filter((pt) => pt.id === propertyTypeId);
+    }
 
     // Get property counts for each property type in parallel
     const propertyTypesWithCounts = await Promise.all(
       propertyTypes.map(async (propertyType) => {
+        // Build where clause for property count
+        const whereClause: any = {
+          propertyTypeId: propertyType.id,
+          status: PropertyStatus.ACTIVE,
+          isDeleted: false,
+        };
+
+        // Add city filter if provided
+        if (cityId) {
+          whereClause.cityId = cityId;
+        }
+
+        // Add listing type filter if provided
+        if (listingTypeId) {
+          whereClause.listingTypeId = listingTypeId;
+        }
+
         const propertyCount = await this.dataSource
           .getRepository(Property)
           .count({
-            where: {
-              propertyTypeId: propertyType.id,
-              status: PropertyStatus.ACTIVE,
-              isDeleted: false,
-            },
+            where: whereClause,
           });
 
         return {

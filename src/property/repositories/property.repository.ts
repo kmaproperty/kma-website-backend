@@ -423,6 +423,7 @@ export class PropertyRepository {
       latitude?: number;
       longitude?: number;
       radius?: number;
+      postedBy?: string[];
     };
   }): Promise<{
     items: Property[];
@@ -445,6 +446,7 @@ export class PropertyRepository {
       .leftJoinAndSelect('property.society', 'society')
       .leftJoinAndSelect('property.locality', 'locality')
       .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoin('property.user', 'user')
       .where('property.isDeleted = false')
       .andWhere('property.status = :status', { status: PropertyStatus.ACTIVE });
 
@@ -538,6 +540,17 @@ export class PropertyRepository {
           ) <= :radius`,
           { lat, lon, radius: radiusInKm },
         );
+    }
+
+    // Filter by posted by (user role)
+    if (filters.postedBy?.length) {
+      // If "ALL" is in the array, don't filter by role (return all properties)
+      if (!filters.postedBy.includes('ALL')) {
+        qb.andWhere('user.role IN (:...postedBy)', {
+          postedBy: filters.postedBy,
+        });
+      }
+      // If "ALL" is present, no filter is applied - all properties are returned
     }
 
     // Get total count

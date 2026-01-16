@@ -41,6 +41,7 @@ import {
   PropertyMasterDataResponseDto,
   HomePageResponseDto,
   PropertyTypeExploreResponseDto,
+  PropertyTypeExploreQueryDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -267,7 +268,7 @@ export class EndUserController {
   @Public()
   @ApiOperation({
     summary: 'Search Properties',
-    description: 'Search and filter properties with various filters including city, search, category, property type, BHK, furnishing, construction status, price range, and location-based search.',
+    description: 'Search and filter properties with various filters including city, search, category, property type, BHK, furnishing, construction status, price range, location-based search, and posted by (owner/channel partner).',
   })
   @ApiResponse({
     status: 200,
@@ -576,15 +577,17 @@ export class EndUserController {
   @Public()
   @ApiOperation({
     summary: 'Explore Property Types',
-    description: 'Get all property types with their active property counts. Returns property types sorted by property count (descending), excluding types with zero properties.',
+    description: 'Get property types with their active property counts. Supports filtering by city ID, property type ID, and listing type ID. Returns property types sorted by property count (descending), excluding types with zero properties.',
   })
   @ApiResponse({
     status: 200,
     description: 'Property types with counts retrieved successfully',
     type: PropertyTypeExploreResponseDto,
   })
-  async getPropertyTypesExplore(): Promise<PropertyTypeExploreResponseDto> {
-    return await this.userService.getPropertyTypesExplore();
+  async getPropertyTypesExplore(
+    @Query() query: PropertyTypeExploreQueryDto,
+  ): Promise<PropertyTypeExploreResponseDto> {
+    return await this.userService.getPropertyTypesExplore(query);
   }
 }
 

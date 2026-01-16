@@ -48,6 +48,9 @@ export class HomePageReviewsStatisticsDto {
 
   @ApiProperty({ description: 'Average rating', example: 4.4 })
   averageRating: number;
+
+  @ApiProperty({ description: 'Total number of end users', example: 5000 })
+  totalEndUsers: number;
 }
 
 export class HomePageReviewsResponseDto {
