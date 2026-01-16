@@ -1466,7 +1466,7 @@ export class PropertyService {
             ? previouslyCompletedStep
             : targetCompletionStep;
         updateData.completionStep = newCompletionStep;
-        updateData.listingScore = this.calculateListingScore(newCompletionStep, property.isVerified);
+        updateData.listingScore = this.calculateListingScore(newCompletionStep, existingProperty.isVerified ?? VerificationStatus.UNVERIFIED);
 
         // Update the property
         await this.propertyRepository.updateProperty(propertyId, updateData);
