@@ -1475,12 +1475,15 @@ export class PropertyService {
         property = await this.propertyRepository.findById(propertyId);
       } else {
         // Create new property - propertyId is required but doesn't exist, so create new with that ID or generate new
-        const ownerPropertyCount =
-          await this.propertyRepository.countByUserId(userId);
-        if (ownerPropertyCount >= MAX_LISTINGS_PER_OWNER) {
-          throw new BadRequestException(
-            `Owners can create a maximum of ${MAX_LISTINGS_PER_OWNER} listings.`,
-          );
+        // Only apply property limit to OWNER role, not CHANNEL_PARTNER
+        if (user.role === UserRole.OWNER) {
+          const ownerPropertyCount =
+            await this.propertyRepository.countByUserId(userId);
+          if (ownerPropertyCount >= MAX_LISTINGS_PER_OWNER) {
+            throw new BadRequestException(
+              `Owners can create a maximum of ${MAX_LISTINGS_PER_OWNER} listings.`,
+            );
+          }
         }
 
         const createData: any = {
