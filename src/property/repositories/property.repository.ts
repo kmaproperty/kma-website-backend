@@ -223,7 +223,7 @@ export class PropertyRepository {
       statuses?: string[];
       listingStatuses?: string[];
       verificationStatuses?: string[];
-      minPrice?: number;
+      minPrice?: number | null;
       maxPrice?: number;
       search?: string;
       recentlyExpired?: boolean;
@@ -328,10 +328,19 @@ export class PropertyRepository {
     }
 
     if (filters.minPrice != null) {
-      qb.andWhere(
-        '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) )',
-        { minPrice: filters.minPrice },
-      );
+      if (filters.minPrice === 0) {
+        // When minPrice is 0, include properties with price >= 0 OR price is null
+        qb.andWhere(
+          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) OR property.price IS NULL OR property.monthlyRent IS NULL )',
+          { minPrice: filters.minPrice },
+        );
+      } else {
+        // When minPrice > 0, only include properties with price >= minPrice
+        qb.andWhere(
+          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) )',
+          { minPrice: filters.minPrice },
+        );
+      }
     }
 
     if (filters.maxPrice != null) {
@@ -492,10 +501,19 @@ export class PropertyRepository {
 
     // Filter by price range
     if (filters.minPrice != null) {
-      qb.andWhere(
-        '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) )',
-        { minPrice: filters.minPrice },
-      );
+      if (filters.minPrice === 0) {
+        // When minPrice is 0, include properties with price >= 0 OR price is null
+        qb.andWhere(
+          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) OR property.price IS NULL OR property.monthlyRent IS NULL )',
+          { minPrice: filters.minPrice },
+        );
+      } else {
+        // When minPrice > 0, only include properties with price >= minPrice
+        qb.andWhere(
+          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) )',
+          { minPrice: filters.minPrice },
+        );
+      }
     }
 
     if (filters.maxPrice != null) {

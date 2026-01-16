@@ -226,7 +226,7 @@ export class PropertyService {
           statuses: finalStatuses,
           listingStatuses,
           verificationStatuses,
-          minPrice,
+          minPrice: minPrice ?? null,
           maxPrice,
           search,
           recentlyExpired,
