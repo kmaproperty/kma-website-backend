@@ -97,6 +97,10 @@ import {
   AdminAboutUsResponseDto,
   AdminCreateAboutUsDto,
   AdminUpdateAboutUsDto,
+  AdminConfigurationResponseDto,
+  AdminConfigurationSingleResponseDto,
+  AdminCreateConfigurationDto,
+  AdminUpdateConfigurationDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
@@ -115,6 +119,8 @@ import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-revie
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 import { AboutUsRepository } from './repositories/about-us.repository';
 import { AboutUs } from './entities/about-us.entity';
+import { AdminConfigurationRepository } from './repositories/admin-configuration.repository';
+import { AdminConfiguration } from './entities/admin-configuration.entity';
 import {
   PropertyVerificationRequest,
   PropertyVerificationStatus,
@@ -285,6 +291,7 @@ export class AdminService {
     private readonly kmaRatingReviewRepository: KmaRatingReviewRepository,
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
     private readonly aboutUsRepository: AboutUsRepository,
+    private readonly adminConfigurationRepository: AdminConfigurationRepository,
   ) {}
 
   private getJwtSecret(): string {
@@ -2896,6 +2903,132 @@ export class AdminService {
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,
       },
+    };
+  }
+
+  async getAdminConfiguration(): Promise<AdminConfigurationSingleResponseDto> {
+    const configuration = await this.adminConfigurationRepository.findOne();
+
+    if (!configuration) {
+      return {
+        success: true,
+        data: null as any,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        id: configuration.id,
+        mobileAppAvailable: configuration.mobileAppAvailable,
+        description: configuration.description,
+        phoneNumber: configuration.phoneNumber,
+        address: configuration.address,
+        latitude: configuration.latitude ? Number(configuration.latitude) : null,
+        longitude: configuration.longitude ? Number(configuration.longitude) : null,
+        createdAt: configuration.createdAt,
+        updatedAt: configuration.updatedAt,
+      },
+    };
+  }
+
+  async createAdminConfiguration(
+    dto: AdminCreateConfigurationDto,
+  ): Promise<AdminConfigurationSingleResponseDto> {
+    // Check if configuration already exists (there should only be one)
+    const existing = await this.adminConfigurationRepository.findOne();
+    if (existing) {
+      throw new BadRequestException('Configuration already exists. Use update endpoint instead.');
+    }
+
+    const configuration = await this.adminConfigurationRepository.create({
+      mobileAppAvailable: dto.mobileAppAvailable,
+      description: dto.description || null,
+      phoneNumber: dto.phoneNumber || null,
+      address: dto.address || null,
+      latitude: dto.latitude || null,
+      longitude: dto.longitude || null,
+    });
+
+    return {
+      success: true,
+      data: {
+        id: configuration.id,
+        mobileAppAvailable: configuration.mobileAppAvailable,
+        description: configuration.description,
+        phoneNumber: configuration.phoneNumber,
+        address: configuration.address,
+        latitude: configuration.latitude ? Number(configuration.latitude) : null,
+        longitude: configuration.longitude ? Number(configuration.longitude) : null,
+        createdAt: configuration.createdAt,
+        updatedAt: configuration.updatedAt,
+      },
+    };
+  }
+
+  async updateAdminConfiguration(
+    id: string,
+    dto: AdminUpdateConfigurationDto,
+  ): Promise<AdminConfigurationSingleResponseDto> {
+    const configuration = await this.adminConfigurationRepository.findById(id);
+    if (!configuration) {
+      throw new BadRequestException('Configuration not found');
+    }
+
+    const updateData: Partial<AdminConfiguration> = {};
+    if (dto.mobileAppAvailable !== undefined) {
+      updateData.mobileAppAvailable = dto.mobileAppAvailable;
+    }
+    if (dto.description !== undefined) {
+      updateData.description = dto.description;
+    }
+    if (dto.phoneNumber !== undefined) {
+      updateData.phoneNumber = dto.phoneNumber;
+    }
+    if (dto.address !== undefined) {
+      updateData.address = dto.address;
+    }
+    if (dto.latitude !== undefined) {
+      updateData.latitude = dto.latitude;
+    }
+    if (dto.longitude !== undefined) {
+      updateData.longitude = dto.longitude;
+    }
+
+    await this.adminConfigurationRepository.update(id, updateData);
+
+    const updated = await this.adminConfigurationRepository.findById(id);
+    if (!updated) {
+      throw new BadRequestException('Failed to retrieve updated configuration');
+    }
+
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        mobileAppAvailable: updated.mobileAppAvailable,
+        description: updated.description,
+        phoneNumber: updated.phoneNumber,
+        address: updated.address,
+        latitude: updated.latitude ? Number(updated.latitude) : null,
+        longitude: updated.longitude ? Number(updated.longitude) : null,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      },
+    };
+  }
+
+  async deleteAdminConfiguration(id: string): Promise<{ success: boolean; message: string }> {
+    const configuration = await this.adminConfigurationRepository.findById(id);
+    if (!configuration) {
+      throw new BadRequestException('Configuration not found');
+    }
+
+    await this.adminConfigurationRepository.delete(id);
+
+    return {
+      success: true,
+      message: 'Configuration deleted successfully',
     };
   }
 }

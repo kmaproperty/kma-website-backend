@@ -42,6 +42,7 @@ import {
   HomePageResponseDto,
   PropertyTypeExploreResponseDto,
   PropertyTypeExploreQueryDto,
+  EndUserConfigurationResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -588,6 +589,21 @@ export class EndUserController {
     @Query() query: PropertyTypeExploreQueryDto,
   ): Promise<PropertyTypeExploreResponseDto> {
     return await this.userService.getPropertyTypesExplore(query);
+  }
+
+  @Get('configurations')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Admin Configurations',
+    description: 'Get all admin configurations including mobile app availability and other settings.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Admin configurations retrieved successfully',
+    type: EndUserConfigurationResponseDto,
+  })
+  async getAdminConfigurations(): Promise<EndUserConfigurationResponseDto> {
+    return await this.userService.getAdminConfigurations();
   }
 }
 

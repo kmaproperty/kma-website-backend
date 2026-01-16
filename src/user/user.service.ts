@@ -107,6 +107,7 @@ import {
   PropertyTypeExploreResponseDto,
   PropertyTypeExploreItemDto,
   PropertyTypeExploreQueryDto,
+  EndUserConfigurationResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { Property } from '../property/entities/property.entity';
@@ -130,6 +131,7 @@ import { EncryptionService } from './services/encryption.service';
 import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
 import { AboutUsRepository } from '../admin/repositories/about-us.repository';
+import { AdminConfigurationRepository } from '../admin/repositories/admin-configuration.repository';
 
 @Injectable()
 export class UserService {
@@ -158,6 +160,7 @@ export class UserService {
     private readonly propertyTypeRepository: PropertyTypeRepository,
     private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
     private readonly aboutUsRepository: AboutUsRepository,
+    private readonly adminConfigurationRepository: AdminConfigurationRepository,
   ) {}
 
   /**
@@ -3797,6 +3800,32 @@ export class UserService {
     return {
       success: true,
       propertyTypes: filteredAndSorted,
+    };
+  }
+
+  async getAdminConfigurations(): Promise<EndUserConfigurationResponseDto> {
+    const configuration = await this.adminConfigurationRepository.findOne();
+
+    if (!configuration) {
+      return {
+        success: true,
+        configuration: null,
+      };
+    }
+
+    return {
+      success: true,
+      configuration: {
+        id: configuration.id,
+        mobileAppAvailable: configuration.mobileAppAvailable,
+        description: configuration.description,
+        phoneNumber: configuration.phoneNumber,
+        address: configuration.address,
+        latitude: configuration.latitude ? Number(configuration.latitude) : null,
+        longitude: configuration.longitude ? Number(configuration.longitude) : null,
+        createdAt: configuration.createdAt,
+        updatedAt: configuration.updatedAt,
+      },
     };
   }
 }

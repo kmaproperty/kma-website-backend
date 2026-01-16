@@ -107,6 +107,10 @@ import {
   AdminAboutUsResponseDto,
   AdminCreateAboutUsDto,
   AdminUpdateAboutUsDto,
+  AdminConfigurationResponseDto,
+  AdminConfigurationSingleResponseDto,
+  AdminCreateConfigurationDto,
+  AdminUpdateConfigurationDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -1501,6 +1505,89 @@ export class AdminController {
     @Body() dto: AdminUpdateAboutUsDto,
   ): Promise<{ success: boolean; data: AdminAboutUsResponseDto }> {
     return this.adminService.updateAboutUs(id, dto);
+  }
+
+  // Admin Configuration management endpoints
+  @Get('configurations')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get admin configuration (single entry)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Admin configuration retrieved successfully',
+    type: AdminConfigurationSingleResponseDto,
+  })
+  async getAdminConfiguration(): Promise<AdminConfigurationSingleResponseDto> {
+    return this.adminService.getAdminConfiguration();
+  }
+
+  @Post('configurations')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create admin configuration (single entry)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Admin configuration created successfully',
+    type: AdminConfigurationSingleResponseDto,
+  })
+  async createAdminConfiguration(
+    @Body() dto: AdminCreateConfigurationDto,
+  ): Promise<AdminConfigurationSingleResponseDto> {
+    return this.adminService.createAdminConfiguration(dto);
+  }
+
+  @Patch('configurations/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update admin configuration' })
+  @ApiParam({
+    name: 'id',
+    description: 'Configuration ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Admin configuration updated successfully',
+    type: AdminConfigurationSingleResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Configuration not found',
+  })
+  async updateAdminConfiguration(
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateConfigurationDto,
+  ): Promise<AdminConfigurationSingleResponseDto> {
+    return this.adminService.updateAdminConfiguration(id, dto);
+  }
+
+  @Delete('configurations/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete admin configuration' })
+  @ApiParam({
+    name: 'id',
+    description: 'Configuration ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Admin configuration deleted successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Configuration not found',
+  })
+  async deleteAdminConfiguration(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.adminService.deleteAdminConfiguration(id);
   }
 
 }
