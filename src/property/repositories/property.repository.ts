@@ -329,24 +329,24 @@ export class PropertyRepository {
 
     if (filters.minPrice != null) {
       if (filters.minPrice === 0) {
-        // When minPrice is 0, include properties with price >= 0 OR price is null
+        // When minPrice is 0, include properties with price >= 0 OR price is null OR (draft with null price)
         qb.andWhere(
-          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) OR property.price IS NULL OR property.monthlyRent IS NULL )',
-          { minPrice: filters.minPrice },
+          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) OR property.price IS NULL OR property.monthlyRent IS NULL OR (property.status = :draftStatus AND (property.price IS NULL OR property.monthlyRent IS NULL)) )',
+          { minPrice: filters.minPrice, draftStatus: PropertyStatus.DRAFT },
         );
       } else {
-        // When minPrice > 0, only include properties with price >= minPrice
+        // When minPrice > 0, include properties with price >= minPrice OR (draft with null price)
         qb.andWhere(
-          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) )',
-          { minPrice: filters.minPrice },
+          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) OR (property.status = :draftStatus AND (property.price IS NULL OR property.monthlyRent IS NULL)) )',
+          { minPrice: filters.minPrice, draftStatus: PropertyStatus.DRAFT },
         );
       }
     }
 
     if (filters.maxPrice != null) {
       qb.andWhere(
-        '( (property.price IS NOT NULL AND property.price <= :maxPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent <= :maxPrice) )',
-        { maxPrice: filters.maxPrice },
+        '( (property.price IS NOT NULL AND property.price <= :maxPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent <= :maxPrice) OR (property.status = :draftStatus AND (property.price IS NULL OR property.monthlyRent IS NULL)) )',
+        { maxPrice: filters.maxPrice, draftStatus: PropertyStatus.DRAFT },
       );
     }
 
@@ -502,24 +502,24 @@ export class PropertyRepository {
     // Filter by price range
     if (filters.minPrice != null) {
       if (filters.minPrice === 0) {
-        // When minPrice is 0, include properties with price >= 0 OR price is null
+        // When minPrice is 0, include properties with price >= 0 OR price is null OR (draft with null price)
         qb.andWhere(
-          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) OR property.price IS NULL OR property.monthlyRent IS NULL )',
-          { minPrice: filters.minPrice },
+          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) OR property.price IS NULL OR property.monthlyRent IS NULL OR (property.status = :draftStatus AND (property.price IS NULL OR property.monthlyRent IS NULL)) )',
+          { minPrice: filters.minPrice, draftStatus: PropertyStatus.DRAFT },
         );
       } else {
-        // When minPrice > 0, only include properties with price >= minPrice
+        // When minPrice > 0, include properties with price >= minPrice OR (draft with null price)
         qb.andWhere(
-          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) )',
-          { minPrice: filters.minPrice },
+          '( (property.price IS NOT NULL AND property.price >= :minPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent >= :minPrice) OR (property.status = :draftStatus AND (property.price IS NULL OR property.monthlyRent IS NULL)) )',
+          { minPrice: filters.minPrice, draftStatus: PropertyStatus.DRAFT },
         );
       }
     }
 
     if (filters.maxPrice != null) {
       qb.andWhere(
-        '( (property.price IS NOT NULL AND property.price <= :maxPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent <= :maxPrice) )',
-        { maxPrice: filters.maxPrice },
+        '( (property.price IS NOT NULL AND property.price <= :maxPrice) OR (property.monthlyRent IS NOT NULL AND property.monthlyRent <= :maxPrice) OR (property.status = :draftStatus AND (property.price IS NULL OR property.monthlyRent IS NULL)) )',
+        { maxPrice: filters.maxPrice, draftStatus: PropertyStatus.DRAFT },
       );
     }
 
