@@ -47,6 +47,34 @@ export class AdminConfigurationResponseDto {
   })
   longitude: number | null;
 
+  @ApiPropertyOptional({
+    description: 'Instagram link',
+    example: 'https://instagram.com/company',
+    nullable: true,
+  })
+  instagramLink: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Facebook link',
+    example: 'https://facebook.com/company',
+    nullable: true,
+  })
+  fbLink: string | null;
+
+  @ApiPropertyOptional({
+    description: 'YouTube link',
+    example: 'https://youtube.com/company',
+    nullable: true,
+  })
+  youtubeLink: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Twitter link',
+    example: 'https://twitter.com/company',
+    nullable: true,
+  })
+  twitterLink: string | null;
+
   @ApiProperty({ description: 'Created at', example: '2025-01-20T10:15:00.000Z' })
   createdAt: Date;
 
@@ -105,6 +133,42 @@ export class AdminCreateConfigurationDto {
   @IsNumber()
   @Type(() => Number)
   longitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Instagram link',
+    example: 'https://instagram.com/company',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  instagramLink?: string;
+
+  @ApiPropertyOptional({
+    description: 'Facebook link',
+    example: 'https://facebook.com/company',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  fbLink?: string;
+
+  @ApiPropertyOptional({
+    description: 'YouTube link',
+    example: 'https://youtube.com/company',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  youtubeLink?: string;
+
+  @ApiPropertyOptional({
+    description: 'Twitter link',
+    example: 'https://twitter.com/company',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  twitterLink?: string;
 }
 
 export class AdminUpdateConfigurationDto {
@@ -158,6 +222,42 @@ export class AdminUpdateConfigurationDto {
   @IsNumber()
   @Type(() => Number)
   longitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Instagram link',
+    example: 'https://instagram.com/company',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  instagramLink?: string;
+
+  @ApiPropertyOptional({
+    description: 'Facebook link',
+    example: 'https://facebook.com/company',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  fbLink?: string;
+
+  @ApiPropertyOptional({
+    description: 'YouTube link',
+    example: 'https://youtube.com/company',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  youtubeLink?: string;
+
+  @ApiPropertyOptional({
+    description: 'Twitter link',
+    example: 'https://twitter.com/company',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  twitterLink?: string;
 }
 
 export class AdminConfigurationSingleResponseDto {

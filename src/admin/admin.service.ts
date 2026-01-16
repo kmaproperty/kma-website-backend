@@ -2926,6 +2926,10 @@ export class AdminService {
         address: configuration.address,
         latitude: configuration.latitude ? Number(configuration.latitude) : null,
         longitude: configuration.longitude ? Number(configuration.longitude) : null,
+        instagramLink: configuration.instagramLink,
+        fbLink: configuration.fbLink,
+        youtubeLink: configuration.youtubeLink,
+        twitterLink: configuration.twitterLink,
         createdAt: configuration.createdAt,
         updatedAt: configuration.updatedAt,
       },
@@ -2948,6 +2952,10 @@ export class AdminService {
       address: dto.address || null,
       latitude: dto.latitude || null,
       longitude: dto.longitude || null,
+      instagramLink: dto.instagramLink || null,
+      fbLink: dto.fbLink || null,
+      youtubeLink: dto.youtubeLink || null,
+      twitterLink: dto.twitterLink || null,
     });
 
     return {
@@ -2960,6 +2968,10 @@ export class AdminService {
         address: configuration.address,
         latitude: configuration.latitude ? Number(configuration.latitude) : null,
         longitude: configuration.longitude ? Number(configuration.longitude) : null,
+        instagramLink: configuration.instagramLink,
+        fbLink: configuration.fbLink,
+        youtubeLink: configuration.youtubeLink,
+        twitterLink: configuration.twitterLink,
         createdAt: configuration.createdAt,
         updatedAt: configuration.updatedAt,
       },
@@ -2994,6 +3006,18 @@ export class AdminService {
     if (dto.longitude !== undefined) {
       updateData.longitude = dto.longitude;
     }
+    if (dto.instagramLink !== undefined) {
+      updateData.instagramLink = dto.instagramLink;
+    }
+    if (dto.fbLink !== undefined) {
+      updateData.fbLink = dto.fbLink;
+    }
+    if (dto.youtubeLink !== undefined) {
+      updateData.youtubeLink = dto.youtubeLink;
+    }
+    if (dto.twitterLink !== undefined) {
+      updateData.twitterLink = dto.twitterLink;
+    }
 
     await this.adminConfigurationRepository.update(id, updateData);
 
@@ -3012,6 +3036,10 @@ export class AdminService {
         address: updated.address,
         latitude: updated.latitude ? Number(updated.latitude) : null,
         longitude: updated.longitude ? Number(updated.longitude) : null,
+        instagramLink: updated.instagramLink,
+        fbLink: updated.fbLink,
+        youtubeLink: updated.youtubeLink,
+        twitterLink: updated.twitterLink,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,
       },

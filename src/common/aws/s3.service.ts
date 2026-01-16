@@ -222,6 +222,7 @@ export class S3Service {
       'image/png',
       'image/gif',
       'image/webp',
+      'image/svg+xml',
       'video/mp4',
       'video/quicktime',
       'video/x-msvideo',
@@ -231,7 +232,7 @@ export class S3Service {
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        'Invalid file type. Only JPEG, PNG, GIF, WebP images and MP4, MOV, AVI, MKV, WebM videos are allowed',
+        'Invalid file type. Only JPEG, PNG, GIF, WebP, SVG images and MP4, MOV, AVI, MKV, WebM videos are allowed',
       );
     }
 
@@ -242,6 +243,7 @@ export class S3Service {
       '.png',
       '.gif',
       '.webp',
+      '.svg',
       '.mp4',
       '.mov',
       '.avi',

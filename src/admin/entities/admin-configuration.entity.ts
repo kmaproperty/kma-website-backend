@@ -50,5 +50,37 @@ export class AdminConfiguration extends BaseEntity {
     nullable: true,
   })
   longitude: number | null;
+
+  @Column({
+    name: 'instagram_link',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  instagramLink: string | null;
+
+  @Column({
+    name: 'fb_link',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  fbLink: string | null;
+
+  @Column({
+    name: 'youtube_link',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  youtubeLink: string | null;
+
+  @Column({
+    name: 'twitter_link',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  twitterLink: string | null;
 }
 
