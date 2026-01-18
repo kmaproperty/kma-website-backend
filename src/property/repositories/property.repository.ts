@@ -455,7 +455,7 @@ export class PropertyRepository {
       .leftJoinAndSelect('property.society', 'society')
       .leftJoinAndSelect('property.locality', 'locality')
       .leftJoinAndSelect('property.bhkType', 'bhkType')
-      .leftJoin('property.user', 'user')
+      .leftJoinAndSelect('property.user', 'user')
       .where('property.isDeleted = false')
       .andWhere('property.status = :status', { status: PropertyStatus.ACTIVE });
 
@@ -574,27 +574,34 @@ export class PropertyRepository {
     // Get total count
     const total = await qb.clone().getCount();
 
+    // Clone query builder for data fetching (same pattern as findOwnerListings)
+    const dataQb = qb.clone();
+
     // Apply sorting
     switch (sortBy) {
       case 'price':
-        qb.orderBy(
-          'COALESCE(property.price, property.monthlyRent, 0)',
-          sortOrder,
+        // Use raw SQL expression to avoid TypeORM parsing issues
+        // Add the COALESCE as a select expression first, then order by the alias
+        dataQb.addSelect(
+          'COALESCE(property.price, property.monthlyRent)',
+          'sort_price',
         );
+        dataQb.orderBy('sort_price', sortOrder, 'NULLS LAST');
+        dataQb.addOrderBy('property.createdAt', 'DESC');
         break;
       case 'updatedAt':
-        qb.addOrderBy('property.updatedAt', sortOrder);
+        dataQb.addOrderBy('property.updatedAt', sortOrder);
         break;
       case 'createdAt':
       default:
-        qb.addOrderBy('property.createdAt', sortOrder);
+        dataQb.addOrderBy('property.createdAt', sortOrder);
         break;
     }
 
     // Apply pagination
-    qb.skip((page - 1) * limit).take(limit);
+    dataQb.skip((page - 1) * limit).take(limit);
 
-    const items = await qb.getMany();
+    const items = await dataQb.getMany();
 
     return {
       items,

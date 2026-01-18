@@ -2312,17 +2312,31 @@ export class UserService {
           imageUrl,
           images: images,
           videos: videos,
+          imageCount: property.photos?.length || 0,
+          videoCount: property.videos?.length || 0,
           isReraRegistered: false, // Add RERA field to Property entity if needed
           constructionStatus: property.constructionStatus || null,
           category: property.category?.name || null,
+          listingType: property.listingType?.name || null,
           propertyType: property.propertyType?.name || null,
           bhkType: property.bhkType?.name || null,
+          plotArea: property.plotArea || null,
+          plotAreaUnit: property.plotAreaUnit || null,
+          facing: property.facing || null,
+          furnishType: property.furnishType || null,
           price: property.price || null,
           monthlyRent: property.monthlyRent || null,
           city: property.city?.name || null,
           society: property.society?.name || null,
           locality: property.locality?.name || null,
           units: units.length > 0 ? units : undefined,
+          owner: property.user
+            ? {
+                name: property.user.name,
+                profileImage: property.user.profileImage,
+                role: property.user.role,
+              }
+            : null,
         };
       },
     );

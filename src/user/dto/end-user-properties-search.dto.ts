@@ -318,6 +318,13 @@ export class EndUserPropertyListItemDto {
   category?: string | null;
 
   @ApiProperty({
+    description: 'Listing type (Sale/Rent)',
+    example: 'Sale',
+    required: false,
+  })
+  listingType?: string | null;
+
+  @ApiProperty({
     description: 'Property type',
     example: 'Apartment',
     required: false,
@@ -330,6 +337,49 @@ export class EndUserPropertyListItemDto {
     required: false,
   })
   bhkType?: string | null;
+
+  @ApiProperty({
+    description: 'Plot area',
+    example: 119,
+    required: false,
+  })
+  plotArea?: number | null;
+
+  @ApiProperty({
+    description: 'Plot area unit',
+    example: 'Sq.Yd.',
+    required: false,
+  })
+  plotAreaUnit?: string | null;
+
+  @ApiProperty({
+    description: 'Property facing/view direction',
+    example: 'Park View',
+    required: false,
+  })
+  facing?: string | null;
+
+  @ApiProperty({
+    description: 'Furnishing type',
+    example: 'Semi-Furnished',
+    enum: ['Furnished', 'Semi-Furnished', 'Unfurnished'],
+    required: false,
+  })
+  furnishType?: string | null;
+
+  @ApiProperty({
+    description: 'Number of images',
+    example: 4,
+    required: false,
+  })
+  imageCount?: number;
+
+  @ApiProperty({
+    description: 'Number of videos',
+    example: 2,
+    required: false,
+  })
+  videoCount?: number;
 
   @ApiProperty({
     description: 'Price (if available)',
@@ -372,6 +422,16 @@ export class EndUserPropertyListItemDto {
     required: false,
   })
   units?: EndUserPropertyUnitDto[];
+
+  @ApiProperty({
+    description: 'Property owner/agent information',
+    required: false,
+  })
+  owner?: {
+    name: string | null;
+    profileImage: string | null;
+    role: string;
+  } | null;
 }
 
 export class EndUserPropertiesSearchResponseDto {
