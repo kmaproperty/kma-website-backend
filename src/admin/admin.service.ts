@@ -1275,9 +1275,9 @@ export class AdminService {
   ) {
     const property = await this.ensurePropertyExists(propertyId);
 
-    // Calculate expiry date: 15 days from now
+    // Calculate expiry date: 60 days from now
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 15);
+    expiresAt.setDate(expiresAt.getDate() + 60);
 
     const now = new Date();
 
@@ -1500,11 +1500,11 @@ export class AdminService {
 
     if (dto.status !== undefined && !hasStep1Changes) {
       directUpdates.status = dto.status;
-      // If status is being set to 'active', set expiry date to 15 days from now and activatedAt
+      // If status is being set to 'active', set expiry date to 60 days from now and activatedAt
       // Note: Verification is a separate step, so we don't set isVerified here
       if (dto.status === PropertyStatus.ACTIVE) {
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 15);
+        expiresAt.setDate(expiresAt.getDate() + 60);
         directUpdates.expiresAt = expiresAt;
         directUpdates.activatedAt = new Date();
       }
