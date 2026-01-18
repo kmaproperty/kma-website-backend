@@ -24,6 +24,8 @@ import {
   EndUserCitiesQueryDto,
   EndUserPropertiesSearchQueryDto,
   EndUserPropertiesSearchResponseDto,
+  EndUserPropertiesCountQueryDto,
+  EndUserPropertiesCountResponseDto,
   EndUserTopPropertiesQueryDto,
   EndUserTopPropertiesResponseDto,
   EndUserTopCitiesResponseDto,
@@ -280,6 +282,23 @@ export class EndUserController {
     @Query() query: EndUserPropertiesSearchQueryDto,
   ): Promise<EndUserPropertiesSearchResponseDto> {
     return await this.userService.searchEndUserProperties(query);
+  }
+
+  @Get('properties/count')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Property Count',
+    description: 'Get count of properties matching the same filters as /properties endpoint. Returns only the count without pagination or sorting parameters.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property count retrieved successfully',
+    type: EndUserPropertiesCountResponseDto,
+  })
+  async getPropertiesCount(
+    @Query() query: EndUserPropertiesCountQueryDto,
+  ): Promise<EndUserPropertiesCountResponseDto> {
+    return await this.userService.getEndUserPropertiesCount(query);
   }
 
   @Get('top-properties')

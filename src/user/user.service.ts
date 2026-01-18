@@ -45,6 +45,8 @@ import {
   EndUserCitiesQueryDto,
   EndUserPropertiesSearchQueryDto,
   EndUserPropertiesSearchResponseDto,
+  EndUserPropertiesCountQueryDto,
+  EndUserPropertiesCountResponseDto,
   EndUserPropertyListItemDto,
   EndUserPropertyUnitDto,
   EndUserPropertyImageDto,
@@ -2334,6 +2336,56 @@ export class UserService {
       page,
       limit,
       totalPages,
+    };
+  }
+
+  /**
+   * Get count of properties matching filters (similar to searchEndUserProperties but only returns count)
+   */
+  async getEndUserPropertiesCount(
+    query: EndUserPropertiesCountQueryDto,
+  ): Promise<EndUserPropertiesCountResponseDto> {
+    const {
+      cityId,
+      search,
+      categoryIds,
+      propertyTypeIds,
+      bhkTypeIds,
+      furnishingTypes,
+      constructionStatuses,
+      minPrice,
+      maxPrice,
+      latitude,
+      longitude,
+      radius,
+      postedBy,
+    } = query;
+
+    const result = await this.propertyRepository.findEndUserProperties({
+      page: 1, // Use page 1 for count
+      limit: 1, // Use minimal limit since we only need count
+      sortBy: 'createdAt', // Default sort (not used in count, but required by repository)
+      sortOrder: 'DESC', // Default order (not used in count, but required by repository)
+      filters: {
+        cityId,
+        search,
+        categoryIds,
+        propertyTypeIds,
+        bhkTypeIds,
+        furnishingTypes,
+        constructionStatuses,
+        minPrice,
+        maxPrice,
+        latitude,
+        longitude,
+        radius,
+        postedBy,
+      },
+    });
+
+    return {
+      success: true,
+      count: result.total,
     };
   }
 

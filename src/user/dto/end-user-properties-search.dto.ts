@@ -421,3 +421,137 @@ export class EndUserTopPropertiesResponseDto {
   total: number;
 }
 
+export class EndUserPropertiesCountQueryDto {
+  @ApiPropertyOptional({
+    description: 'City ID to filter properties',
+    example: 'uuid-city-id',
+  })
+  @IsOptional()
+  @IsUUID()
+  cityId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search by property name, locality, or builder',
+    example: 'DLF Valley',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by property category IDs (comma separated) - Residential/Commercial',
+    example: 'uuid-category-1,uuid-category-2',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsUUID(4, { each: true })
+  categoryIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by property type IDs (comma separated) - Villa, Plot, Apartment, etc.',
+    example: 'uuid-property-type-1,uuid-property-type-2',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsUUID(4, { each: true })
+  propertyTypeIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by BHK type IDs (comma separated)',
+    example: 'uuid-bhk-1,uuid-bhk-2',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsUUID(4, { each: true })
+  bhkTypeIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by furnishing type (comma separated)',
+    example: 'Unfurnished,Fully Furnished',
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsString({ each: true })
+  furnishingTypes?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by construction status (comma separated) - ready_to_move,under_construction',
+    example: 'ready_to_move,under_construction',
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsString({ each: true })
+  constructionStatuses?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Minimum price',
+    example: 1000000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  minPrice?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum price',
+    example: 10000000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  maxPrice?: number;
+
+  @ApiPropertyOptional({
+    description: 'Latitude for location-based search (Near Me)',
+    example: 28.6139,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Longitude for location-based search (Near Me)',
+    example: 77.2090,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Radius in kilometers for location-based search',
+    example: 10,
+    default: 10,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  radius?: number = 10;
+
+  @ApiPropertyOptional({
+    description: 'Filter by posted by user role (comma separated) - OWNER, CHANNEL_PARTNER, or ALL to get all properties',
+    example: 'OWNER,CHANNEL_PARTNER',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsString({ each: true })
+  postedBy?: string[];
+}
+
+export class EndUserPropertiesCountResponseDto {
+  @ApiProperty({ description: 'Success status', example: true })
+  success: boolean;
+
+  @ApiProperty({ description: 'Total number of properties matching the filters', example: 150 })
+  count: number;
+}
+
