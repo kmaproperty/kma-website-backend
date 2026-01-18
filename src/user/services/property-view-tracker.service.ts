@@ -1,187 +1,205 @@
 import { Injectable } from '@nestjs/common';
-
-interface ViewRecord {
-  count: number;
-  lastReset: number;
-  viewedProperties: Set<string>; // Track unique properties viewed
-}
+import * as crypto from 'crypto';
+import { SessionRepository } from '../repositories/session.repository';
+import { SessionPropertyViewRepository } from '../repositories/session-property-view.repository';
+import { Session } from '../entities/session.entity';
 
 @Injectable()
 export class PropertyViewTrackerService {
   private readonly MAX_FREE_VIEWS = 3;
-  private readonly VIEW_RESET_HOURS = 24; // Reset views after 24 hours
-  private viewRecords: Map<string, ViewRecord> = new Map();
+
+  constructor(
+    private readonly sessionRepository: SessionRepository,
+    private readonly sessionPropertyViewRepository: SessionPropertyViewRepository,
+  ) {}
 
   /**
-   * Get unique identifier for unauthenticated user
-   * Uses IP address + User-Agent as identifier
+   * Generate a unique session ID from IP and User-Agent
+   * In production, this should ideally come from a cookie set by the frontend
    */
-  private getIdentifier(ip: string, userAgent?: string): string {
+  private generateSessionId(ip: string, userAgent?: string): string {
     const ua = userAgent || 'unknown';
-    return `${ip}:${ua}`;
+    const hash = crypto
+      .createHash('sha256')
+      .update(`${ip}:${ua}:${Date.now()}`)
+      .digest('hex');
+    return hash.substring(0, 32);
+  }
+
+  /**
+   * Get or create a session for unauthenticated user
+   */
+  private async getOrCreateSession(
+    sessionId: string | null,
+    ip: string,
+    userAgent?: string,
+  ): Promise<Session> {
+    // If sessionId is provided, try to find existing session
+    if (sessionId) {
+      const existing = await this.sessionRepository.findBySessionId(sessionId);
+      if (existing && !existing.userId) {
+        // Only return if not merged with a user
+        return existing;
+      }
+    }
+
+    // Create new session
+    const newSessionId = sessionId || this.generateSessionId(ip, userAgent);
+    const session = await this.sessionRepository.create({
+      sessionId: newSessionId,
+      ipAddress: ip,
+      userAgent: userAgent || null,
+      userId: null,
+      mergedAt: null,
+    });
+
+    return session;
   }
 
   /**
    * Check if user can view property details
-   * Returns { canView: boolean, remainingViews: number, requiresLogin: boolean }
+   * Returns { canView: boolean, remainingViews: number, requiresLogin: boolean, sessionId: string }
    */
-  canViewProperty(
+  async canViewProperty(
+    sessionId: string | null,
     ip: string,
     userAgent?: string,
     isAuthenticated: boolean = false,
-  ): {
+  ): Promise<{
     canView: boolean;
     remainingViews: number;
     requiresLogin: boolean;
-  } {
+    sessionId: string;
+  }> {
     // Authenticated users have unlimited views
     if (isAuthenticated) {
       return {
         canView: true,
         remainingViews: -1, // -1 indicates unlimited
         requiresLogin: false,
+        sessionId: sessionId || '',
       };
     }
 
-    const identifier = this.getIdentifier(ip, userAgent);
-    const record = this.viewRecords.get(identifier);
+    // Get or create session
+    const session = await this.getOrCreateSession(sessionId, ip, userAgent);
 
-    // If no record exists, user can view (first view)
-    if (!record) {
-      return {
-        canView: true,
-        remainingViews: this.MAX_FREE_VIEWS - 1,
-        requiresLogin: false,
-      };
-    }
-
-    // Check if record has expired (24 hours)
-    const now = Date.now();
-    const hoursSinceReset =
-      (now - record.lastReset) / (1000 * 60 * 60);
-    
-    if (hoursSinceReset >= this.VIEW_RESET_HOURS) {
-      // Reset the record
-      this.viewRecords.delete(identifier);
-      return {
-        canView: true,
-        remainingViews: this.MAX_FREE_VIEWS - 1,
-        requiresLogin: false,
-      };
-    }
+    // Count unique properties viewed in this session
+    const uniquePropertyCount =
+      await this.sessionPropertyViewRepository.getUniquePropertyCount(
+        session.id,
+      );
 
     // Check if user has exceeded limit
-    if (record.count >= this.MAX_FREE_VIEWS) {
+    if (uniquePropertyCount >= this.MAX_FREE_VIEWS) {
       return {
         canView: false,
         remainingViews: 0,
         requiresLogin: true,
+        sessionId: session.sessionId,
       };
     }
 
     // User can view, return remaining views
     return {
       canView: true,
-      remainingViews: this.MAX_FREE_VIEWS - record.count - 1,
+      remainingViews: this.MAX_FREE_VIEWS - uniquePropertyCount - 1,
       requiresLogin: false,
+      sessionId: session.sessionId,
     };
   }
 
   /**
    * Record a property view for unauthenticated user
+   * Returns the sessionId that should be stored (e.g., in cookie)
    */
-  recordView(
+  async recordView(
+    sessionId: string | null,
     ip: string,
     userAgent: string | undefined,
     propertyId: string,
     isAuthenticated: boolean = false,
-  ): void {
+  ): Promise<string> {
     // Don't track views for authenticated users
     if (isAuthenticated) {
-      return;
+      return sessionId || '';
     }
 
-    const identifier = this.getIdentifier(ip, userAgent);
-    const record = this.viewRecords.get(identifier);
+    // Get or create session
+    const session = await this.getOrCreateSession(sessionId, ip, userAgent);
 
-    if (!record) {
-      // Create new record
-      this.viewRecords.set(identifier, {
-        count: 1,
-        lastReset: Date.now(),
-        viewedProperties: new Set([propertyId]),
-      });
-    } else {
-      // Check if this property was already viewed
-      if (!record.viewedProperties.has(propertyId)) {
-        record.count += 1;
-        record.viewedProperties.add(propertyId);
-      }
-      // Update last reset time if needed (for tracking purposes)
-      record.lastReset = Date.now();
-    }
+    // Increment view count (or create new view record)
+    await this.sessionPropertyViewRepository.incrementViewCount(
+      session.id,
+      propertyId,
+    );
 
-    // Clean up old records periodically (optional - to prevent memory leak)
-    this.cleanupOldRecords();
+    return session.sessionId;
   }
 
   /**
    * Get remaining views for a user
    */
-  getRemainingViews(
+  async getRemainingViews(
+    sessionId: string | null,
     ip: string,
     userAgent?: string,
     isAuthenticated: boolean = false,
-  ): number {
+  ): Promise<number> {
     if (isAuthenticated) {
       return -1; // Unlimited
     }
 
-    const identifier = this.getIdentifier(ip, userAgent);
-    const record = this.viewRecords.get(identifier);
-
-    if (!record) {
+    if (!sessionId) {
       return this.MAX_FREE_VIEWS;
     }
 
-    // Check if record has expired
-    const now = Date.now();
-    const hoursSinceReset =
-      (now - record.lastReset) / (1000 * 60 * 60);
-    
-    if (hoursSinceReset >= this.VIEW_RESET_HOURS) {
+    const session = await this.sessionRepository.findBySessionId(sessionId);
+    if (!session || session.userId) {
+      // Session not found or already merged
       return this.MAX_FREE_VIEWS;
     }
 
-    return Math.max(0, this.MAX_FREE_VIEWS - record.count);
+    const uniquePropertyCount =
+      await this.sessionPropertyViewRepository.getUniquePropertyCount(
+        session.id,
+      );
+
+    return Math.max(0, this.MAX_FREE_VIEWS - uniquePropertyCount);
   }
 
   /**
-   * Clean up old records (older than 24 hours)
+   * Merge session views with user account when user logs in
+   * This should be called after successful login/signup
    */
-  private cleanupOldRecords(): void {
-    const now = Date.now();
-    const recordsToDelete: string[] = [];
+  async mergeSessionWithUser(
+    sessionId: string,
+    userId: string,
+  ): Promise<boolean> {
+    try {
+      const session = await this.sessionRepository.mergeSession(
+        sessionId,
+        userId,
+      );
+      return !!session;
+    } catch (error) {
+      // Session might not exist or already merged - that's okay
+      return false;
+    }
+  }
 
-    for (const [identifier, record] of this.viewRecords.entries()) {
-      const hoursSinceReset =
-        (now - record.lastReset) / (1000 * 60 * 60);
-      if (hoursSinceReset >= this.VIEW_RESET_HOURS) {
-        recordsToDelete.push(identifier);
-      }
+  /**
+   * Get all property IDs viewed in a session (for merging purposes)
+   */
+  async getSessionPropertyViews(sessionId: string): Promise<string[]> {
+    const session = await this.sessionRepository.findBySessionId(sessionId);
+    if (!session || session.userId) {
+      return [];
     }
 
-    recordsToDelete.forEach((identifier) => {
-      this.viewRecords.delete(identifier);
-    });
-  }
-
-  /**
-   * Reset views for a user (for testing or admin purposes)
-   */
-  resetViews(ip: string, userAgent?: string): void {
-    const identifier = this.getIdentifier(ip, userAgent);
-    this.viewRecords.delete(identifier);
+    const views = await this.sessionPropertyViewRepository.findBySessionId(
+      session.id,
+    );
+    return views.map((view) => view.propertyId);
   }
 }
-

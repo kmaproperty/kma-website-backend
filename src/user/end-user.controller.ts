@@ -401,7 +401,7 @@ export class EndUserController {
   @Public()
   @ApiOperation({
     summary: 'Get Property Details',
-    description: 'Get detailed information about a specific property. Unauthenticated users can view up to 3 properties, then login is required. Authenticated users have unlimited access.',
+    description: 'Get detailed information about a specific property. Unauthenticated users can view up to 3 unique properties, then login is required. Authenticated users have unlimited access. Returns sessionId in response for non-logged-in users to store and send in subsequent requests.',
   })
   @ApiParam({
     name: 'id',
@@ -412,6 +412,11 @@ export class EndUserController {
   @ApiHeader({
     name: 'Authorization',
     description: 'Bearer token (optional - for authenticated users)',
+    required: false,
+  })
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description: 'Session ID from previous request (optional - for tracking non-logged-in user views)',
     required: false,
   })
   @ApiResponse({
@@ -435,6 +440,7 @@ export class EndUserController {
     @Param('id') propertyId: string,
     @Req() req: Request,
     @Headers('user-agent') userAgent?: string,
+    @Headers('x-session-id') sessionId?: string,
   ): Promise<EndUserPropertyDetailsResponseDto> {
     // Check if user is authenticated
     const isAuthenticated = !!(req as any).user?.id;
@@ -446,8 +452,9 @@ export class EndUserController {
       req.socket?.remoteAddress ||
       'unknown';
 
-    // Check if user can view property
-    const viewCheck = this.propertyViewTracker.canViewProperty(
+    // Check if user can view property (async method now)
+    const viewCheck = await this.propertyViewTracker.canViewProperty(
+      sessionId || null,
       clientIp,
       userAgent,
       isAuthenticated,
@@ -465,18 +472,20 @@ export class EndUserController {
     const propertyDetails =
       await this.userService.getEndUserPropertyDetails(propertyId);
 
-    // Record the view for unauthenticated users
-    this.propertyViewTracker.recordView(
+    // Record the view for unauthenticated users (async method now)
+    const newSessionId = await this.propertyViewTracker.recordView(
+      sessionId || null,
       clientIp,
       userAgent,
       propertyId,
       isAuthenticated,
     );
 
-    // Add remaining views info to response
+    // Add remaining views info and sessionId to response
     return {
       ...propertyDetails,
       remainingViews: viewCheck.remainingViews,
+      sessionId: isAuthenticated ? undefined : newSessionId, // Only return sessionId for non-authenticated users
     };
   }
 

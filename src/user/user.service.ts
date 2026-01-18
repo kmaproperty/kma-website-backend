@@ -137,6 +137,7 @@ import { ChannelPartnerAgreementRepository } from './repositories/channel-partne
 import { AgreementStatus } from './entities/channel-partner-agreement.entity';
 import { BankDetailsRepository } from './repositories/bank-details.repository';
 import { EncryptionService } from './services/encryption.service';
+import { PropertyViewTrackerService } from './services/property-view-tracker.service';
 import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
 import { AboutUsRepository } from '../admin/repositories/about-us.repository';
@@ -172,6 +173,7 @@ export class UserService {
     private readonly aboutUsRepository: AboutUsRepository,
     private readonly adminConfigurationRepository: AdminConfigurationRepository,
     private readonly favoritePropertyRepository: FavoritePropertyRepository,
+    private readonly propertyViewTracker: PropertyViewTrackerService,
   ) {}
 
   /**
@@ -1074,6 +1076,14 @@ export class UserService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
+      // Merge session with user account if sessionId is provided
+      if (verifyOtpDto.sessionId) {
+        await this.propertyViewTracker.mergeSessionWithUser(
+          verifyOtpDto.sessionId,
+          savedUser.id,
+        );
+      }
+
       return {
         success: true,
         message: 'Account created successfully',
@@ -1240,6 +1250,14 @@ export class UserService {
 
       // Commit transaction
       await queryRunner.commitTransaction();
+
+      // Merge session with user account if sessionId is provided
+      if (verifyOtpDto.sessionId) {
+        await this.propertyViewTracker.mergeSessionWithUser(
+          verifyOtpDto.sessionId,
+          updatedUser.id,
+        );
+      }
 
       return {
         success: true,

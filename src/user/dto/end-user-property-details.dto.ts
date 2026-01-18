@@ -130,6 +130,12 @@ export class EndUserPropertyDetailsResponseDto {
   })
   remainingViews?: number;
 
+  @ApiPropertyOptional({
+    description: 'Session ID for non-logged-in users (store this and send in X-Session-Id header for subsequent requests)',
+    example: 'abc123def456',
+  })
+  sessionId?: string;
+
   @ApiProperty({ description: 'Property ID', example: 'uuid-string' })
   id: string;
 

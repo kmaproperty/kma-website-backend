@@ -12,6 +12,8 @@ import { BankDetails } from './entities/bank-details.entity';
 import { ContactUsKmaQuery } from './entities/contact-us-kma-query.entity';
 import { KmaRatingReview } from './entities/kma-rating-review.entity';
 import { FavoriteProperty } from './entities/favorite-property.entity';
+import { Session } from './entities/session.entity';
+import { SessionPropertyView } from './entities/session-property-view.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
@@ -24,6 +26,8 @@ import { UserRoleHistoryRepository } from './repositories/user-role-history.repo
 import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
 import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
+import { SessionRepository } from './repositories/session.repository';
+import { SessionPropertyViewRepository } from './repositories/session-property-view.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { DocuSignService } from './services/docusign.service';
@@ -38,7 +42,7 @@ import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { AdminModule } from '../admin/admin.module';
 import { PropertyModule } from '../property/property.module';
 
-const entities = [User, Otp, ChannelPartnerCode, ChannelPartnerAgreement, Lead, UserRoleHistory, Property, BankDetails, ContactUsKmaQuery, KmaRatingReview, FavoriteProperty];
+const entities = [User, Otp, ChannelPartnerCode, ChannelPartnerAgreement, Lead, UserRoleHistory, Property, BankDetails, ContactUsKmaQuery, KmaRatingReview, FavoriteProperty, Session, SessionPropertyView];
 const repositories = [
   UserRepository,
   OtpRepository,
@@ -51,6 +55,8 @@ const repositories = [
   ContactUsKmaQueryRepository,
   KmaRatingReviewRepository,
   FavoritePropertyRepository,
+  SessionRepository,
+  SessionPropertyViewRepository,
 ];
 
 @Module({
