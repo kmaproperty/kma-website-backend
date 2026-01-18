@@ -432,6 +432,13 @@ export class EndUserPropertyListItemDto {
     profileImage: string | null;
     role: string;
   } | null;
+
+  @ApiProperty({
+    description: 'Whether the property is in the user\'s favorites (true if logged in user has favorited it, false otherwise)',
+    example: false,
+    required: false,
+  })
+  isFavorite?: boolean;
 }
 
 export class EndUserPropertiesSearchResponseDto {

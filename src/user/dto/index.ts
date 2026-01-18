@@ -30,3 +30,4 @@ export * from './home-page-reviews.dto';
 export * from './home-page.dto';
 export * from './property-type-explore.dto';
 export * from './end-user-configuration.dto';
+export * from './favorite-property.dto';

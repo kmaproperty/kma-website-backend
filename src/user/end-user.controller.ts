@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Put, Req, Query, Param, BadRequestException, UnauthorizedException, Headers, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Put, Delete, Req, Query, Param, BadRequestException, UnauthorizedException, Headers, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiHeader } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { PropertyViewTrackerService } from './services/property-view-tracker.service';
@@ -45,6 +45,13 @@ import {
   PropertyTypeExploreResponseDto,
   PropertyTypeExploreQueryDto,
   EndUserConfigurationResponseDto,
+  AddFavoritePropertyDto,
+  RemoveFavoritePropertyDto,
+  FavoritePropertyResponseDto,
+  FavoritePropertyListQueryDto,
+  FavoritePropertyListResponseDto,
+  CheckFavoritePropertyQueryDto,
+  CheckFavoritePropertyResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -269,9 +276,15 @@ export class EndUserController {
 
   @Get('properties')
   @Public()
+  @ApiBearerAuth('access-token')
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - if provided, includes isFavorite status for each property)',
+    required: false,
+  })
   @ApiOperation({
     summary: 'Search Properties',
-    description: 'Search and filter properties with various filters including city, search, category, property type, BHK, furnishing, construction status, price range, location-based search, and posted by (owner/channel partner).',
+    description: 'Search and filter properties with various filters including city, search, category, property type, BHK, furnishing, construction status, price range, location-based search, and posted by (owner/channel partner). If user is logged in, includes isFavorite status for each property.',
   })
   @ApiResponse({
     status: 200,
@@ -280,8 +293,11 @@ export class EndUserController {
   })
   async searchProperties(
     @Query() query: EndUserPropertiesSearchQueryDto,
+    @Req() req: Request,
   ): Promise<EndUserPropertiesSearchResponseDto> {
-    return await this.userService.searchEndUserProperties(query);
+    // Pass userId if user is logged in (even though endpoint is public, JWT may be present)
+    const userId = req.user?.id;
+    return await this.userService.searchEndUserProperties(query, userId);
   }
 
   @Get('properties/count')
@@ -623,6 +639,98 @@ export class EndUserController {
   })
   async getAdminConfigurations(): Promise<EndUserConfigurationResponseDto> {
     return await this.userService.getAdminConfigurations();
+  }
+
+  @Post('favorites')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Add Property to Favorites',
+    description: 'Add a property to the logged-in user\'s favorites list. The property must be active and not already favorited.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property added to favorites successfully',
+    type: FavoritePropertyResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Property not found, not available, or already in favorites',
+  })
+  async addFavoriteProperty(
+    @Body() dto: AddFavoritePropertyDto,
+    @Req() req: Request,
+  ): Promise<FavoritePropertyResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.addFavoriteProperty(req.user.id, dto);
+  }
+
+  @Delete('favorites')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Remove Property from Favorites',
+    description: 'Remove a property from the logged-in user\'s favorites list.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property removed from favorites successfully',
+    type: FavoritePropertyResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Property is not in favorites',
+  })
+  async removeFavoriteProperty(
+    @Body() dto: RemoveFavoritePropertyDto,
+    @Req() req: Request,
+  ): Promise<FavoritePropertyResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.removeFavoriteProperty(req.user.id, dto);
+  }
+
+  @Get('favorites')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Get Favorite Properties',
+    description: 'Get paginated list of properties favorited by the logged-in user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Favorite properties retrieved successfully',
+    type: FavoritePropertyListResponseDto,
+  })
+  async getFavoriteProperties(
+    @Query() query: FavoritePropertyListQueryDto,
+    @Req() req: Request,
+  ): Promise<FavoritePropertyListResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getFavoriteProperties(req.user.id, query);
+  }
+
+  @Get('favorites/check')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Check if Property is Favorited',
+    description: 'Check if a specific property is in the logged-in user\'s favorites list.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Favorite status retrieved successfully',
+    type: CheckFavoritePropertyResponseDto,
+  })
+  async checkFavoriteProperty(
+    @Query() query: CheckFavoritePropertyQueryDto,
+    @Req() req: Request,
+  ): Promise<CheckFavoritePropertyResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.checkFavoriteProperty(req.user.id, query.propertyId);
   }
 }
 

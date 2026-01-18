@@ -110,6 +110,13 @@ import {
   PropertyTypeExploreItemDto,
   PropertyTypeExploreQueryDto,
   EndUserConfigurationResponseDto,
+  AddFavoritePropertyDto,
+  RemoveFavoritePropertyDto,
+  FavoritePropertyResponseDto,
+  FavoritePropertyListQueryDto,
+  FavoritePropertyListResponseDto,
+  CheckFavoritePropertyQueryDto,
+  CheckFavoritePropertyResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { Property } from '../property/entities/property.entity';
@@ -134,6 +141,7 @@ import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query
 import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
 import { AboutUsRepository } from '../admin/repositories/about-us.repository';
 import { AdminConfigurationRepository } from '../admin/repositories/admin-configuration.repository';
+import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
 
 @Injectable()
 export class UserService {
@@ -163,6 +171,7 @@ export class UserService {
     private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
     private readonly aboutUsRepository: AboutUsRepository,
     private readonly adminConfigurationRepository: AdminConfigurationRepository,
+    private readonly favoritePropertyRepository: FavoritePropertyRepository,
   ) {}
 
   /**
@@ -2186,9 +2195,12 @@ export class UserService {
   /**
    * Search properties for end users
    * Returns paginated list of active properties with filters
+   * @param query - Search query parameters
+   * @param userId - Optional user ID to check favorite status (if logged in)
    */
   async searchEndUserProperties(
     query: EndUserPropertiesSearchQueryDto,
+    userId?: string,
   ): Promise<EndUserPropertiesSearchResponseDto> {
     const {
       page,
@@ -2231,6 +2243,16 @@ export class UserService {
         postedBy,
       },
     });
+
+    // Get favorite property IDs if user is logged in
+    let favoritePropertyIds: Set<string> = new Set();
+    if (userId) {
+      const favoriteProperties = await this.favoritePropertyRepository
+        .findByUserId(userId, 1, 10000); // Get all favorites (large limit to get all)
+      favoritePropertyIds = new Set(
+        favoriteProperties.items.map((fp) => fp.propertyId),
+      );
+    }
 
     // Map properties to response DTO
     const properties: EndUserPropertyListItemDto[] = result.items.map(
@@ -2337,6 +2359,7 @@ export class UserService {
                 role: property.user.role,
               }
             : null,
+          isFavorite: userId ? favoritePropertyIds.has(property.id) : false,
         };
       },
     );
@@ -3897,6 +3920,230 @@ export class UserService {
         createdAt: configuration.createdAt,
         updatedAt: configuration.updatedAt,
       },
+    };
+  }
+
+  /**
+   * Add property to favorites
+   */
+  async addFavoriteProperty(
+    userId: string,
+    dto: AddFavoritePropertyDto,
+  ): Promise<FavoritePropertyResponseDto> {
+    const { propertyId } = dto;
+
+    // Check if property exists and is active
+    const property = await this.propertyRepository.findById(propertyId);
+    if (!property) {
+      throw new BadRequestException('Property not found');
+    }
+
+    if (property.status !== PropertyStatus.ACTIVE || property.isDeleted) {
+      throw new BadRequestException('Property is not available');
+    }
+
+    // Check if already favorited
+    const existing = await this.favoritePropertyRepository.findByUserAndProperty(
+      userId,
+      propertyId,
+    );
+    if (existing) {
+      throw new BadRequestException('Property is already in favorites');
+    }
+
+    const favorite = await this.favoritePropertyRepository.create(
+      userId,
+      propertyId,
+    );
+
+    return {
+      success: true,
+      message: 'Property added to favorites successfully',
+      favoriteId: favorite.id,
+    };
+  }
+
+  /**
+   * Remove property from favorites
+   */
+  async removeFavoriteProperty(
+    userId: string,
+    dto: RemoveFavoritePropertyDto,
+  ): Promise<FavoritePropertyResponseDto> {
+    const { propertyId } = dto;
+
+    const deleted = await this.favoritePropertyRepository.delete(
+      userId,
+      propertyId,
+    );
+
+    if (!deleted) {
+      throw new BadRequestException('Property is not in favorites');
+    }
+
+    return {
+      success: true,
+      message: 'Property removed from favorites successfully',
+    };
+  }
+
+  /**
+   * Get user's favorite properties
+   */
+  async getFavoriteProperties(
+    userId: string,
+    query: FavoritePropertyListQueryDto,
+  ): Promise<FavoritePropertyListResponseDto> {
+    const { page, limit } = query;
+
+    const result = await this.favoritePropertyRepository.findByUserId(
+      userId,
+      page,
+      limit,
+    );
+
+    // Map favorite properties to response DTO (reuse the same mapping logic as searchEndUserProperties)
+    const properties: EndUserPropertyListItemDto[] = result.items.map(
+      (favorite) => {
+        const property = favorite.property;
+
+        // Get primary image (cover image or first image) and all images
+        let imageUrl: string | null = null;
+        let images: EndUserPropertyImageDto[] | undefined = undefined;
+        if (property.photos && property.photos.length > 0) {
+          const coverImage = property.photos.find((p) => p.isCoverImage);
+          const firstPhoto = property.photos[0];
+          const selectedPhoto = coverImage || firstPhoto;
+          imageUrl = selectedPhoto.fileKey || null;
+
+          // Map all images
+          images = property.photos.map((photo) => ({
+            fileKey: photo.fileKey,
+            view: photo.view,
+            isCoverImage: photo.isCoverImage || false,
+          }));
+        }
+
+        // Map all videos
+        let videos: EndUserPropertyVideoDto[] | undefined = undefined;
+        if (property.videos && property.videos.length > 0) {
+          videos = property.videos.map((video) => ({
+            fileKey: video.fileKey,
+            format: video.format,
+          }));
+        }
+
+        // Build address
+        const addressParts: string[] = [];
+        if (property.society?.name) {
+          addressParts.push(property.society.name);
+        }
+        if (property.locality?.name) {
+          addressParts.push(property.locality.name);
+        }
+        if (property.city?.name) {
+          addressParts.push(property.city.name);
+        }
+        const address = addressParts.join(', ') || 'Address not available';
+
+        // Build property name (use society name or property description)
+        const propertyName =
+          property.society?.name ||
+          property.propertyDescription?.split('.')[0] ||
+          'Property';
+
+        // Build units array
+        const units: EndUserPropertyUnitDto[] = [];
+        if (property.bhkType?.name) {
+          // Try to get builtUpAreaMetadata from relations if available
+          const builtUpAreaMetadata = property.builtUpAreaMetadata || 
+            (property as any).builtUpAreaMetadata;
+          
+          if (builtUpAreaMetadata) {
+            const superBuiltUpArea = builtUpAreaMetadata.superBuiltUpArea
+              ? `${builtUpAreaMetadata.superBuiltUpArea} Sq. Ft.`
+              : builtUpAreaMetadata.carpetArea
+                ? `${builtUpAreaMetadata.carpetArea} Sq. Ft.`
+                : 'Size not available';
+            const price =
+              property.price != null
+                ? `₹ ${property.price.toLocaleString('en-IN')}`
+                : property.monthlyRent != null
+                  ? `₹ ${property.monthlyRent.toLocaleString('en-IN')}/month`
+                  : 'Price On Request';
+
+            units.push({
+              unit: property.bhkType.name,
+              size: `${superBuiltUpArea} (Saleable)`,
+              price,
+            });
+          }
+        }
+
+        return {
+          id: property.id,
+          propertyName,
+          address,
+          description: property.propertyDescription || undefined,
+          imageUrl,
+          images: images,
+          videos: videos,
+          imageCount: property.photos?.length || 0,
+          videoCount: property.videos?.length || 0,
+          isReraRegistered: false,
+          constructionStatus: property.constructionStatus || null,
+          category: property.category?.name || null,
+          listingType: property.listingType?.name || null,
+          propertyType: property.propertyType?.name || null,
+          bhkType: property.bhkType?.name || null,
+          plotArea: property.plotArea || null,
+          plotAreaUnit: property.plotAreaUnit || null,
+          facing: property.facing || null,
+          furnishType: property.furnishType || null,
+          price: property.price || null,
+          monthlyRent: property.monthlyRent || null,
+          city: property.city?.name || null,
+          society: property.society?.name || null,
+          locality: property.locality?.name || null,
+          units: units.length > 0 ? units : undefined,
+          owner: property.user
+            ? {
+                name: property.user.name,
+                profileImage: property.user.profileImage,
+                role: property.user.role,
+              }
+            : null,
+        };
+      },
+    );
+
+    const totalPages = Math.ceil(result.total / limit);
+
+    return {
+      success: true,
+      properties,
+      total: result.total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  /**
+   * Check if property is favorited by user
+   */
+  async checkFavoriteProperty(
+    userId: string,
+    propertyId: string,
+  ): Promise<CheckFavoritePropertyResponseDto> {
+    const isFavorite = await this.favoritePropertyRepository.isFavorite(
+      userId,
+      propertyId,
+    );
+
+    return {
+      success: true,
+      isFavorite,
     };
   }
 }
