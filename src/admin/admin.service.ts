@@ -2923,6 +2923,7 @@ export class AdminService {
         mobileAppAvailable: configuration.mobileAppAvailable,
         description: configuration.description,
         phoneNumber: configuration.phoneNumber,
+        email: configuration.email,
         address: configuration.address,
         latitude: configuration.latitude ? Number(configuration.latitude) : null,
         longitude: configuration.longitude ? Number(configuration.longitude) : null,
@@ -2949,6 +2950,7 @@ export class AdminService {
       mobileAppAvailable: dto.mobileAppAvailable,
       description: dto.description || null,
       phoneNumber: dto.phoneNumber || null,
+      email: dto.email || null,
       address: dto.address || null,
       latitude: dto.latitude || null,
       longitude: dto.longitude || null,
@@ -2965,6 +2967,7 @@ export class AdminService {
         mobileAppAvailable: configuration.mobileAppAvailable,
         description: configuration.description,
         phoneNumber: configuration.phoneNumber,
+        email: configuration.email,
         address: configuration.address,
         latitude: configuration.latitude ? Number(configuration.latitude) : null,
         longitude: configuration.longitude ? Number(configuration.longitude) : null,
@@ -2996,6 +2999,9 @@ export class AdminService {
     }
     if (dto.phoneNumber !== undefined) {
       updateData.phoneNumber = dto.phoneNumber;
+    }
+    if (dto.email !== undefined) {
+      updateData.email = dto.email;
     }
     if (dto.address !== undefined) {
       updateData.address = dto.address;
@@ -3033,6 +3039,7 @@ export class AdminService {
         mobileAppAvailable: updated.mobileAppAvailable,
         description: updated.description,
         phoneNumber: updated.phoneNumber,
+        email: updated.email,
         address: updated.address,
         latitude: updated.latitude ? Number(updated.latitude) : null,
         longitude: updated.longitude ? Number(updated.longitude) : null,

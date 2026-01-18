@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsBoolean, IsNumber, IsPhoneNumber, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsBoolean, IsNumber, IsPhoneNumber, IsEmail, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AdminConfigurationResponseDto {
@@ -25,6 +25,13 @@ export class AdminConfigurationResponseDto {
     nullable: true,
   })
   phoneNumber: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Email address',
+    example: 'contact@example.com',
+    nullable: true,
+  })
+  email: string | null;
 
   @ApiPropertyOptional({
     description: 'Address',
@@ -107,6 +114,16 @@ export class AdminCreateConfigurationDto {
   @IsString()
   @MaxLength(20)
   phoneNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'Email address',
+    example: 'contact@example.com',
+  })
+  @IsOptional()
+  @IsString()
+  @IsEmail()
+  @MaxLength(255)
+  email?: string;
 
   @ApiPropertyOptional({
     description: 'Address',
@@ -196,6 +213,16 @@ export class AdminUpdateConfigurationDto {
   @IsString()
   @MaxLength(20)
   phoneNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'Email address',
+    example: 'contact@example.com',
+  })
+  @IsOptional()
+  @IsString()
+  @IsEmail()
+  @MaxLength(255)
+  email?: string;
 
   @ApiPropertyOptional({
     description: 'Address',

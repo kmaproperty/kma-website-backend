@@ -27,6 +27,14 @@ export class AdminConfiguration extends BaseEntity {
   phoneNumber: string | null;
 
   @Column({
+    name: 'email',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  email: string | null;
+
+  @Column({
     name: 'address',
     type: 'text',
     nullable: true,

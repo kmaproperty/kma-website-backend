@@ -3820,6 +3820,7 @@ export class UserService {
         mobileAppAvailable: configuration.mobileAppAvailable,
         description: configuration.description,
         phoneNumber: configuration.phoneNumber,
+        email: configuration.email,
         address: configuration.address,
         latitude: configuration.latitude ? Number(configuration.latitude) : null,
         longitude: configuration.longitude ? Number(configuration.longitude) : null,
