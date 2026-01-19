@@ -32,6 +32,7 @@ import { PropertyRejectionHistory } from './entities/property-rejection-history.
 import { PropertyVerificationRequest } from './entities/property-verification-request.entity';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
+import { OpenAIService } from './services/openai.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminModule } from '../admin/admin.module';
 import { Admin } from '../admin/entities/admin.entity';
@@ -88,6 +89,7 @@ import { PropertyVerificationRequestRepository } from './repositories/property-v
     PropertyVerificationRequestRepository,
     MasterDataSeederService,
     GooglePlacesService,
+    OpenAIService,
     JwtAuthGuard,
   ],
   exports: [

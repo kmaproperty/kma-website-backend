@@ -135,4 +135,11 @@ export class ConfigService implements TypeOrmOptionsFactory {
   public getGoogleMapsApiKey(): string {
     return this.nestConfigService.get<string>('GOOGLE_MAPS_API_KEY') || '';
   }
+
+  /**
+   * Get OpenAI API key
+   */
+  public getOpenAIApiKey(): string {
+    return this.nestConfigService.get<string>('OPENAI_API_KEY') || '';
+  }
 }

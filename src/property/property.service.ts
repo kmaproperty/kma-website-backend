@@ -18,6 +18,7 @@ import { PropertyRejectionHistoryRepository } from './repositories/property-reje
 import { PropertyVerificationRequestRepository } from './repositories/property-verification-request.repository';
 import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
+import { OpenAIService } from './services/openai.service';
 import { UserRepository } from '../user/repositories/user.repository';
 import { UserService } from '../user/user.service';
 import { UserRole } from '../user/enum/user-role.enum';
@@ -38,6 +39,10 @@ import {
   SubmitPropertyVerificationMediaDto,
   SubmitPropertyVerificationMediaResponseDto,
 } from './dto/property-verification.dto';
+import {
+  GeneratePropertyDescriptionDto,
+  GeneratePropertyDescriptionResponseDto,
+} from './dto/generate-property-description.dto';
 import { Property } from './entities/property.entity';
 import { PropertyVerificationRequest, PropertyVerificationStatus } from './entities/property-verification-request.entity';
 import { PropertyStatus, DeactivationReason, VerificationStatus } from './enum/property-status.enum';
@@ -74,6 +79,7 @@ export class PropertyService {
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
     private readonly masterDataSeederService: MasterDataSeederService,
     private readonly googlePlacesService: GooglePlacesService,
+    private readonly openAIService: OpenAIService,
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => UserRepository))
     private readonly userRepository: UserRepository,
@@ -3184,5 +3190,126 @@ export class PropertyService {
       message: 'Verification media submitted successfully. Waiting for admin approval.',
       verificationRequestId: verificationRequest.id,
     };
+  }
+
+  /**
+   * Generate property description using ChatGPT API based on all fields from steps 1-3
+   */
+  async generatePropertyDescription(
+    dto: GeneratePropertyDescriptionDto,
+    userId: string,
+  ): Promise<GeneratePropertyDescriptionResponseDto> {
+    // Load property with all relations
+    const property = await this.propertyRepository.findByIdWithRelations(
+      dto.propertyId,
+    );
+
+    if (!property) {
+      throw new BadRequestException('Property not found');
+    }
+
+    // Verify ownership
+    if (property.userId !== userId) {
+      throw new BadRequestException(
+        'You can only generate descriptions for your own properties',
+      );
+    }
+
+    // Prepare property data for ChatGPT
+    const propertyData: Record<string, any> = {
+      bhkType: property.bhkType?.name || null,
+      propertyType: property.propertyType?.name || null,
+      furnishType: property.furnishType || null,
+      society: property.society?.name || null,
+      locality: property.locality?.name || null,
+      city: property.city?.name || null,
+      superBuiltUpArea: property.builtUpAreaMetadata?.superBuiltUpArea || null,
+      carpetArea: property.builtUpAreaMetadata?.carpetArea || null,
+      bedrooms: property.builtUpAreaMetadata?.noOfBedrooms || null,
+      bathrooms: property.builtUpAreaMetadata?.noOfBathrooms || null,
+      balconies: property.builtUpAreaMetadata?.balconies || null,
+      floorNumber: property.floorNumber,
+      totalFloors: property.totalFloors,
+      flatNumber: property.flatNumber || null,
+      towerBlock: property.towerBlock || null,
+      additionalRooms: property.additionalRooms || null,
+      reservedParkingCovered: property.reservedParkingCovered || null,
+      reservedParkingOpen: property.reservedParkingOpen || null,
+      powerBackup: property.powerBackup || null,
+      minNumberOfSeats: property.minNumberOfSeats,
+      maxNumberOfSeats: property.maxNumberOfSeats,
+      numberOfCabins: property.numberOfCabins || null,
+      numberOfMeetingRooms: property.numberOfMeetingRooms || null,
+      conferenceRoom: property.conferenceRoom || null,
+      receptionArea: property.receptionArea || null,
+      furnishingsCounts: property.furnishingsCounts || null,
+      amenities: property.amenities || null,
+      ageOfProperty: property.ageOfProperty,
+      constructionStatus: property.constructionStatus || null,
+      facing: property.facing || null,
+      transactionType: property.transactionType || null,
+      monthlyRent: property.monthlyRent || null,
+      price: property.price || null,
+      possessionStatus: property.possessionStatus || null,
+      possessionDate: property.possessionDate
+        ? new Date(property.possessionDate).toLocaleDateString('en-IN', {
+            month: 'long',
+            year: 'numeric',
+          })
+        : null,
+      waterSource: property.waterSource || null,
+      isLiftAvailable: property.isLiftAvailable,
+    };
+
+    try {
+      // Generate description using ChatGPT
+      const description = await this.openAIService.generatePropertyDescription(
+        propertyData,
+      );
+
+      return {
+        success: true,
+        description,
+        propertyId: property.id,
+      };
+    } catch (error) {
+      // Fallback to a basic description if ChatGPT API fails
+      const fallbackDescription = this.generateFallbackDescription(property);
+      return {
+        success: true,
+        description: fallbackDescription,
+        propertyId: property.id,
+      };
+    }
+  }
+
+  /**
+   * Generate a basic fallback description if ChatGPT API fails
+   */
+  private generateFallbackDescription(property: Property): string {
+    const parts: string[] = [];
+
+    if (property.bhkType?.name) {
+      parts.push(property.bhkType.name);
+    }
+    if (property.propertyType?.name) {
+      parts.push(property.propertyType.name.toLowerCase());
+    }
+    if (property.furnishType) {
+      parts.push(property.furnishType);
+    }
+
+    const locationParts: string[] = [];
+    if (property.society?.name) locationParts.push(property.society.name);
+    if (property.locality?.name) locationParts.push(property.locality.name);
+    if (property.city?.name) locationParts.push(property.city.name);
+    if (locationParts.length > 0) {
+      parts.push(`in ${locationParts.join(', ')}`);
+    }
+
+    const description = parts.filter(Boolean).join(' ');
+    return description
+      ? `${description.charAt(0).toUpperCase() + description.slice(1)}.`
+      : 'Property details available upon request.';
   }
 }

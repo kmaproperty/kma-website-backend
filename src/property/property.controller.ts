@@ -63,6 +63,10 @@ import {
   SubmitPropertyVerificationMediaResponseDto,
 } from './dto/property-verification.dto';
 import {
+  GeneratePropertyDescriptionDto,
+  GeneratePropertyDescriptionResponseDto,
+} from './dto/generate-property-description.dto';
+import {
   CreatePropertyLeadDto,
   CreatePropertyLeadResponseDto,
 } from './dto/create-property-lead.dto';
@@ -733,5 +737,31 @@ export class PropertyController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.propertyService.requestPropertyVerification(body, req.user.id);
+  }
+
+  @Post('generate-description')
+  @ApiOperation({
+    summary: 'Generate property description',
+    description:
+      'Generates a comprehensive property description based on all fields added in steps 1-3. The description includes property type, location, area, rooms, amenities, and other relevant details.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property description generated successfully',
+    type: GeneratePropertyDescriptionResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Property not found or validation error' })
+  @ApiResponse({ status: 403, description: 'Not authorized to generate description for this property' })
+  async generatePropertyDescription(
+    @Body() dto: GeneratePropertyDescriptionDto,
+    @Req() req: Request,
+  ): Promise<GeneratePropertyDescriptionResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.generatePropertyDescription(
+      dto,
+      req.user.id,
+    );
   }
 }
