@@ -3085,6 +3085,30 @@ export class PropertyService {
   /**
    * Submit property verification media using verification token (public endpoint)
    */
+  /**
+   * Calculate distance between two coordinates using Haversine formula
+   * Returns distance in meters
+   */
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+  }
+
   async submitPropertyVerificationMedia(
     dto: SubmitPropertyVerificationMediaDto,
   ): Promise<SubmitPropertyVerificationMediaResponseDto> {
@@ -3097,6 +3121,41 @@ export class PropertyService {
     // Check if request is in pending status
     if (verificationRequest.status !== PropertyVerificationStatus.PENDING) {
       throw new BadRequestException('This verification request is no longer pending');
+    }
+
+    // Validate location - check if submitted coordinates are within 1 km of property location
+    const property = verificationRequest.property;
+    let propertyLat: number | null = null;
+    let propertyLon: number | null = null;
+
+    // Try to get coordinates from society first, then locality
+    if (property.society?.latitude != null && property.society?.longitude != null) {
+      propertyLat = Number(property.society.latitude);
+      propertyLon = Number(property.society.longitude);
+    } else if (property.locality?.latitude != null && property.locality?.longitude != null) {
+      propertyLat = Number(property.locality.latitude);
+      propertyLon = Number(property.locality.longitude);
+    }
+
+    if (propertyLat == null || propertyLon == null) {
+      throw new BadRequestException(
+        'Property location coordinates are not available. Cannot verify location.',
+      );
+    }
+
+    // Calculate distance between submitted coordinates and property location
+    const distanceInMeters = this.calculateDistance(
+      propertyLat,
+      propertyLon,
+      dto.latitude,
+      dto.longitude,
+    );
+
+    const maxDistanceMeters = 1000; // 1 km
+    if (distanceInMeters > maxDistanceMeters) {
+      throw new BadRequestException(
+        `Location verification failed. You must be within ${maxDistanceMeters / 1000} km of the property location. Current distance: ${(distanceInMeters / 1000).toFixed(2)} km`,
+      );
     }
 
     // Prepare media data with timestamps

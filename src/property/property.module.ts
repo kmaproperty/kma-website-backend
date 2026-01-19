@@ -34,6 +34,7 @@ import { MasterDataSeederService } from './services/master-data-seeder.service';
 import { GooglePlacesService } from './services/google-places.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminModule } from '../admin/admin.module';
+import { Admin } from '../admin/entities/admin.entity';
 import { UserModule } from '../user/user.module';
 import { PropertyRejectionHistoryRepository } from './repositories/property-rejection-history.repository';
 import { PropertyVerificationRequestRepository } from './repositories/property-verification-request.repository';
@@ -55,6 +56,7 @@ import { PropertyVerificationRequestRepository } from './repositories/property-v
       Property,
       PropertyRejectionHistory,
       PropertyVerificationRequest,
+      Admin,
     ]),
     forwardRef(() => AdminModule),
     forwardRef(() => UserModule),

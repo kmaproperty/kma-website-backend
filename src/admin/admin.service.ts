@@ -2592,7 +2592,7 @@ export class AdminService {
         createdAt: request.createdAt,
         submittedAt: request.submittedAt,
         reviewedBy: request.reviewedBy,
-        reviewedByName: request.reviewedByUser?.name || null,
+        reviewedByName: request.reviewedByAdmin?.username || null,
         reviewedAt: request.reviewedAt,
         rejectionReason: request.rejectionReason,
       };
@@ -2654,7 +2654,7 @@ export class AdminService {
       createdAt: request.createdAt,
       submittedAt: request.submittedAt,
       reviewedBy: request.reviewedBy,
-      reviewedByName: request.reviewedByUser?.name || null,
+      reviewedByName: request.reviewedByAdmin?.username || null,
       reviewedAt: request.reviewedAt,
       rejectionReason: request.rejectionReason,
       livePhotos: request.livePhotos || [],

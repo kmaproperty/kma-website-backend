@@ -20,7 +20,7 @@ export class PropertyVerificationRequestRepository {
   async findById(id: string): Promise<PropertyVerificationRequest | null> {
     return this.repository.findOne({
       where: { id },
-      relations: ['property', 'requestedByUser', 'reviewedByUser'],
+      relations: ['property', 'requestedByUser', 'reviewedByAdmin'],
     });
   }
 
@@ -29,7 +29,12 @@ export class PropertyVerificationRequestRepository {
   ): Promise<PropertyVerificationRequest | null> {
     return this.repository.findOne({
       where: { verificationToken: token },
-      relations: ['property', 'requestedByUser'],
+      relations: [
+        'property',
+        'property.society',
+        'property.locality',
+        'requestedByUser',
+      ],
     });
   }
 
@@ -38,7 +43,7 @@ export class PropertyVerificationRequestRepository {
   ): Promise<PropertyVerificationRequest[]> {
     return this.repository.find({
       where: { propertyId },
-      relations: ['requestedByUser', 'reviewedByUser'],
+      relations: ['requestedByUser', 'reviewedByAdmin'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -71,7 +76,7 @@ export class PropertyVerificationRequestRepository {
       .createQueryBuilder('request')
       .leftJoinAndSelect('request.property', 'property')
       .leftJoinAndSelect('request.requestedByUser', 'requestedByUser')
-      .leftJoinAndSelect('request.reviewedByUser', 'reviewedByUser')
+      .leftJoinAndSelect('request.reviewedByAdmin', 'reviewedByAdmin')
       .orderBy('request.createdAt', 'DESC')
       .skip(skip)
       .take(take);

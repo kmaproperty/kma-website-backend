@@ -9,6 +9,9 @@ import {
   IsString,
   ValidateNested,
   IsEnum,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PropertyVerificationStatus } from '../entities/property-verification-request.entity';
@@ -117,6 +120,26 @@ export class SubmitPropertyVerificationMediaDto {
   @ValidateNested({ each: true })
   @Type(() => LiveVideoDto)
   liveVideos?: LiveVideoDto[];
+
+  @ApiProperty({
+    description: 'Latitude coordinate of the location where media is being submitted',
+    example: 28.4595,
+  })
+  @IsNumber()
+  @Min(-90, { message: 'Latitude must be between -90 and 90' })
+  @Max(90, { message: 'Latitude must be between -90 and 90' })
+  @Type(() => Number)
+  latitude: number;
+
+  @ApiProperty({
+    description: 'Longitude coordinate of the location where media is being submitted',
+    example: 77.0266,
+  })
+  @IsNumber()
+  @Min(-180, { message: 'Longitude must be between -180 and 180' })
+  @Max(180, { message: 'Longitude must be between -180 and 180' })
+  @Type(() => Number)
+  longitude: number;
 }
 
 export class SubmitPropertyVerificationMediaResponseDto {
@@ -195,10 +218,10 @@ export class PropertyVerificationRequestItemDto {
   @ApiPropertyOptional({ description: 'Submitted at' })
   submittedAt?: Date | null;
 
-  @ApiPropertyOptional({ description: 'Reviewed by user ID' })
+  @ApiPropertyOptional({ description: 'Reviewed by admin ID' })
   reviewedBy?: string | null;
 
-  @ApiPropertyOptional({ description: 'Reviewed by user name' })
+  @ApiPropertyOptional({ description: 'Reviewed by admin username' })
   reviewedByName?: string | null;
 
   @ApiPropertyOptional({ description: 'Reviewed at' })

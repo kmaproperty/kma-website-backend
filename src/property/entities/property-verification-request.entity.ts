@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../common/database/base.entity';
 import { Property } from './property.entity';
 import { User } from '../../user/entities/user.entity';
+import { Admin } from '../../admin/entities/admin.entity';
 
 export enum PropertyVerificationStatus {
   PENDING = 'pending',
@@ -92,9 +93,9 @@ export class PropertyVerificationRequest extends BaseEntity {
   })
   reviewedBy: string | null;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => Admin, { nullable: true })
   @JoinColumn({ name: 'reviewed_by' })
-  reviewedByUser: User | null;
+  reviewedByAdmin: Admin | null;
 
   @Column({
     name: 'reviewed_at',
