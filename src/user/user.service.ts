@@ -400,6 +400,7 @@ export class UserService {
       attempts: 0,
     });
 
+
     // In production, integrate with SMS service
     if (process.env.NODE_ENV !== 'production') {
       this.logger.debug(`OTP generated for ${phone}: ${otpCode}`);
@@ -1309,6 +1310,7 @@ export class UserService {
     });
 
     // In production, integrate with SMS service
+
     // For development, log the OTP (only in non-production)
     if (process.env.NODE_ENV !== 'production') {
       this.logger.debug(`OTP resent for ${phone}: ${otpCode}`);

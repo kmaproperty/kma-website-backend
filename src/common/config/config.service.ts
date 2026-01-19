@@ -142,4 +142,5 @@ export class ConfigService implements TypeOrmOptionsFactory {
   public getOpenAIApiKey(): string {
     return this.nestConfigService.get<string>('OPENAI_API_KEY') || '';
   }
+
 }

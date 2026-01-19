@@ -104,7 +104,7 @@ export class AdminTopPropertiesListResponseDto {
   success: boolean;
 
   @ApiProperty({
-    description: 'List of top properties',
+    description: 'List of top properties with enhanced details including bathroom, bedroom, owner details, rating, and possession status',
     type: Object,
     isArray: true,
   })

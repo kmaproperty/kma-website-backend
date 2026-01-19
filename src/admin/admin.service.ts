@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -268,6 +269,7 @@ const STEP4_FIELDS: readonly (keyof AdminUpdatePropertyDto)[] = [
 export class AdminService {
   private readonly ACCESS_TOKEN_EXPIRY = '12h';
   private readonly REFRESH_TOKEN_EXPIRY = '7d';
+  private readonly logger = new Logger(AdminService.name);
 
   constructor(
     private readonly adminRepository: AdminRepository,
@@ -2786,6 +2788,7 @@ export class AdminService {
 
   /**
    * List top properties with pagination and optional city filter
+   * Includes detailed information: bathroom, bedroom, owner details, rating, possession status
    */
   async listTopProperties(
     query: AdminTopPropertiesListQueryDto,
@@ -2799,7 +2802,23 @@ export class AdminService {
       cityId: query.cityId,
     });
 
-    const data = items.map((property) => this.formatPropertyData(property));
+    // Get rating statistics once (platform-wide KMA rating)
+    let averageRating: number | null = null;
+    let ratingCount: number = 0;
+    try {
+      const ratingStats = await this.kmaRatingReviewRepository.getApprovedReviewsStatistics();
+      if (ratingStats && ratingStats.averageRating) {
+        averageRating = ratingStats.averageRating;
+        ratingCount = ratingStats.totalCount || 0;
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to get rating statistics: ${error.message}`);
+    }
+
+    // Format each property with enhanced details
+    const data = items.map((property) =>
+      this.formatTopPropertyData(property, averageRating, ratingCount),
+    );
 
     return {
       success: true,
@@ -2807,6 +2826,71 @@ export class AdminService {
       total,
       page,
       limit,
+    };
+  }
+
+  /**
+   * Format top property data with enhanced details
+   * Includes: bathroom count, bedroom count, owner details, rating, possession status
+   */
+  private formatTopPropertyData(
+    property: any,
+    averageRating: number | null,
+    ratingCount: number,
+  ): Record<string, any> {
+    const baseData = this.formatPropertyData(property);
+
+    // Extract bathroom and bedroom counts from builtUpAreaMetadata
+    const bathrooms = property.builtUpAreaMetadata?.noOfBathrooms ?? null;
+    const bedrooms = property.builtUpAreaMetadata?.noOfBedrooms ?? null;
+    const balconies = property.builtUpAreaMetadata?.balconies ?? null;
+
+    // Get owner details (already included in formatPropertyData, but ensure it's complete)
+    const owner = baseData.owner || null;
+
+    // Possession status details
+    const possessionStatus = property.possessionStatus || null;
+    const possessionDate = property.possessionDate
+      ? new Date(property.possessionDate)
+      : null;
+
+    // Enhanced property data with additional fields
+    return {
+      ...baseData,
+      // Room details
+      bathrooms,
+      bedrooms,
+      balconies,
+      // Owner details (already included but ensuring it's present)
+      owner: owner
+        ? {
+            ...owner,
+            // Add more owner details if needed
+            profilePhotoUrl: property.user?.profilePhotoUrl || null,
+          }
+        : null,
+      // Rating information (platform-wide KMA rating)
+      rating: averageRating,
+      ratingCount,
+      // Possession details
+      possessionStatus,
+      possessionDate: possessionDate
+        ? possessionDate.toISOString()
+        : null,
+      possessionDateFormatted: possessionDate
+        ? possessionDate.toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
+        : null,
+      // Additional area details
+      superBuiltUpArea: property.builtUpAreaMetadata?.superBuiltUpArea ?? null,
+      carpetArea: property.builtUpAreaMetadata?.carpetArea ?? null,
+      // BHK type name for easy access
+      bhkTypeName: property.bhkType?.name || null,
+      // Property type name
+      propertyTypeName: property.propertyType?.name || null,
     };
   }
 
