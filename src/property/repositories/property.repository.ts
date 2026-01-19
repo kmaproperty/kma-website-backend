@@ -423,6 +423,7 @@ export class PropertyRepository {
       cityId?: string;
       search?: string;
       categoryIds?: string[];
+      listingTypeIds?: string[];
       propertyTypeIds?: string[];
       bhkTypeIds?: string[];
       furnishingTypes?: string[];
@@ -468,6 +469,13 @@ export class PropertyRepository {
     if (filters.categoryIds?.length) {
       qb.andWhere('property.categoryId IN (:...categoryIds)', {
         categoryIds: filters.categoryIds,
+      });
+    }
+
+    // Filter by listing type (Sale/Rent)
+    if (filters.listingTypeIds?.length) {
+      qb.andWhere('property.listingTypeId IN (:...listingTypeIds)', {
+        listingTypeIds: filters.listingTypeIds,
       });
     }
 

@@ -83,6 +83,16 @@ export class EndUserPropertiesSearchQueryDto {
   categoryIds?: string[];
 
   @ApiPropertyOptional({
+    description: 'Filter by listing type IDs (comma separated) - Sale/Rent',
+    example: 'uuid-listing-type-1,uuid-listing-type-2',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsUUID(4, { each: true })
+  listingTypeIds?: string[];
+
+  @ApiPropertyOptional({
     description: 'Filter by property type IDs (comma separated) - Villa, Plot, Apartment, etc.',
     example: 'uuid-property-type-1,uuid-property-type-2',
     type: String,
@@ -514,6 +524,16 @@ export class EndUserPropertiesCountQueryDto {
   @Transform(({ value }) => parseCsv(value))
   @IsUUID(4, { each: true })
   categoryIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by listing type IDs (comma separated) - Sale/Rent',
+    example: 'uuid-listing-type-1,uuid-listing-type-2',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsUUID(4, { each: true })
+  listingTypeIds?: string[];
 
   @ApiPropertyOptional({
     description: 'Filter by property type IDs (comma separated) - Villa, Plot, Apartment, etc.',
