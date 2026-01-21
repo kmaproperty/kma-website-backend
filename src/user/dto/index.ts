@@ -26,6 +26,7 @@ export * from './user-profile.dto';
 export * from './contact-us.dto';
 export * from './property-master-data.dto';
 export * from './rating-review.dto';
+export * from './property-rating-review.dto';
 export * from './home-page-reviews.dto';
 export * from './home-page.dto';
 export * from './property-type-explore.dto';

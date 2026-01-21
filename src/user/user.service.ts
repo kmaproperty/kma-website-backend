@@ -122,7 +122,12 @@ import { PropertyRejectionHistoryRepository } from '../property/repositories/pro
 import { GooglePlacesService } from '../property/services/google-places.service';
 import { PropertyStatus } from '../property/enum/property-status.enum';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
-import { DashboardResponseDto } from './dto';
+import {
+  DashboardResponseDto,
+  SubmitPropertyRatingReviewDto,
+  SubmitPropertyRatingReviewResponseDto,
+  GetMyPropertyRatingReviewResponseDto,
+} from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import { LeadRepository } from './repositories/lead.repository';
 import { LeadType } from './entities/lead.entity';
@@ -134,6 +139,7 @@ import { EncryptionService } from './services/encryption.service';
 import { PropertyViewTrackerService } from './services/property-view-tracker.service';
 import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
+import { PropertyRatingReviewRepository } from './repositories/property-rating-review.repository';
 import { AboutUsRepository } from '../admin/repositories/about-us.repository';
 import { AdminConfigurationRepository } from '../admin/repositories/admin-configuration.repository';
 import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
@@ -160,6 +166,7 @@ export class UserService {
     private readonly encryptionService: EncryptionService,
     private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
     private readonly kmaRatingReviewRepository: KmaRatingReviewRepository,
+    private readonly propertyRatingReviewRepository: PropertyRatingReviewRepository,
     private readonly propertyListingTypeRepository: PropertyListingTypeRepository,
     private readonly propertyCategoryRepository: PropertyCategoryNewRepository,
     private readonly propertyTypeRepository: PropertyTypeRepository,
@@ -3439,6 +3446,112 @@ export class UserService {
       success: true,
       message: 'Rating and review submitted successfully',
       ratingReviewId: ratingReview.id,
+    };
+  }
+
+  /**
+   * Submit or update rating and review for a specific property (logged in end users only)
+   */
+  async submitPropertyRatingReview(
+    endUserId: string,
+    dto: SubmitPropertyRatingReviewDto,
+  ): Promise<SubmitPropertyRatingReviewResponseDto> {
+    const {
+      propertyId,
+      role,
+      connectivityRating,
+      neighbourhoodRating,
+      safetyRating,
+      livabilityRating,
+      likeText,
+      dislikeText,
+    } = dto;
+
+    // Verify the user exists and is an end user
+    const user = await this.userRepository.findById(endUserId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    if (user.role !== UserRole.END_USER) {
+      throw new BadRequestException(
+        'Only end users can submit property ratings and reviews',
+      );
+    }
+
+    // Verify the property exists and is active
+    const property = await this.propertyRepository.findById(propertyId);
+    if (!property || property.isDeleted || property.status !== PropertyStatus.ACTIVE) {
+      throw new BadRequestException('Property is not available');
+    }
+
+    // Compute overall rating as average of the four categories
+    const overallRating =
+      (connectivityRating +
+        neighbourhoodRating +
+        safetyRating +
+        livabilityRating) /
+      4;
+
+    const saved = await this.propertyRatingReviewRepository.upsertForUser(
+      propertyId,
+      endUserId,
+      role,
+      {
+        connectivityRating,
+        neighbourhoodRating,
+        safetyRating,
+        livabilityRating,
+        likeText: likeText ?? null,
+        dislikeText: dislikeText ?? null,
+        overallRating,
+      },
+    );
+
+    return {
+      success: true,
+      message: 'Property rating and review submitted successfully',
+      ratingReviewId: saved.id,
+    };
+  }
+
+  /**
+   * Get logged-in user's rating and review for a specific property
+   */
+  async getMyPropertyRatingReview(
+    endUserId: string,
+    propertyId: string,
+  ): Promise<GetMyPropertyRatingReviewResponseDto> {
+    // Ensure user exists (cheap safety check)
+    const user = await this.userRepository.findById(endUserId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const review =
+      await this.propertyRatingReviewRepository.findByUserAndProperty(
+        propertyId,
+        endUserId,
+      );
+
+    if (!review) {
+      return {
+        success: true,
+        review: null,
+      };
+    }
+
+    return {
+      success: true,
+      review: {
+        propertyId: review.propertyId,
+        role: review.role,
+        connectivityRating: review.connectivityRating,
+        neighbourhoodRating: review.neighbourhoodRating,
+        safetyRating: review.safetyRating,
+        livabilityRating: review.livabilityRating,
+        likeText: review.likeText ?? undefined,
+        dislikeText: review.dislikeText ?? undefined,
+      },
     };
   }
 

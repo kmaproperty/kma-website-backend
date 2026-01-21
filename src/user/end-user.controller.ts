@@ -52,6 +52,9 @@ import {
   FavoritePropertyListResponseDto,
   CheckFavoritePropertyQueryDto,
   CheckFavoritePropertyResponseDto,
+  SubmitPropertyRatingReviewDto,
+  SubmitPropertyRatingReviewResponseDto,
+  GetMyPropertyRatingReviewResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -571,6 +574,74 @@ export class EndUserController {
     }
     
     return await this.userService.submitRatingReview(submitDto, req.user.id);
+  }
+
+  @Post('properties/:propertyId/rating-review')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Submit rating and review for a specific property (logged-in users only)',
+    description:
+      'Submit or update a rating and review for a property. Only logged-in end users can submit ratings and reviews. One review per user per property is maintained (subsequent calls update the existing review).',
+  })
+  @ApiParam({
+    name: 'propertyId',
+    description: 'Property ID to rate',
+    example: 'uuid-property-id',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property rating and review submitted successfully',
+    type: SubmitPropertyRatingReviewResponseDto,
+  })
+  async submitPropertyRatingReview(
+    @Req() req: Request,
+    @Param('propertyId') propertyId: string,
+    @Body() body: SubmitPropertyRatingReviewDto,
+  ): Promise<SubmitPropertyRatingReviewResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    const dto: SubmitPropertyRatingReviewDto = {
+      ...body,
+      propertyId,
+    };
+
+    return await this.userService.submitPropertyRatingReview(
+      req.user.id,
+      dto,
+    );
+  }
+
+  @Get('properties/:propertyId/rating-review/me')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Get my rating and review for a specific property',
+    description:
+      'Fetch the logged-in user\'s existing rating and review for a given property. Useful to pre-fill the rating form if a review was already submitted.',
+  })
+  @ApiParam({
+    name: 'propertyId',
+    description: 'Property ID whose rating/review to fetch',
+    example: 'uuid-property-id',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property rating and review retrieved successfully',
+    type: GetMyPropertyRatingReviewResponseDto,
+  })
+  async getMyPropertyRatingReview(
+    @Req() req: Request,
+    @Param('propertyId') propertyId: string,
+  ): Promise<GetMyPropertyRatingReviewResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    return await this.userService.getMyPropertyRatingReview(
+      req.user.id,
+      propertyId,
+    );
   }
 
   @Get('home/reviews')
