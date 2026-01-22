@@ -332,10 +332,12 @@ export class DocuSignService {
       const envelopesApi = new docusign.EnvelopesApi(this.apiClient);
 
       // Create signer with role assignment
+      // IMPORTANT: roleName must exactly match the role name defined in the DocuSign template
+      // The template was created with roleName: 'Signer', so we must use the same here
       const signer = docusign.TemplateRole.constructFromObject({
         email: recipientEmail,
         name: recipientName,
-        roleName: 'Signer',
+        roleName: 'Signer1', // Must match the role name in the template (created with 'Signer')
         // Required for embedded signing (Recipient View)
         clientUserId: userId,
       });
@@ -345,7 +347,7 @@ export class DocuSignService {
         templateId: templateId,
         templateRoles: [signer],
         status: 'sent',
-        emailSubject: 'Please sign the Channel Partner Agreement',
+        emailSubject: 'Complete with Docusign: Channel_Partner_Agreement.pdf',
       });
 
       // Create and send envelope
