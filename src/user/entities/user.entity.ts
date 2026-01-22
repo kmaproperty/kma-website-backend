@@ -192,4 +192,12 @@ export class User extends BaseEntity {
     nullable: true,
   })
   kycStatus: KycStatus | null;
+
+  // KYC Rejection Reason (stored when KYC is rejected by admin)
+  @Column({
+    name: 'kyc_rejection_reason',
+    type: 'text',
+    nullable: true,
+  })
+  kycRejectionReason: string | null;
 }

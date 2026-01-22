@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
 
 // Step 1: Live Photo Upload
@@ -244,6 +244,12 @@ export class VerificationStepsStatusResponseDto {
     example: 'in_review',
   })
   kyc_status: string;
+
+  @ApiPropertyOptional({
+    description: 'KYC rejection reason (only present when kyc_status is rejected)',
+    example: 'Documents are not clear. Please upload clear images.',
+  })
+  kyc_rejection_reason?: string | null;
 }
 
 // GET endpoints response DTOs

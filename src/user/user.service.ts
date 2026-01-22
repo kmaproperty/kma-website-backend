@@ -3026,6 +3026,7 @@ export class UserService {
       kyc_steps_completed: stepsCompleted,
       kyc_total_steps: totalSteps,
       kyc_status: kycStatusString,
+      kyc_rejection_reason: user.kycRejectionReason ?? null,
     };
   }
 

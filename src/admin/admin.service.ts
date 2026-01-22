@@ -2360,6 +2360,7 @@ export class AdminService {
       await this.userRepository.update(dto.userId, {
         kycCompleted: true,
         kycStatus: KycStatus.APPROVED,
+        kycRejectionReason: null, // Clear rejection reason when approved
         livePhotoApproved: true, // Ensure live photo is marked as approved
       });
     } else {
@@ -2367,6 +2368,7 @@ export class AdminService {
       await this.userRepository.update(dto.userId, {
         kycCompleted: false,
         kycStatus: KycStatus.REJECTED,
+        kycRejectionReason: dto.comment || null, // Store rejection reason from comment
         livePhotoApproved: false, // Reset live photo approval
         // Note: We don't reset aadhaarVerified, bankDetailsFilled, or docusignAgreementSigned
         // as those are user actions, not admin approvals
