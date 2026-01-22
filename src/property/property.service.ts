@@ -1736,15 +1736,6 @@ export class PropertyService {
       }
     }
 
-    // Company occupancy requirement - only if tenantType includes company
-    if (
-      dto.tenantType &&
-      dto.tenantType.includes(TenantType.COMPANY) &&
-      !dto.companyOccupancy
-    ) {
-      throw new BadRequestException('Please select company occupancy');
-    }
-
     // Build update object with only provided fields
     const previouslyCompletedStep = property.completionStep ?? 0;
     const targetCompletionStep = PropertyCompletionStep.STEP_2;
