@@ -60,6 +60,23 @@ export class PropertyVerificationRequestRepository {
     });
   }
 
+  async findValidByPropertyId(
+    propertyId: string,
+  ): Promise<PropertyVerificationRequest | null> {
+    const now = new Date();
+    return this.repository
+      .createQueryBuilder('request')
+      .where('request.propertyId = :propertyId', { propertyId })
+      .andWhere('request.status = :status', {
+        status: PropertyVerificationStatus.PENDING,
+      })
+      .andWhere('request.expiresAt > :now', { now })
+      .leftJoinAndSelect('request.property', 'property')
+      .leftJoinAndSelect('request.requestedByUser', 'requestedByUser')
+      .orderBy('request.createdAt', 'DESC')
+      .getOne();
+  }
+
   async update(
     id: string,
     data: Partial<PropertyVerificationRequest>,

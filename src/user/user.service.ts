@@ -2699,12 +2699,35 @@ export class UserService {
       throw new BadRequestException('User not found');
     }
 
-    await this.userRepository.update(userId, {
+    // Prepare update data
+    const updateData: Partial<User> = {
       livePhotoUrl: uploadLivePhotoDto.live_photo_url,
       livePhotoApproved: false, // Reset approval status when new photo is uploaded
-    });
+    };
 
-    // Check and update KYC status
+    // If KYC was previously rejected, move status back to IN_REVIEW or PENDING
+    if (user.kycStatus === KycStatus.REJECTED) {
+      // Clear rejection reason
+      updateData.kycRejectionReason = null;
+      
+      // Check if all user steps are completed to determine new status
+      const agreementStatus = await this.getDocuSignAgreementStatus(userId);
+      const step1Completed = !!(uploadLivePhotoDto.live_photo_url && uploadLivePhotoDto.live_photo_url.trim().length > 0);
+      const allUserStepsCompleted =
+        step1Completed && // Step 1: Live photo uploaded (user action)
+        user.aadhaarVerified && // Step 2: Aadhaar verified (user action)
+        user.bankDetailsFilled && // Step 3: Bank details filled (user action)
+        agreementStatus.docusign_agreement_signed; // Step 4: DocuSign signed (user action)
+
+      // Set status to IN_REVIEW if all steps completed, otherwise PENDING
+      updateData.kycStatus = allUserStepsCompleted
+        ? KycStatus.IN_REVIEW
+        : KycStatus.PENDING;
+    }
+
+    await this.userRepository.update(userId, updateData);
+
+    // Check and update KYC status (this will maintain the status if it's not REJECTED anymore)
     await this.checkAndUpdateKycStatus(userId);
 
     const updatedUser = await this.userRepository.findById(userId);

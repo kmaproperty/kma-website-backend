@@ -3049,18 +3049,33 @@ export class PropertyService {
       throw new BadRequestException('Only active properties can be verified');
     }
 
-    // Check if there's already a pending request
-    const existingPending = await this.propertyVerificationRequestRepository.findPendingByPropertyId(dto.propertyId);
-    if (existingPending) {
-      throw new BadRequestException('A pending verification request already exists for this property');
+    // Check if there's already a valid (not expired, not submitted) verification request
+    const existingValid = await this.propertyVerificationRequestRepository.findValidByPropertyId(dto.propertyId);
+    if (existingValid) {
+      // Return existing valid link
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://example.com';
+      const verificationLink = `${frontendUrl}?token=${existingValid.verificationToken}`;
+      
+      return {
+        success: true,
+        message: 'Verification request already exists. Use the link to upload live photos/videos.',
+        verificationRequestId: existingValid.id,
+        verificationToken: existingValid.verificationToken,
+        verificationLink,
+      };
     }
 
     // Generate unique verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     // Get frontend URL from config (default to placeholder if not set)
+
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://example.com';
-    const verificationLink = `${frontendUrl}/verify-property/${verificationToken}`;
+    const verificationLink = `${frontendUrl}?token=${verificationToken}`;
+    
+    // Calculate expiration time (24 hours from now)
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
 
     // Create verification request
     const verificationRequest = await this.propertyVerificationRequestRepository.create({
@@ -3068,6 +3083,7 @@ export class PropertyService {
       requestedBy: userId,
       verificationToken,
       status: PropertyVerificationStatus.PENDING,
+      expiresAt,
     });
 
     return {
@@ -3118,6 +3134,12 @@ export class PropertyService {
     // Check if request is in pending status
     if (verificationRequest.status !== PropertyVerificationStatus.PENDING) {
       throw new BadRequestException('This verification request is no longer pending');
+    }
+
+    // Check if verification link has expired
+    const now = new Date();
+    if (verificationRequest.expiresAt <= now) {
+      throw new BadRequestException('This verification link has expired. Please request a new verification link.');
     }
 
     // Validate location - check if submitted coordinates are within 1 km of property location

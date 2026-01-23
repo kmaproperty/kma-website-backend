@@ -110,5 +110,13 @@ export class PropertyVerificationRequest extends BaseEntity {
     nullable: true,
   })
   rejectionReason: string | null;
+
+  @Column({
+    name: 'expires_at',
+    type: 'timestamp with time zone',
+    nullable: false,
+    comment: 'Verification link expiration time (24 hours from creation)',
+  })
+  expiresAt: Date;
 }
 
