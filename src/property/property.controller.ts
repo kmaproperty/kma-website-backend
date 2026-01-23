@@ -220,6 +220,7 @@ export class PropertyController {
   }
 
   @Get('rooms')
+  @Public()
   @ApiOperation({
     summary: 'Get all active rooms',
     description:
