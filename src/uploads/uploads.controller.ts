@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
+import { Public } from '../common/decorators/public.decorator';
 import {
   ApiBody,
   ApiOperation,
@@ -23,6 +24,8 @@ import { GeneratePresignedUrlDto, PresignedUrlResponseDto } from './dto/generate
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
+  @Post('presigned-url')
+  @Public()
   @ApiOperation({ 
     summary: 'Generate a presigned URL for uploading files to S3',
     description: 'Generates a presigned URL that can be used to upload files directly from the client application to S3. The client should use the returned URL to perform a PUT request with the file data.'
@@ -33,7 +36,6 @@ export class UploadsController {
     description: 'Presigned URL generated successfully',
     type: ApiResponseWrapper(PresignedUrlResponseDto, 'Presigned URL generated successfully'),
   })
-  @Post('presigned-url')
   async generatePresignedUrl(@Body() dto: GeneratePresignedUrlDto) {
     const result = await this.uploadsService.generatePresignedUrl(dto);
     return ApiResponseDto.success(
