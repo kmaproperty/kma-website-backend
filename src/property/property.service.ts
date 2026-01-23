@@ -13,6 +13,7 @@ import { SocietyRepository } from './repositories/society.repository';
 import { LocalityRepository } from './repositories/locality.repository';
 import { FurnishingRepository } from './repositories/furnishing.repository';
 import { AmenityRepository } from './repositories/amenity.repository';
+import { RoomRepository } from './repositories/room.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from './repositories/property-rejection-history.repository';
 import { PropertyVerificationRequestRepository } from './repositories/property-verification-request.repository';
@@ -74,6 +75,7 @@ export class PropertyService {
     private readonly localityRepository: LocalityRepository,
     private readonly furnishingRepository: FurnishingRepository,
     private readonly amenityRepository: AmenityRepository,
+    private readonly roomRepository: RoomRepository,
     private readonly propertyRepository: PropertyRepository,
     private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
@@ -2018,6 +2020,15 @@ export class PropertyService {
       code: amenity.code,
       icon: amenity.icon ?? null,
       sortOrder: amenity.sortOrder,
+    }));
+  }
+
+  async getAllRooms(): Promise<any[]> {
+    const rooms = await this.roomRepository.findAllActive();
+    return rooms.map((room) => ({
+      id: room.id,
+      name: room.name,
+      displayOrder: room.displayOrder,
     }));
   }
 

@@ -30,6 +30,8 @@ import { AboutUs } from './entities/about-us.entity';
 import { AboutUsRepository } from './repositories/about-us.repository';
 import { AdminConfiguration } from './entities/admin-configuration.entity';
 import { AdminConfigurationRepository } from './repositories/admin-configuration.repository';
+import { Room } from '../property/entities/room.entity';
+import { RoomRepository } from '../property/repositories/room.repository';
 
 @Module({
   imports: [
@@ -48,6 +50,7 @@ import { AdminConfigurationRepository } from './repositories/admin-configuration
       PropertyVerificationRequest,
       AboutUs,
       AdminConfiguration,
+      Room,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -74,6 +77,7 @@ import { AdminConfigurationRepository } from './repositories/admin-configuration
     PropertyVerificationRequestRepository,
     AboutUsRepository,
     AdminConfigurationRepository,
+    RoomRepository,
   ],
   exports: [AdminService, AdminRepository, LeadService, AboutUsRepository, AdminConfigurationRepository],
 })

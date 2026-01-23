@@ -15,6 +15,7 @@ import { SocietyRepository } from './repositories/society.repository';
 import { LocalityRepository } from './repositories/locality.repository';
 import { FurnishingRepository } from './repositories/furnishing.repository';
 import { AmenityRepository } from './repositories/amenity.repository';
+import { RoomRepository } from './repositories/room.repository';
 import { PropertyRepository } from './repositories/property.repository';
 import { MasterPropertyListingType } from './entities/master-property-listing-type.entity';
 import { MasterPropertyCategoryNew } from './entities/master-property-category-new.entity';
@@ -26,6 +27,7 @@ import { MasterBhkType } from './entities/master-bhk-type.entity';
 import { MasterBuiltUpArea } from './entities/master-built-up-area.entity';
 import { MasterFurnishing } from './entities/master-furnishing.entity';
 import { MasterAmenity } from './entities/master-amenity.entity';
+import { Room } from './entities/room.entity';
 import { UnitConfiguration } from './entities/unit-configuration.entity';
 import { Property } from './entities/property.entity';
 import { PropertyRejectionHistory } from './entities/property-rejection-history.entity';
@@ -53,6 +55,7 @@ import { PropertyVerificationRequestRepository } from './repositories/property-v
       MasterBuiltUpArea,
       MasterFurnishing,
       MasterAmenity,
+      Room,
       UnitConfiguration,
       Property,
       PropertyRejectionHistory,
@@ -84,6 +87,7 @@ import { PropertyVerificationRequestRepository } from './repositories/property-v
     LocalityRepository,
     FurnishingRepository,
     AmenityRepository,
+    RoomRepository,
     PropertyRepository,
     PropertyRejectionHistoryRepository,
     PropertyVerificationRequestRepository,
@@ -101,6 +105,7 @@ import { PropertyVerificationRequestRepository } from './repositories/property-v
     LocalityRepository,
     FurnishingRepository,
     AmenityRepository,
+    RoomRepository,
     GooglePlacesService,
     PropertyRejectionHistoryRepository,
     PropertyVerificationRequestRepository,

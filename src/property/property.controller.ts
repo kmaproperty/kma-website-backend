@@ -219,6 +219,20 @@ export class PropertyController {
     return await this.propertyService.getAllAmenities();
   }
 
+  @Get('rooms')
+  @ApiOperation({
+    summary: 'Get all active rooms',
+    description:
+      'Returns all available active rooms (e.g., Living Room, Bedroom, Kitchen) sorted by display order',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rooms retrieved successfully',
+  })
+  async getRooms(): Promise<any[]> {
+    return await this.propertyService.getAllRooms();
+  }
+
   @Get('listings')
   @ApiOperation({
     summary: 'Get owner/channel partner property listings',

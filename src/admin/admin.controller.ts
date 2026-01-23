@@ -111,6 +111,10 @@ import {
   AdminConfigurationSingleResponseDto,
   AdminCreateConfigurationDto,
   AdminUpdateConfigurationDto,
+  AdminRoomListQueryDto,
+  AdminRoomResponseDto,
+  AdminCreateRoomDto,
+  AdminUpdateRoomDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -398,6 +402,79 @@ export class AdminController {
     @Param('id') cityId: string,
   ): Promise<{ success: boolean; message: string; cityId: string }> {
     return this.adminService.deleteCity(cityId);
+  }
+
+  // Room CRUD Endpoints
+  @Get('rooms')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List rooms with optional search' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of rooms',
+    type: [AdminRoomResponseDto],
+  })
+  async listRooms(
+    @Query() query: AdminRoomListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminRoomResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.adminService.listRooms(query);
+  }
+
+  @Get('rooms/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get room detail' })
+  async getRoom(
+    @Param('id') roomId: string,
+  ): Promise<{ success: boolean; data: AdminRoomResponseDto }> {
+    return this.adminService.getRoom(roomId);
+  }
+
+  @Post('rooms')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a room' })
+  async createRoom(
+    @Body() dto: AdminCreateRoomDto,
+  ): Promise<{ success: boolean; data: AdminRoomResponseDto }> {
+    return this.adminService.createRoom(dto);
+  }
+
+  @Patch('rooms/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a room' })
+  @ApiResponse({
+    status: 200,
+    description: 'Room updated successfully',
+    type: AdminRoomResponseDto,
+  })
+  async updateRoom(
+    @Param('id') roomId: string,
+    @Body() dto: AdminUpdateRoomDto,
+  ): Promise<{ success: boolean; data: AdminRoomResponseDto }> {
+    return this.adminService.updateRoom(roomId, dto);
+  }
+
+  @Delete('rooms/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.MASTER_DATA_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a room' })
+  async deleteRoom(
+    @Param('id') roomId: string,
+  ): Promise<{ success: boolean; message: string; roomId: string }> {
+    return this.adminService.deleteRoom(roomId);
   }
 
   // Society management

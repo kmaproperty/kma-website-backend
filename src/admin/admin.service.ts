@@ -102,6 +102,10 @@ import {
   AdminConfigurationSingleResponseDto,
   AdminCreateConfigurationDto,
   AdminUpdateConfigurationDto,
+  AdminRoomListQueryDto,
+  AdminRoomResponseDto,
+  AdminCreateRoomDto,
+  AdminUpdateRoomDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
@@ -111,6 +115,7 @@ import { BhkTypeRepository } from '../property/repositories/bhk-type.repository'
 import { LocalityRepository } from '../property/repositories/locality.repository';
 import { FurnishingRepository } from '../property/repositories/furnishing.repository';
 import { AmenityRepository } from '../property/repositories/amenity.repository';
+import { RoomRepository } from '../property/repositories/room.repository';
 import { ChannelPartnerCodeRepository } from '../user/repositories/channel-partner-code.repository';
 import { ChannelPartnerAgreementRepository } from '../user/repositories/channel-partner-agreement.repository';
 import { UserRepository } from '../user/repositories/user.repository';
@@ -139,6 +144,7 @@ import { MasterBhkType } from '../property/entities/master-bhk-type.entity';
 import { MasterLocality } from '../property/entities/master-locality.entity';
 import { MasterFurnishing } from '../property/entities/master-furnishing.entity';
 import { MasterAmenity } from '../property/entities/master-amenity.entity';
+import { Room } from '../property/entities/room.entity';
 import { ChannelPartnerCode } from '../user/entities/channel-partner-code.entity';
 import { User } from '../user/entities/user.entity';
 import { UserRole } from '../user/enum/user-role.enum';
@@ -281,6 +287,7 @@ export class AdminService {
     private readonly localityRepository: LocalityRepository,
     private readonly furnishingRepository: FurnishingRepository,
     private readonly amenityRepository: AmenityRepository,
+    private readonly roomRepository: RoomRepository,
     private readonly channelPartnerCodeRepository: ChannelPartnerCodeRepository,
     private readonly channelPartnerAgreementRepository: ChannelPartnerAgreementRepository,
     private readonly userRepository: UserRepository,
@@ -575,6 +582,125 @@ export class AdminService {
       success: true,
       message: 'City deleted successfully',
       cityId,
+    };
+  }
+
+  // Room CRUD Operations
+  private toRoomResponse(room: Room): AdminRoomResponseDto {
+    return {
+      id: room.id,
+      name: room.name,
+      displayOrder: room.displayOrder,
+      isActive: room.isActive,
+      createdAt: room.createdAt,
+      updatedAt: room.updatedAt,
+    };
+  }
+
+  private async ensureRoomExists(roomId: string): Promise<Room> {
+    const room = await this.roomRepository.findById(roomId);
+    if (!room) {
+      throw new BadRequestException(`Room with ID "${roomId}" not found`);
+    }
+    return room;
+  }
+
+  async listRooms(
+    query: AdminRoomListQueryDto,
+  ): Promise<{
+    success: boolean;
+    data: AdminRoomResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+    const search = query?.search?.trim();
+    const skip = (page - 1) * limit;
+    const { items, total } = await this.roomRepository.findWithPagination({
+      skip,
+      take: limit,
+      search,
+    });
+
+    const data = items.map((room) => this.toRoomResponse(room));
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getRoom(
+    roomId: string,
+  ): Promise<{ success: boolean; data: AdminRoomResponseDto }> {
+    const room = await this.ensureRoomExists(roomId);
+    return {
+      success: true,
+      data: this.toRoomResponse(room),
+    };
+  }
+
+  async createRoom(
+    dto: AdminCreateRoomDto,
+  ): Promise<{ success: boolean; data: AdminRoomResponseDto }> {
+    const existing = await this.roomRepository.findByName(dto.name);
+    if (existing) {
+      throw new BadRequestException(`Room with name "${dto.name}" already exists`);
+    }
+
+    const room = await this.roomRepository.create({
+      name: dto.name,
+      displayOrder: dto.displayOrder ?? 0,
+      isActive: dto.isActive ?? true,
+    });
+
+    return {
+      success: true,
+      data: this.toRoomResponse(room),
+    };
+  }
+
+  async updateRoom(
+    roomId: string,
+    dto: AdminUpdateRoomDto,
+  ): Promise<{ success: boolean; data: AdminRoomResponseDto }> {
+    const room = await this.ensureRoomExists(roomId);
+
+    if (dto.name && dto.name !== room.name) {
+      const existing = await this.roomRepository.findByName(dto.name);
+      if (existing) {
+        throw new BadRequestException(
+          `Room with name "${dto.name}" already exists`,
+        );
+      }
+    }
+
+    const updateData: Partial<Room> = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.displayOrder !== undefined) updateData.displayOrder = dto.displayOrder;
+    if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
+
+    await this.roomRepository.update(roomId, updateData);
+    const updated = await this.ensureRoomExists(roomId);
+    return {
+      success: true,
+      data: this.toRoomResponse(updated),
+    };
+  }
+
+  async deleteRoom(
+    roomId: string,
+  ): Promise<{ success: boolean; message: string; roomId: string }> {
+    await this.ensureRoomExists(roomId);
+    await this.roomRepository.delete(roomId);
+    return {
+      success: true,
+      message: 'Room deleted successfully',
+      roomId,
     };
   }
 
