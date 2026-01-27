@@ -438,6 +438,12 @@ export class PropertyService {
       );
     const rejectionReason = latestRejectionHistory?.rejectionReason || null;
 
+    // Fetch the latest property verification request
+    const verificationRequests = await this.propertyVerificationRequestRepository.findByPropertyId(
+      property.id,
+    );
+    const latestVerificationRequest = verificationRequests[0] || null;
+
     return {
       id: property.id,
       title,
@@ -482,6 +488,8 @@ export class PropertyService {
       rejectionReason,
       expiresAt: property.expiresAt || null,
       isVerified: property.isVerified || null,
+      verificationStatus: latestVerificationRequest?.status || null,
+      comments: latestVerificationRequest?.rejectionReason || null,
     };
   }
 

@@ -908,6 +908,21 @@ export class OwnerPropertyDetailResponseDto {
     required: false,
   })
   isVerified?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Verification status from property verification request',
+    example: 'approved',
+    enum: ['pending', 'submitted', 'approved', 'rejected'],
+    nullable: true,
+  })
+  verificationStatus?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Comments/rejection reason from property verification request',
+    example: 'Property verified and approved',
+    nullable: true,
+  })
+  comments?: string | null;
 }
 
 // Property Step 2 Response DTO
