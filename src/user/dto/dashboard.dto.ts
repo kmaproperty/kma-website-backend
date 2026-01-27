@@ -23,6 +23,14 @@ export class LeadsSummaryDto {
   commercial: number;
 }
 
+export class ListingsSummaryDto {
+  @ApiProperty({ description: 'Residential listings count', example: 41 })
+  residential: number;
+
+  @ApiProperty({ description: 'Commercial listings count', example: 2 })
+  commercial: number;
+}
+
 export class LeadsSummaryPeriodsDto {
   @ApiProperty({ description: 'Leads summary for last day (24h)', type: LeadsSummaryDto })
   lastDay: LeadsSummaryDto;
@@ -125,6 +133,9 @@ export class DashboardResponseDto {
 
   @ApiProperty({ description: 'Leads summary for dashboard cards across periods', type: LeadsSummaryPeriodsDto })
   leadsSummary: LeadsSummaryPeriodsDto;
+
+  @ApiProperty({ description: 'Listings summary by category (Residential and Commercial)', type: ListingsSummaryDto })
+  listingsSummary: ListingsSummaryDto;
 
   @ApiProperty({ description: 'KYC verification status', type: KycStatusDto })
   kycStatus: KycStatusDto;

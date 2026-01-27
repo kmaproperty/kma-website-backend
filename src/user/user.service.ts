@@ -1445,6 +1445,29 @@ export class UserService {
       this.leadRepository.countByUserAndTypeSinceQuery(user.id, LeadType.COMMERCIAL, monthSince),
     ]);
 
+    // Get category IDs for residential and commercial
+    const residentialCategory = await this.propertyCategoryRepository.findByCode('residential');
+    const commercialCategory = await this.propertyCategoryRepository.findByCode('commercial');
+
+    // Count properties by category for the user
+    const [
+      residentialCount,
+      commercialCount,
+    ] = await Promise.all([
+      residentialCategory
+        ? this.propertyRepository.countByUserIdAndCategoryId(
+            user.id,
+            residentialCategory.id,
+          )
+        : Promise.resolve(0),
+      commercialCategory
+        ? this.propertyRepository.countByUserIdAndCategoryId(
+            user.id,
+            commercialCategory.id,
+          )
+        : Promise.resolve(0),
+    ]);
+
     // Get KYC status
     const kycStatus = await this.getVerificationStepsStatus(userId);
 
@@ -1471,6 +1494,10 @@ export class UserService {
           residential: monthResidential,
           commercial: monthCommercial,
         },
+      },
+      listingsSummary: {
+        residential: residentialCount,
+        commercial: commercialCount,
       },
       kycStatus: {
         step1_live_photo: kycStatus.step1_live_photo,

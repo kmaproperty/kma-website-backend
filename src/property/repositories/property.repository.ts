@@ -64,6 +64,18 @@ export class PropertyRepository {
   }
 
   /**
+   * Count properties by user ID and category ID (not deleted)
+   */
+  async countByUserIdAndCategoryId(
+    userId: string,
+    categoryId: string,
+  ): Promise<number> {
+    return await this.propertyRepository.count({
+      where: { userId, categoryId, isDeleted: false },
+    });
+  }
+
+  /**
    * Find active properties by user ID with all relations (active and not deleted)
    */
   async findActivePropertiesByUserId(
