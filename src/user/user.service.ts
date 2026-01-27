@@ -119,8 +119,10 @@ import { PropertyListingTypeRepository } from '../property/repositories/property
 import { PropertyCategoryNewRepository } from '../property/repositories/property-category-new.repository';
 import { PropertyTypeRepository } from '../property/repositories/property-type.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
+import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 import { GooglePlacesService } from '../property/services/google-places.service';
 import { PropertyStatus } from '../property/enum/property-status.enum';
+import { PropertyVerificationStatus } from '../property/entities/property-verification-request.entity';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
 import {
   DashboardResponseDto,
@@ -171,6 +173,7 @@ export class UserService {
     private readonly propertyCategoryRepository: PropertyCategoryNewRepository,
     private readonly propertyTypeRepository: PropertyTypeRepository,
     private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
+    private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
     private readonly aboutUsRepository: AboutUsRepository,
     private readonly adminConfigurationRepository: AdminConfigurationRepository,
     private readonly favoritePropertyRepository: FavoritePropertyRepository,
@@ -2612,10 +2615,18 @@ export class UserService {
       throw new BadRequestException('Property is not available');
     }
 
+    // Fetch the latest property verification request (ordered by createdAt DESC, so first is latest)
+    const verificationRequests = await this.propertyVerificationRequestRepository.findByPropertyId(
+      propertyId,
+    );
+    const latestVerificationRequest = verificationRequests[0] || null;
+
     // Return the full property entity with all loaded relations (photos, videos, master data, owner, etc.)
     return {
       success: true,
       property,
+      verificationStatus: latestVerificationRequest?.status || null,
+      comments: latestVerificationRequest?.rejectionReason || null,
     };
   }
 

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PropertyVerificationStatus } from '../../property/entities/property-verification-request.entity';
 
 export class EndUserPropertyDetailsResponseDto {
   @ApiProperty({ description: 'Success status', example: true })
@@ -9,6 +10,21 @@ export class EndUserPropertyDetailsResponseDto {
       'Full property entity object with all scalar fields and loaded relations (including photos, videos, and master data mappings).',
   })
   property: any;
+
+  @ApiPropertyOptional({
+    description: 'Verification status of the property from property verification request',
+    enum: PropertyVerificationStatus,
+    example: PropertyVerificationStatus.APPROVED,
+    nullable: true,
+  })
+  verificationStatus?: PropertyVerificationStatus | null;
+
+  @ApiPropertyOptional({
+    description: 'Comments/rejection reason from property verification request',
+    example: 'Property verified and approved',
+    nullable: true,
+  })
+  comments?: string | null;
 
   @ApiPropertyOptional({
     description:
