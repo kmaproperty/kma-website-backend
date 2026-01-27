@@ -129,6 +129,8 @@ import {
   SubmitPropertyRatingReviewDto,
   SubmitPropertyRatingReviewResponseDto,
   GetMyPropertyRatingReviewResponseDto,
+  SimilarPropertiesQueryDto,
+  SimilarPropertiesResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import { LeadRepository } from './repositories/lead.repository';
@@ -2590,6 +2592,178 @@ export class UserService {
         };
       },
     );
+
+    return {
+      success: true,
+      properties,
+      total: result.total,
+    };
+  }
+
+  /**
+   * Get similar properties based on city and optionally property type
+   * Returns active properties in the same city
+   */
+  async getSimilarProperties(
+    query: SimilarPropertiesQueryDto,
+    userId?: string,
+  ): Promise<SimilarPropertiesResponseDto> {
+    const { cityId, propertyTypeId, limit = 10 } = query;
+
+    // Build filters for property repository
+    const filters: any = {
+      cityId,
+      propertyTypeIds: propertyTypeId ? [propertyTypeId] : undefined,
+    };
+
+    const result = await this.propertyRepository.findEndUserProperties({
+      page: 1,
+      limit,
+      sortBy: 'createdAt',
+      sortOrder: 'DESC',
+      filters,
+    });
+
+    // Get favorite property IDs if user is logged in
+    let favoritePropertyIds: Set<string> = new Set();
+    if (userId) {
+      const favoriteProperties = await this.favoritePropertyRepository.findByUserId(
+        userId,
+        1,
+        10000,
+      );
+      favoritePropertyIds = new Set(
+        favoriteProperties.items.map((fp) => fp.propertyId),
+      );
+    }
+
+    // Get ratings for all properties
+    const propertyIds = result.items.map((p) => p.id);
+    const ratingsMap = new Map<string, { averageRating: number; totalReviews: number }>();
+
+    for (const propertyId of propertyIds) {
+      const stats = await this.propertyRatingReviewRepository.getRatingStatistics(
+        propertyId,
+      );
+      ratingsMap.set(propertyId, {
+        averageRating: stats.averageOverallRating,
+        totalReviews: stats.totalReviews,
+      });
+    }
+
+    // Map properties to response DTO
+    const properties = result.items.map((property) => {
+      // Get primary image (cover image or first image)
+      let imageUrl: string | null = null;
+      if (property.photos && property.photos.length > 0) {
+        const coverImage = property.photos.find((p) => p.isCoverImage);
+        const firstPhoto = property.photos[0];
+        const selectedPhoto = coverImage || firstPhoto;
+        imageUrl = selectedPhoto.fileKey || null;
+      }
+
+      // Build address
+      const addressParts: string[] = [];
+      if (property.houseNumber || property.flatNumber) {
+        addressParts.push(property.houseNumber || property.flatNumber || '');
+      }
+      if (property.society?.name) {
+        addressParts.push(property.society.name);
+      }
+      if (property.locality?.name) {
+        addressParts.push(property.locality.name);
+      }
+      const address = addressParts.join(', ') || 'Address not available';
+
+      // Build property title
+      const titleParts: string[] = [];
+      if (property.bhkType?.name) {
+        titleParts.push(property.bhkType.name);
+      }
+      if (property.propertyType?.name) {
+        titleParts.push(property.propertyType.name);
+      }
+      const title =
+        titleParts.join(' ') ||
+        property.society?.name ||
+        property.propertyDescription?.split('.')[0] ||
+        'Property';
+
+      // Get area
+      const areaFromMetadata = property.builtUpAreaMetadata?.superBuiltUpArea
+        ? Number(property.builtUpAreaMetadata.superBuiltUpArea)
+        : null;
+      const area =
+        property.builtUpArea ?? areaFromMetadata ?? property.carpetArea ?? null;
+      const areaUnit =
+        property.builtUpAreaUnit ??
+        property.carpetAreaUnit ??
+        (area != null ? 'Sq Ft' : null);
+
+      // Get price and price type
+      const price = property.price ?? property.monthlyRent ?? null;
+      const priceType = property.price != null ? 'sale' : property.monthlyRent != null ? 'rent' : null;
+
+      // Format listed on date
+      const listedOn = property.createdAt.toISOString().split('T')[0];
+      const listedOnFormatted = new Date(listedOn).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+
+      // Get possession status
+      let possessionStatus: string | null = null;
+      if (property.possessionStatus === 'immediate') {
+        possessionStatus = 'Ready to move';
+      } else if (property.possessionStatus === 'future' && property.possessionDate) {
+        const posDate = new Date(property.possessionDate);
+        possessionStatus = `Available from ${posDate.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })}`;
+      }
+
+      // Get ratings
+      const ratings = ratingsMap.get(property.id) || {
+        averageRating: null,
+        totalReviews: 0,
+      };
+
+      // Get bathrooms from builtUpAreaMetadata
+      const bathrooms = property.builtUpAreaMetadata?.noOfBathrooms || null;
+
+      // Determine price type
+      const finalPriceType: 'sale' | 'rent' | null = property.price != null ? 'sale' : property.monthlyRent != null ? 'rent' : null;
+
+      return {
+        id: property.id,
+        title,
+        address,
+        imageUrl,
+        propertyType: property.propertyType?.name || null,
+        averageRating: (ratings.averageRating && ratings.averageRating > 0) ? ratings.averageRating : null,
+        totalReviews: ratings.totalReviews,
+        price,
+        priceType: finalPriceType,
+        listedOn: listedOnFormatted,
+        possessionStatus,
+        bedrooms: property.bhkType?.name
+          ? parseInt(property.bhkType.name.match(/\d+/)?.[0] || '0') || null
+          : null,
+        bathrooms,
+        area,
+        areaUnit,
+        owner: {
+          id: property.user?.id || '',
+          name: property.user?.name || null,
+          profileImage: property.user?.profileImage || null,
+          role: property.user?.role || 'OWNER',
+        },
+        isFavorite: userId ? favoritePropertyIds.has(property.id) : false,
+      };
+    });
 
     return {
       success: true,

@@ -55,6 +55,8 @@ import {
   SubmitPropertyRatingReviewDto,
   SubmitPropertyRatingReviewResponseDto,
   GetMyPropertyRatingReviewResponseDto,
+  SimilarPropertiesQueryDto,
+  SimilarPropertiesResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -811,6 +813,32 @@ export class EndUserController {
       throw new BadRequestException('User not authenticated');
     }
     return await this.userService.checkFavoriteProperty(req.user.id, query.propertyId);
+  }
+
+  @Get('properties/similar')
+  @Public()
+  @ApiBearerAuth('access-token')
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - if provided, includes isFavorite status for each property)',
+    required: false,
+  })
+  @ApiOperation({
+    summary: 'Get Similar Properties',
+    description: 'Get similar properties based on city and optionally property type. Returns active properties in the same city. If user is logged in, includes isFavorite status for each property.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Similar properties retrieved successfully',
+    type: SimilarPropertiesResponseDto,
+  })
+  async getSimilarProperties(
+    @Query() query: SimilarPropertiesQueryDto,
+    @Req() req: Request,
+  ): Promise<SimilarPropertiesResponseDto> {
+    // Pass userId if user is logged in (even though endpoint is public, JWT may be present)
+    const userId = req.user?.id;
+    return await this.userService.getSimilarProperties(query, userId);
   }
 }
 
