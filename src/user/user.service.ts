@@ -2648,12 +2648,125 @@ export class UserService {
     );
     const latestVerificationRequest = verificationRequests[0] || null;
 
+    // Check if property owner is a channel partner and fetch channel partner details
+    const propertyOwner = property.user;
+    let channelPartnerDetails: {
+      id: string;
+      name: string | null;
+      firmName: string | null;
+      profileImage: string | null;
+      channelPartnerCode: string | null;
+      phone: string;
+      email: string | null;
+      buyersServed: number;
+      yearsOfExperience: number | null;
+      propertyHoldings: number;
+      areasOfOperation: number;
+      propertyListings: { rent: number; sale: number };
+    } | undefined = undefined;
+
+    if (propertyOwner && propertyOwner.role === UserRole.CHANNEL_PARTNER) {
+      // Calculate channel partner statistics
+      const [
+        totalLeads,
+        propertyCount,
+        categorizedProperties,
+      ] = await Promise.all([
+        this.leadRepository.countByUserId(propertyOwner.id),
+        this.propertyRepository.countByUserId(propertyOwner.id),
+        this.propertyRepository.findActivePropertiesByUserIdCategorized(
+          propertyOwner.id,
+        ),
+      ]);
+
+      // Calculate experience years
+      let experienceYears: number | null = null;
+      if (propertyOwner.businessSince) {
+        const businessDate = new Date(propertyOwner.businessSince);
+        const today = new Date();
+        const years = Math.floor(
+          (today.getTime() - businessDate.getTime()) /
+            (1000 * 60 * 60 * 24 * 365.25),
+        );
+        experienceYears = Math.max(0, years);
+      }
+
+      // Parse areas of operation from cities field
+      const areasOfOperationList = propertyOwner.cities
+        ? propertyOwner.cities.split(',').map((city) => city.trim()).filter(Boolean)
+        : [];
+      const areasOfOperationCount = new Set(areasOfOperationList).size;
+
+      // Count properties by listing type (rent/sale)
+      const rentCount = categorizedProperties.rent.length;
+      const saleCount = categorizedProperties.buy.length;
+
+      channelPartnerDetails = {
+        id: propertyOwner.id,
+        name: propertyOwner.name,
+        firmName: propertyOwner.firmName,
+        profileImage: propertyOwner.profileImage,
+        channelPartnerCode: propertyOwner.channelPartnerCode,
+        phone: propertyOwner.phone,
+        email: propertyOwner.email,
+        buyersServed: totalLeads,
+        yearsOfExperience: experienceYears,
+        propertyHoldings: propertyCount,
+        areasOfOperation: areasOfOperationCount,
+        propertyListings: {
+          rent: rentCount,
+          sale: saleCount,
+        },
+      };
+    }
+
+    // Fetch ratings and reviews statistics
+    const [ratingStats, likeDislikeTexts, sampleReviews] = await Promise.all([
+      this.propertyRatingReviewRepository.getRatingStatistics(propertyId),
+      this.propertyRatingReviewRepository.getLikeDislikeTexts(propertyId),
+      this.propertyRatingReviewRepository.findAllByProperty(propertyId, 3), // Get first 3 reviews
+    ]);
+
+    // Format ratings and reviews data
+    const ratingsAndReviews = ratingStats.totalReviews > 0 ? {
+      totalReviews: ratingStats.totalReviews,
+      averageOverallRating: ratingStats.averageOverallRating,
+      starDistribution: ratingStats.starDistribution,
+      featureRatings: {
+        connectivity: ratingStats.averageConnectivityRating,
+        neighbourhood: ratingStats.averageNeighbourhoodRating,
+        safety: ratingStats.averageSafetyRating,
+        livability: ratingStats.averageLivabilityRating,
+      },
+      likes: likeDislikeTexts.likes,
+      dislikes: likeDislikeTexts.dislikes,
+    } : undefined;
+
+    // Format sample reviews
+    const formattedSampleReviews = sampleReviews.map((review) => ({
+      id: review.id,
+      endUserId: review.endUserId,
+      reviewerName: review.endUser?.name || null,
+      role: review.role,
+      overallRating: Number(review.overallRating),
+      connectivityRating: review.connectivityRating,
+      neighbourhoodRating: review.neighbourhoodRating,
+      safetyRating: review.safetyRating,
+      livabilityRating: review.livabilityRating,
+      likeText: review.likeText,
+      dislikeText: review.dislikeText,
+      createdAt: review.createdAt,
+    }));
+
     // Return the full property entity with all loaded relations (photos, videos, master data, owner, etc.)
     return {
       success: true,
       property,
       verificationStatus: latestVerificationRequest?.status || null,
       comments: latestVerificationRequest?.rejectionReason || null,
+      channelPartnerDetails,
+      ratingsAndReviews,
+      sampleReviews: formattedSampleReviews.length > 0 ? formattedSampleReviews : undefined,
     };
   }
 
