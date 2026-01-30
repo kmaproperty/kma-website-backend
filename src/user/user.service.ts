@@ -131,6 +131,7 @@ import {
   GetMyPropertyRatingReviewResponseDto,
   GetPropertyRatingReviewsQueryDto,
   GetPropertyRatingReviewsResponseDto,
+  GetPropertyMediaResponseDto,
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
 } from './dto';
@@ -2944,6 +2945,117 @@ export class UserService {
       ratingsAndReviews,
       sampleReviews: formattedSampleReviews.length > 0 ? formattedSampleReviews : undefined,
     };
+  }
+
+  /**
+   * Get property media (photos and videos) for the Property Gallery screen.
+   * Returns media grouped by category (Cover Image, Exterior, Bedroom, etc.) and includes verified live photos/videos.
+   */
+  async getPropertyMedia(propertyId: string): Promise<GetPropertyMediaResponseDto> {
+    const property = await this.propertyRepository.findByIdWithRelations(propertyId);
+    if (!property) {
+      throw new BadRequestException('Property not found');
+    }
+    if (property.status !== PropertyStatus.ACTIVE || property.isDeleted) {
+      throw new BadRequestException('Property is not available');
+    }
+
+    const verificationRequests =
+      await this.propertyVerificationRequestRepository.findByPropertyId(propertyId);
+    const approvedVerification = verificationRequests.find(
+      (r) => r.status === PropertyVerificationStatus.APPROVED,
+    );
+
+    const listingPhotos = property.photos ?? [];
+    const listingVideos = property.videos ?? [];
+    const livePhotos = approvedVerification?.livePhotos ?? [];
+    const liveVideos = approvedVerification?.liveVideos ?? [];
+
+    const allPhotos: Array<{ fileKey: string; view: string; isCoverImage: boolean; isVerified: boolean }> = [
+      ...listingPhotos.map((p) => ({
+        fileKey: p.fileKey,
+        view: p.view ?? 'Other',
+        isCoverImage: p.isCoverImage ?? false,
+        isVerified: false,
+      })),
+      ...livePhotos.map((p) => ({
+        fileKey: p.fileKey,
+        view: p.view ?? 'Other',
+        isCoverImage: false,
+        isVerified: true,
+      })),
+    ];
+
+    const allVideos = [
+      ...listingVideos.map((v) => ({ fileKey: v.fileKey, format: v.format ?? 'mp4', isVerified: false })),
+      ...liveVideos.map((v) => ({
+        fileKey: v.fileKey,
+        format: v.format ?? 'mp4',
+        isVerified: true,
+      })),
+    ];
+
+    const categories = this.groupPhotosByCategory(allPhotos);
+
+    const propertyName =
+      property.society?.name ||
+      property.propertyDescription?.split('.')[0] ||
+      'Property';
+    const price =
+      property.monthlyRent != null
+        ? `₹${property.monthlyRent.toLocaleString('en-IN')}/month`
+        : property.price != null
+          ? `₹${property.price.toLocaleString('en-IN')}`
+          : 'Price On Request';
+    const addressParts: string[] = [];
+    if (property.city?.state) addressParts.push(property.city.state);
+    addressParts.push('India');
+    if (property.society?.pincode) addressParts.push(property.society.pincode);
+    const address = addressParts.join(', ') || 'Address not available';
+
+    return {
+      success: true,
+      property: {
+        id: property.id,
+        name: propertyName,
+        price,
+        address,
+      },
+      photoCount: allPhotos.length,
+      videoCount: allVideos.length,
+      categories,
+      videos: allVideos,
+    };
+  }
+
+  private groupPhotosByCategory(
+    photos: Array<{ fileKey: string; view: string; isCoverImage: boolean; isVerified: boolean }>,
+  ): Array<{ name: string; photos: typeof photos }> {
+    const coverPhotos = photos.filter((p) => p.isCoverImage);
+    const nonCoverPhotos = photos.filter((p) => !p.isCoverImage);
+    const byView = new Map<string, typeof photos>();
+    for (const p of nonCoverPhotos) {
+      const view = p.view || 'Other';
+      if (!byView.has(view)) byView.set(view, []);
+      byView.get(view)!.push(p);
+    }
+    const categories: Array<{ name: string; photos: typeof photos }> = [];
+    if (coverPhotos.length > 0) {
+      categories.push({ name: 'Cover Image', photos: coverPhotos });
+    }
+    const viewOrder = ['Exterior', 'Living Room', 'Bedroom', 'Kitchen', 'Bathroom', 'Balcony', 'Parking', 'Amenities', 'Other'];
+    for (const view of viewOrder) {
+      const items = byView.get(view);
+      if (items && items.length > 0) {
+        categories.push({ name: view, photos: items });
+      }
+    }
+    for (const [view, items] of byView) {
+      if (!viewOrder.includes(view)) {
+        categories.push({ name: view, photos: items });
+      }
+    }
+    return categories;
   }
 
   /**

@@ -57,6 +57,7 @@ import {
   GetMyPropertyRatingReviewResponseDto,
   GetPropertyRatingReviewsQueryDto,
   GetPropertyRatingReviewsResponseDto,
+  GetPropertyMediaResponseDto,
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
 } from './dto';
@@ -665,6 +666,33 @@ export class EndUserController {
     @Query() query: GetPropertyRatingReviewsQueryDto,
   ): Promise<GetPropertyRatingReviewsResponseDto> {
     return await this.userService.getPropertyRatingReviews(propertyId, query);
+  }
+
+  @Get('properties/:propertyId/media')
+  @Public()
+  @ApiOperation({
+    summary: 'Get property media (gallery)',
+    description:
+      'Get photos and videos for the Property Gallery screen. Returns media grouped by category (Cover Image, Exterior, Bedroom, etc.), including verified live photos from property verification. Supports 40 Photos, 2 Videos display.',
+  })
+  @ApiParam({
+    name: 'propertyId',
+    description: 'Property ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property media retrieved successfully',
+    type: GetPropertyMediaResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property is not available (not found, deleted, or inactive)',
+  })
+  async getPropertyMedia(
+    @Param('propertyId') propertyId: string,
+  ): Promise<GetPropertyMediaResponseDto> {
+    return await this.userService.getPropertyMedia(propertyId);
   }
 
   @Get('properties/:propertyId/rating-review/me')
