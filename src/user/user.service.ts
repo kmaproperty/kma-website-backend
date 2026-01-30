@@ -126,9 +126,11 @@ import { PropertyVerificationStatus } from '../property/entities/property-verifi
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
 import {
   DashboardResponseDto,
-  SubmitPropertyRatingReviewDto,
+  SubmitPropertyRatingReviewBodyDto,
   SubmitPropertyRatingReviewResponseDto,
   GetMyPropertyRatingReviewResponseDto,
+  GetPropertyRatingReviewsQueryDto,
+  GetPropertyRatingReviewsResponseDto,
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
 } from './dto';
@@ -3800,13 +3802,14 @@ export class UserService {
 
   /**
    * Submit or update rating and review for a specific property (logged in end users only)
+   * propertyId comes from path param; body contains role, ratings, and optional text.
    */
   async submitPropertyRatingReview(
     endUserId: string,
-    dto: SubmitPropertyRatingReviewDto,
+    propertyId: string,
+    dto: SubmitPropertyRatingReviewBodyDto,
   ): Promise<SubmitPropertyRatingReviewResponseDto> {
     const {
-      propertyId,
       role,
       connectivityRating,
       neighbourhoodRating,
@@ -3902,6 +3905,88 @@ export class UserService {
         dislikeText: review.dislikeText ?? undefined,
       },
     };
+  }
+
+  /**
+   * Get rating and reviews for a specific property (summary, feature ratings, whats good/bad, paginated reviews)
+   */
+  async getPropertyRatingReviews(
+    propertyId: string,
+    query: GetPropertyRatingReviewsQueryDto,
+  ): Promise<GetPropertyRatingReviewsResponseDto> {
+    const property = await this.propertyRepository.findById(propertyId);
+    if (
+      !property ||
+      property.isDeleted ||
+      property.status !== PropertyStatus.ACTIVE
+    ) {
+      throw new BadRequestException('Property is not available');
+    }
+
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(50, Math.max(1, query.limit ?? 10));
+
+    const [stats, { likes, dislikes }, { items: reviews, total }] =
+      await Promise.all([
+        this.propertyRatingReviewRepository.getRatingStatistics(propertyId),
+        this.propertyRatingReviewRepository.getLikeDislikeTexts(propertyId),
+        this.propertyRatingReviewRepository.findByPropertyPaginated(
+          propertyId,
+          page,
+          limit,
+        ),
+      ]);
+
+    const whatsGood = this.dedupeTrimStrings(likes);
+    const whatsBad = this.dedupeTrimStrings(dislikes);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return {
+      success: true,
+      summary: {
+        averageRating: stats.averageOverallRating,
+        totalReviews: stats.totalReviews,
+        starDistribution: stats.starDistribution,
+      },
+      featureRatings: {
+        connectivity: stats.averageConnectivityRating,
+        neighbourhood: stats.averageNeighbourhoodRating,
+        safety: stats.averageSafetyRating,
+        livability: stats.averageLivabilityRating,
+      },
+      whatsGood,
+      whatsBad,
+      reviews: reviews.map((r) => ({
+        id: r.id,
+        reviewerName: r.endUser?.name ?? 'Anonymous',
+        reviewerProfileImage: r.endUser?.profileImage ?? null,
+        reviewerDetail: r.endUser?.aboutYourSelf ?? null,
+        overallRating: Number(r.overallRating),
+        role: r.role,
+        likeText: r.likeText ?? null,
+        dislikeText: r.dislikeText ?? null,
+        createdAt: r.createdAt,
+      })),
+      page,
+      limit,
+      total,
+      totalPages,
+    };
+  }
+
+  private dedupeTrimStrings(arr: string[]): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const s of arr) {
+      const t = s.trim();
+      if (!t) continue;
+      const key = t.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(t);
+    }
+    return out;
   }
 
   /**

@@ -52,9 +52,11 @@ import {
   FavoritePropertyListResponseDto,
   CheckFavoritePropertyQueryDto,
   CheckFavoritePropertyResponseDto,
-  SubmitPropertyRatingReviewDto,
+  SubmitPropertyRatingReviewBodyDto,
   SubmitPropertyRatingReviewResponseDto,
   GetMyPropertyRatingReviewResponseDto,
+  GetPropertyRatingReviewsQueryDto,
+  GetPropertyRatingReviewsResponseDto,
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
 } from './dto';
@@ -402,6 +404,32 @@ export class EndUserController {
     return await this.userService.getChannelPartnerDetails(channelPartnerId);
   }
 
+  @Get('properties/similar')
+  @Public()
+  @ApiBearerAuth('access-token')
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - if provided, includes isFavorite status for each property)',
+    required: false,
+  })
+  @ApiOperation({
+    summary: 'Get Similar Properties',
+    description: 'Get similar properties based on city and optionally property type. Returns active properties in the same city. If user is logged in, includes isFavorite status for each property.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Similar properties retrieved successfully',
+    type: SimilarPropertiesResponseDto,
+  })
+  async getSimilarProperties(
+    @Query() query: SimilarPropertiesQueryDto,
+    @Req() req: Request,
+  ): Promise<SimilarPropertiesResponseDto> {
+    // Pass userId if user is logged in (even though endpoint is public, JWT may be present)
+    const userId = req.user?.id;
+    return await this.userService.getSimilarProperties(query, userId);
+  }
+
   @Get('properties/:id')
   @Public()
   @ApiOperation({
@@ -583,12 +611,12 @@ export class EndUserController {
   @ApiOperation({
     summary: 'Submit rating and review for a specific property (logged-in users only)',
     description:
-      'Submit or update a rating and review for a property. Only logged-in end users can submit ratings and reviews. One review per user per property is maintained (subsequent calls update the existing review).',
+      'Submit or update a rating and review for a property. Only logged-in end users can submit ratings and reviews. One review per user per property is maintained (subsequent calls update the existing review). Property ID is taken from the URL path; do not send it in the request body.',
   })
   @ApiParam({
     name: 'propertyId',
-    description: 'Property ID to rate',
-    example: 'uuid-property-id',
+    description: 'Property ID to rate (path param only; omit from body)',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
   })
   @ApiResponse({
     status: 200,
@@ -598,21 +626,45 @@ export class EndUserController {
   async submitPropertyRatingReview(
     @Req() req: Request,
     @Param('propertyId') propertyId: string,
-    @Body() body: SubmitPropertyRatingReviewDto,
+    @Body() body: SubmitPropertyRatingReviewBodyDto,
   ): Promise<SubmitPropertyRatingReviewResponseDto> {
     if (!req.user?.id) {
       throw new BadRequestException('User not authenticated');
     }
 
-    const dto: SubmitPropertyRatingReviewDto = {
-      ...body,
-      propertyId,
-    };
-
     return await this.userService.submitPropertyRatingReview(
       req.user.id,
-      dto,
+      propertyId,
+      body,
     );
+  }
+
+  @Get('properties/:propertyId/rating-reviews')
+  @Public()
+  @ApiOperation({
+    summary: 'Get rating and reviews for a property',
+    description:
+      'Get aggregated ratings and paginated reviews for a property: overall summary (average rating, total reviews, star distribution), feature ratings (connectivity, neighbourhood, safety, livability), what\'s good / what\'s bad from reviews, and paginated individual reviews. Public endpoint.',
+  })
+  @ApiParam({
+    name: 'propertyId',
+    description: 'Property ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rating and reviews retrieved successfully',
+    type: GetPropertyRatingReviewsResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Property is not available (not found, deleted, or inactive)',
+  })
+  async getPropertyRatingReviews(
+    @Param('propertyId') propertyId: string,
+    @Query() query: GetPropertyRatingReviewsQueryDto,
+  ): Promise<GetPropertyRatingReviewsResponseDto> {
+    return await this.userService.getPropertyRatingReviews(propertyId, query);
   }
 
   @Get('properties/:propertyId/rating-review/me')
@@ -815,30 +867,5 @@ export class EndUserController {
     return await this.userService.checkFavoriteProperty(req.user.id, query.propertyId);
   }
 
-  @Get('properties/similar')
-  @Public()
-  @ApiBearerAuth('access-token')
-  @ApiHeader({
-    name: 'Authorization',
-    description: 'Bearer token (optional - if provided, includes isFavorite status for each property)',
-    required: false,
-  })
-  @ApiOperation({
-    summary: 'Get Similar Properties',
-    description: 'Get similar properties based on city and optionally property type. Returns active properties in the same city. If user is logged in, includes isFavorite status for each property.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Similar properties retrieved successfully',
-    type: SimilarPropertiesResponseDto,
-  })
-  async getSimilarProperties(
-    @Query() query: SimilarPropertiesQueryDto,
-    @Req() req: Request,
-  ): Promise<SimilarPropertiesResponseDto> {
-    // Pass userId if user is logged in (even though endpoint is public, JWT may be present)
-    const userId = req.user?.id;
-    return await this.userService.getSimilarProperties(query, userId);
-  }
 }
 

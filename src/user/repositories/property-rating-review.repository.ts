@@ -64,6 +64,25 @@ export class PropertyRatingReviewRepository {
     return query.getMany();
   }
 
+  async findByPropertyPaginated(
+    propertyId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ items: PropertyRatingReview[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const [items, total] = await this.repository
+      .createQueryBuilder('review')
+      .leftJoinAndSelect('review.endUser', 'endUser')
+      .where('review.propertyId = :propertyId', { propertyId })
+      .andWhere('review.deletedAt IS NULL')
+      .orderBy('review.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return { items, total };
+  }
+
   async getRatingStatistics(propertyId: string): Promise<{
     totalReviews: number;
     averageOverallRating: number;
