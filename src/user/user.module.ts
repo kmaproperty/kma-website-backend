@@ -15,6 +15,7 @@ import { PropertyRatingReview } from './entities/property-rating-review.entity';
 import { FavoriteProperty } from './entities/favorite-property.entity';
 import { Session } from './entities/session.entity';
 import { SessionPropertyView } from './entities/session-property-view.entity';
+import { SeenProperty } from './entities/seen-property.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
@@ -30,6 +31,7 @@ import { PropertyRatingReviewRepository } from './repositories/property-rating-r
 import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
 import { SessionRepository } from './repositories/session.repository';
 import { SessionPropertyViewRepository } from './repositories/session-property-view.repository';
+import { SeenPropertyRepository } from './repositories/seen-property.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { DocuSignService } from './services/docusign.service';
@@ -59,6 +61,7 @@ const entities = [
   FavoriteProperty,
   Session,
   SessionPropertyView,
+  SeenProperty,
 ];
 const repositories = [
   UserRepository,
@@ -75,6 +78,7 @@ const repositories = [
   FavoritePropertyRepository,
   SessionRepository,
   SessionPropertyViewRepository,
+  SeenPropertyRepository,
 ];
 
 @Module({

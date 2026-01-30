@@ -1,21 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { SessionRepository } from '../repositories/session.repository';
-import { SessionPropertyViewRepository } from '../repositories/session-property-view.repository';
-import { Session } from '../entities/session.entity';
+import { SeenPropertyRepository } from '../repositories/seen-property.repository';
 
 @Injectable()
 export class PropertyViewTrackerService {
   private readonly MAX_FREE_VIEWS = 3;
 
   constructor(
-    private readonly sessionRepository: SessionRepository,
-    private readonly sessionPropertyViewRepository: SessionPropertyViewRepository,
+    private readonly seenPropertyRepository: SeenPropertyRepository,
   ) {}
 
   /**
-   * Generate a unique session ID from IP and User-Agent
-   * In production, this should ideally come from a cookie set by the frontend
+   * Generate a unique session ID
    */
   private generateSessionId(ip: string, userAgent?: string): string {
     const ua = userAgent || 'unknown';
@@ -27,44 +23,15 @@ export class PropertyViewTrackerService {
   }
 
   /**
-   * Get or create a session for unauthenticated user
-   */
-  private async getOrCreateSession(
-    sessionId: string | null,
-    ip: string,
-    userAgent?: string,
-  ): Promise<Session> {
-    // If sessionId is provided, try to find existing session
-    if (sessionId) {
-      const existing = await this.sessionRepository.findBySessionId(sessionId);
-      if (existing && !existing.userId) {
-        // Only return if not merged with a user
-        return existing;
-      }
-    }
-
-    // Create new session
-    const newSessionId = sessionId || this.generateSessionId(ip, userAgent);
-    const session = await this.sessionRepository.create({
-      sessionId: newSessionId,
-      ipAddress: ip,
-      userAgent: userAgent || null,
-      userId: null,
-      mergedAt: null,
-    });
-
-    return session;
-  }
-
-  /**
    * Check if user can view property details
    * Returns { canView: boolean, remainingViews: number, requiresLogin: boolean, sessionId: string }
    */
   async canViewProperty(
     sessionId: string | null,
     ip: string,
-    userAgent?: string,
-    isAuthenticated: boolean = false,
+    userAgent: string | undefined,
+    isAuthenticated: boolean,
+    propertyId: string,
   ): Promise<{
     canView: boolean;
     remainingViews: number;
@@ -81,37 +48,57 @@ export class PropertyViewTrackerService {
       };
     }
 
-    // Get or create session
-    const session = await this.getOrCreateSession(sessionId, ip, userAgent);
+    // Generate sessionId if not provided
+    const effectiveSessionId =
+      sessionId || this.generateSessionId(ip, userAgent);
 
-    // Count unique properties viewed in this session
+    // Count unique properties viewed with this sessionId
     const uniquePropertyCount =
-      await this.sessionPropertyViewRepository.getUniquePropertyCount(
-        session.id,
+      await this.seenPropertyRepository.getUniquePropertyCountBySession(
+        effectiveSessionId,
       );
 
-    // Check if user has exceeded limit
+    // Check if this property was already viewed in this session
+    const alreadyViewed =
+      await this.seenPropertyRepository.findBySessionAndProperty(
+        effectiveSessionId,
+        propertyId,
+      );
+
+    // If already viewed, don't count as new view
+    if (alreadyViewed) {
+      return {
+        canView: true,
+        remainingViews: this.MAX_FREE_VIEWS - uniquePropertyCount,
+        requiresLogin: false,
+        sessionId: effectiveSessionId,
+      };
+    }
+
+    // Check if user has exceeded limit (for new property)
     if (uniquePropertyCount >= this.MAX_FREE_VIEWS) {
       return {
         canView: false,
         remainingViews: 0,
         requiresLogin: true,
-        sessionId: session.sessionId,
+        sessionId: effectiveSessionId,
       };
     }
 
-    // User can view, return remaining views
+    // User can view new property, return remaining views after this view
     return {
       canView: true,
       remainingViews: this.MAX_FREE_VIEWS - uniquePropertyCount - 1,
       requiresLogin: false,
-      sessionId: session.sessionId,
+      sessionId: effectiveSessionId,
     };
   }
 
   /**
-   * Record a property view for unauthenticated user
-   * Returns the sessionId that should be stored (e.g., in cookie)
+   * Record a property view for unauthenticated or authenticated user.
+   * - Anonymous: records in seen_properties with sessionId (limited to MAX_FREE_VIEWS unique properties).
+   * - Logged-in: records in seen_properties with userId (unlimited).
+   * Returns the sessionId that should be stored (e.g., in cookie) for anonymous users.
    */
   async recordView(
     sessionId: string | null,
@@ -119,22 +106,23 @@ export class PropertyViewTrackerService {
     userAgent: string | undefined,
     propertyId: string,
     isAuthenticated: boolean = false,
+    userId?: string | null,
   ): Promise<string> {
-    // Don't track views for authenticated users
-    if (isAuthenticated) {
+    if (isAuthenticated && userId) {
+      await this.seenPropertyRepository.upsertForUser(userId, propertyId);
       return sessionId || '';
     }
 
-    // Get or create session
-    const session = await this.getOrCreateSession(sessionId, ip, userAgent);
+    // Generate sessionId if not provided
+    const effectiveSessionId =
+      sessionId || this.generateSessionId(ip, userAgent);
 
-    // Increment view count (or create new view record)
-    await this.sessionPropertyViewRepository.incrementViewCount(
-      session.id,
+    await this.seenPropertyRepository.upsertForSession(
+      effectiveSessionId,
       propertyId,
     );
 
-    return session.sessionId;
+    return effectiveSessionId;
   }
 
   /**
@@ -142,8 +130,6 @@ export class PropertyViewTrackerService {
    */
   async getRemainingViews(
     sessionId: string | null,
-    ip: string,
-    userAgent?: string,
     isAuthenticated: boolean = false,
   ): Promise<number> {
     if (isAuthenticated) {
@@ -154,52 +140,34 @@ export class PropertyViewTrackerService {
       return this.MAX_FREE_VIEWS;
     }
 
-    const session = await this.sessionRepository.findBySessionId(sessionId);
-    if (!session || session.userId) {
-      // Session not found or already merged
-      return this.MAX_FREE_VIEWS;
-    }
-
     const uniquePropertyCount =
-      await this.sessionPropertyViewRepository.getUniquePropertyCount(
-        session.id,
+      await this.seenPropertyRepository.getUniquePropertyCountBySession(
+        sessionId,
       );
 
     return Math.max(0, this.MAX_FREE_VIEWS - uniquePropertyCount);
   }
 
   /**
-   * Merge session views with user account when user logs in
-   * This should be called after successful login/signup
+   * Attach userId to all seen_properties records with matching sessionId.
+   * Called when user logs in or registers with a session that has viewed properties.
    */
   async mergeSessionWithUser(
     sessionId: string,
     userId: string,
   ): Promise<boolean> {
     try {
-      const session = await this.sessionRepository.mergeSession(
-        sessionId,
-        userId,
-      );
-      return !!session;
+      await this.seenPropertyRepository.attachUserToSession(sessionId, userId);
+      return true;
     } catch (error) {
-      // Session might not exist or already merged - that's okay
       return false;
     }
   }
 
   /**
-   * Get all property IDs viewed in a session (for merging purposes)
+   * Get all property IDs viewed in a session
    */
   async getSessionPropertyViews(sessionId: string): Promise<string[]> {
-    const session = await this.sessionRepository.findBySessionId(sessionId);
-    if (!session || session.userId) {
-      return [];
-    }
-
-    const views = await this.sessionPropertyViewRepository.findBySessionId(
-      session.id,
-    );
-    return views.map((view) => view.propertyId);
+    return await this.seenPropertyRepository.getPropertyIdsBySession(sessionId);
   }
 }

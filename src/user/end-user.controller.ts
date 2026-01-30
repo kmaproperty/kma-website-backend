@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Put, Delete, Req, Query, Param, BadRequestException, UnauthorizedException, Headers, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Put, Delete, Req, Query, Param, BadRequestException, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiHeader } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { PropertyViewTrackerService } from './services/property-view-tracker.service';
@@ -473,11 +473,13 @@ export class EndUserController {
   async getPropertyDetails(
     @Param('id') propertyId: string,
     @Req() req: Request,
-    @Headers('user-agent') userAgent?: string,
-    @Headers('x-session-id') sessionId?: string,
   ): Promise<EndUserPropertyDetailsResponseDto> {
     // Check if user is authenticated
     const isAuthenticated = !!(req as any).user?.id;
+
+    // Get headers from request
+    const userAgent = req.headers['user-agent'] as string | undefined;
+    const sessionId = req.headers['x-session-id'] as string | undefined;
 
     // Get client IP address
     const clientIp =
@@ -492,6 +494,7 @@ export class EndUserController {
       clientIp,
       userAgent,
       isAuthenticated,
+      propertyId,
     );
 
     if (!viewCheck.canView) {
@@ -506,13 +509,14 @@ export class EndUserController {
     const propertyDetails =
       await this.userService.getEndUserPropertyDetails(propertyId);
 
-    // Record the view for unauthenticated users (async method now)
+    // Record the view (session_property_views for anonymous, seen_properties for logged-in)
     const newSessionId = await this.propertyViewTracker.recordView(
       sessionId || null,
       clientIp,
       userAgent,
       propertyId,
       isAuthenticated,
+      (req as any).user?.id,
     );
 
     // Add remaining views info and sessionId to response
