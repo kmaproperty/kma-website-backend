@@ -3925,6 +3925,7 @@ export class UserService {
 
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(50, Math.max(1, query.limit ?? 10));
+    const sortBy = query.sortBy ?? 'recommended';
 
     const [stats, { likes, dislikes }, { items: reviews, total }] =
       await Promise.all([
@@ -3934,6 +3935,11 @@ export class UserService {
           propertyId,
           page,
           limit,
+          {
+            search: query.q?.trim() || undefined,
+            rating: query.rating,
+            sortBy,
+          },
         ),
       ]);
 

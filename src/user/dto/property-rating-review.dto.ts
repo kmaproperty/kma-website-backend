@@ -124,6 +124,13 @@ export class GetMyPropertyRatingReviewResponseDto {
   review?: SubmitPropertyRatingReviewDto | null;
 }
 
+export type PropertyRatingReviewsSortBy =
+  | 'recommended'
+  | 'newest'
+  | 'oldest'
+  | 'highest'
+  | 'lowest';
+
 /** Query for GET /properties/:propertyId/rating-reviews */
 export class GetPropertyRatingReviewsQueryDto {
   @ApiPropertyOptional({
@@ -151,6 +158,37 @@ export class GetPropertyRatingReviewsQueryDto {
   @Max(50)
   @IsOptional()
   limit: number = 10;
+
+  @ApiPropertyOptional({
+    description: 'Search in review text and reviewer name',
+    example: 'spacious',
+  })
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by star rating (1–5). Only reviews with this rounded rating.',
+    example: 5,
+    minimum: 1,
+    maximum: 5,
+    enum: [1, 2, 3, 4, 5],
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  @IsOptional()
+  rating?: number;
+
+  @ApiPropertyOptional({
+    description: 'Sort order for reviews',
+    enum: ['recommended', 'newest', 'oldest', 'highest', 'lowest'],
+    default: 'recommended',
+  })
+  @IsIn(['recommended', 'newest', 'oldest', 'highest', 'lowest'])
+  @IsOptional()
+  sortBy?: PropertyRatingReviewsSortBy = 'recommended';
 }
 
 export class PropertyRatingReviewsSummaryDto {

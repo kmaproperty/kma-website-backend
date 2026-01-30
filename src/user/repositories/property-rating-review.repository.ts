@@ -68,18 +68,58 @@ export class PropertyRatingReviewRepository {
     propertyId: string,
     page: number,
     limit: number,
+    opts?: {
+      search?: string;
+      rating?: number;
+      sortBy?: 'recommended' | 'newest' | 'oldest' | 'highest' | 'lowest';
+    },
   ): Promise<{ items: PropertyRatingReview[]; total: number }> {
     const skip = (page - 1) * limit;
-    const [items, total] = await this.repository
+    const qb = this.repository
       .createQueryBuilder('review')
       .leftJoinAndSelect('review.endUser', 'endUser')
       .where('review.propertyId = :propertyId', { propertyId })
-      .andWhere('review.deletedAt IS NULL')
-      .orderBy('review.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit)
-      .getManyAndCount();
+      .andWhere('review.deletedAt IS NULL');
 
+    const search = opts?.search?.trim();
+    if (search) {
+      const searchPattern = `%${search}%`;
+      qb.andWhere(
+        '(LOWER(COALESCE(review.like_text, \'\')) LIKE LOWER(:searchPattern) OR LOWER(COALESCE(review.dislike_text, \'\')) LIKE LOWER(:searchPattern) OR LOWER(COALESCE(endUser.name, \'\')) LIKE LOWER(:searchPattern))',
+        { searchPattern },
+      );
+    }
+    const rating = opts?.rating;
+    if (rating != null && rating >= 1 && rating <= 5) {
+      const lo = rating - 0.5;
+      const hi = rating + 0.5;
+      qb.andWhere(
+        'review.overall_rating >= :ratingLo AND review.overall_rating < :ratingHi',
+        { ratingLo: lo, ratingHi: hi },
+      );
+    }
+    const sortBy = opts?.sortBy ?? 'recommended';
+    switch (sortBy) {
+      case 'oldest':
+        qb.orderBy('review.createdAt', 'ASC');
+        break;
+      case 'highest':
+        qb.orderBy('review.overallRating', 'DESC').addOrderBy(
+          'review.createdAt',
+          'DESC',
+        );
+        break;
+      case 'lowest':
+        qb.orderBy('review.overallRating', 'ASC').addOrderBy(
+          'review.createdAt',
+          'DESC',
+        );
+        break;
+      default:
+        qb.orderBy('review.createdAt', 'DESC');
+    }
+
+    const [items, total] = await qb.skip(skip).take(limit).getManyAndCount();
     return { items, total };
   }
 

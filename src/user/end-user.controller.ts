@@ -644,7 +644,7 @@ export class EndUserController {
   @ApiOperation({
     summary: 'Get rating and reviews for a property',
     description:
-      'Get aggregated ratings and paginated reviews for a property: overall summary (average rating, total reviews, star distribution), feature ratings (connectivity, neighbourhood, safety, livability), what\'s good / what\'s bad from reviews, and paginated individual reviews. Public endpoint.',
+      'Get aggregated ratings and paginated reviews for a property: overall summary (average rating, total reviews, star distribution), feature ratings (connectivity, neighbourhood, safety, livability), what\'s good / what\'s bad from reviews, and paginated individual reviews. Supports search (q), filter by star rating, and sort (recommended, newest, oldest, highest, lowest). Public endpoint.',
   })
   @ApiParam({
     name: 'propertyId',
