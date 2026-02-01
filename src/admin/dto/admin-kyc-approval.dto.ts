@@ -150,7 +150,17 @@ export class AdminApproveKycResponseDto {
     description: 'KYC verification steps status',
     example: {
       step1_live_photo: { live_photo_url: 'https://example.com/photo.jpg', live_photo_approved: true },
-      step2_aadhaar: { aadhaar_number: '123456789012', aadhaar_verified: true },
+      step2_aadhaar: {
+        aadhaar_number: '123456789012',
+        aadhaar_verified: true,
+        digilocker_clientid: 'client_abc123',
+        digilocker_metadata: {
+          name: 'Par',
+          gender: 'M',
+          dob: '1992-08-10',
+          mobile_number: '88993232',
+        },
+      },
       step3_bank_details: { bank_details_filled: true },
       step4_docusign_agreement: { docusign_agreement_signed: true },
     },
@@ -163,6 +173,13 @@ export class AdminApproveKycResponseDto {
     step2_aadhaar: {
       aadhaar_number: string | null;
       aadhaar_verified: boolean;
+      digilocker_clientid: string | null;
+      digilocker_metadata: {
+        name?: string;
+        gender?: string;
+        dob?: string;
+        mobile_number?: string;
+      } | null;
     };
     step3_bank_details: {
       bank_details_filled: boolean;
@@ -214,6 +231,13 @@ export class AdminKycStatusResponseDto {
       step2_aadhaar: {
         aadhaar_number: '123456789012',
         aadhaar_verified: true,
+        digilocker_clientid: 'client_abc123',
+        digilocker_metadata: {
+          name: 'Paras Gambhir',
+          gender: 'M',
+          dob: '1992-07-10',
+          mobile_number: '9467813457',
+        },
       },
       step3_bank_details: {
         bank_details_filled: true,
@@ -231,6 +255,13 @@ export class AdminKycStatusResponseDto {
     step2_aadhaar: {
       aadhaar_number: string | null;
       aadhaar_verified: boolean;
+      digilocker_clientid: string | null;
+      digilocker_metadata: {
+        name?: string;
+        gender?: string;
+        dob?: string;
+        mobile_number?: string;
+      } | null;
     };
     step3_bank_details: {
       bank_details_filled: boolean;

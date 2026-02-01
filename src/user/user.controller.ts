@@ -330,7 +330,7 @@ export class UserController {
   @ApiOperation({ summary: 'Verify Aadhaar (Step 2)' })
   @ApiResponse({
     status: 200,
-    description: 'Aadhaar verified successfully',
+    description: 'Aadhaar details saved successfully',
     type: VerifyAadhaarResponseDto,
   })
   async verifyAadhaar(

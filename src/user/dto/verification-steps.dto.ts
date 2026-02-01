@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 // Step 1: Live Photo Upload
 export class UploadLivePhotoDto {
@@ -39,22 +46,67 @@ export class UploadLivePhotoResponseDto {
 }
 
 // Step 2: Aadhaar Verification
+export class DigilockerMetadataDto {
+  @ApiPropertyOptional({ description: 'Name from DigiLocker', example: 'Paras Gambhir' })
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Gender from DigiLocker', example: 'M' })
+  @IsString()
+  @IsOptional()
+  gender?: string;
+
+  @ApiPropertyOptional({ description: 'Date of birth from DigiLocker', example: '1992-07-10' })
+  @IsString()
+  @IsOptional()
+  dob?: string;
+
+  @ApiPropertyOptional({ description: 'Mobile number from DigiLocker', example: '9467813457' })
+  @IsString()
+  @IsOptional()
+  mobile_number?: string;
+}
+
 export class VerifyAadhaarDto {
   @ApiProperty({
-    description: 'Aadhaar number',
+    description: 'Aadhaar number (optional)',
     example: '123456789012',
+    required: false,
   })
   @IsString()
-  @IsNotEmpty()
-  aadhaar_number: string;
+  @IsOptional()
+  aadhaar_number?: string;
 
   @ApiProperty({
-    description: 'OTP code (use 1234 for verification)',
-    example: '1234',
+    description: 'DigiLocker client ID (optional, for DigiLocker-linked Aadhaar)',
+    example: 'client_abc123',
+    required: false,
   })
   @IsString()
-  @IsNotEmpty()
-  otp: string;
+  @IsOptional()
+  digilocker_clientid?: string;
+
+  @ApiPropertyOptional({
+    description: 'DigiLocker metadata (name, gender, dob, mobile_number)',
+    example: {
+      name: 'Paras Gambhir',
+      gender: 'M',
+      dob: '1992-07-10',
+      mobile_number: '9467813457',
+    },
+  })
+  @ValidateNested()
+  @Type(() => DigilockerMetadataDto)
+  @IsOptional()
+  digilocker_metadata?: DigilockerMetadataDto;
+
+  @ApiProperty({
+    description: 'Whether Aadhaar is verified (e.g. via DigiLocker or other flow)',
+    example: true,
+  })
+  @IsBoolean()
+  isVerified: boolean;
 }
 
 export class VerifyAadhaarResponseDto {
@@ -75,6 +127,25 @@ export class VerifyAadhaarResponseDto {
     example: true,
   })
   aadhaar_verified: boolean;
+
+  @ApiProperty({
+    description: 'DigiLocker client ID (if provided)',
+    example: 'client_abc123',
+    nullable: true,
+  })
+  digilocker_clientid: string | null;
+
+  @ApiPropertyOptional({
+    description: 'DigiLocker metadata (name, gender, dob, mobile_number)',
+    example: {
+      name: 'Paras Gambhir',
+      gender: 'M',
+      dob: '1992-07-10',
+      mobile_number: '9467813457',
+    },
+    nullable: true,
+  })
+  digilocker_metadata?: DigilockerMetadataDto | null;
 }
 
 // Step 3: Bank Details
@@ -188,11 +259,20 @@ export class VerificationStepsStatusResponseDto {
     example: {
       aadhaar_number: '123456789012',
       aadhaar_verified: true,
+      digilocker_clientid: 'client_abc123',
+      digilocker_metadata: {
+        name: 'Paras Gambhir',
+        gender: 'M',
+        dob: '1992-07-10',
+        mobile_number: '9467813457',
+      },
     },
   })
   step2_aadhaar: {
     aadhaar_number: string | null;
     aadhaar_verified: boolean;
+    digilocker_clientid: string | null;
+    digilocker_metadata: DigilockerMetadataDto | null;
   };
 
   @ApiProperty({
@@ -293,6 +373,25 @@ export class GetAadhaarDetailsResponseDto {
     example: true,
   })
   aadhaar_verified: boolean;
+
+  @ApiProperty({
+    description: 'DigiLocker client ID (if linked via DigiLocker)',
+    example: 'client_abc123',
+    nullable: true,
+  })
+  digilocker_clientid: string | null;
+
+  @ApiPropertyOptional({
+    description: 'DigiLocker metadata (name, gender, dob, mobile_number)',
+    example: {
+      name: 'Paras Gambhir',
+      gender: 'M',
+      dob: '1992-07-10',
+      mobile_number: '9467813457',
+    },
+    nullable: true,
+  })
+  digilocker_metadata?: DigilockerMetadataDto | null;
 }
 
 export class GetBankDetailsResponseDto {

@@ -3180,7 +3180,7 @@ export class UserService {
 
   /**
    * Step 2: Verify Aadhaar
-   * Accepts fixed OTP "1234" for verification
+   * Accepts aadhaar_number, digilocker_clientid (optional), and isVerified
    */
   async verifyAadhaar(
     userId: string,
@@ -3191,20 +3191,28 @@ export class UserService {
       throw new BadRequestException('User not found');
     }
 
-    // Validate Aadhaar number format (12 digits)
-    if (!/^\d{12}$/.test(verifyAadhaarDto.aadhaar_number)) {
+    // Validate Aadhaar number format (12 digits) when provided
+    if (
+      verifyAadhaarDto.aadhaar_number != null &&
+      verifyAadhaarDto.aadhaar_number !== '' &&
+      !/^\d{12}$/.test(verifyAadhaarDto.aadhaar_number)
+    ) {
       throw new BadRequestException('Aadhaar number must be exactly 12 digits');
     }
 
-    // Validate OTP - accept only "1234"
-    if (verifyAadhaarDto.otp !== '1234') {
-      throw new BadRequestException('Invalid OTP code. Please enter 1234.');
-    }
-
-    // Store Aadhaar number and mark as verified
+    // Store Aadhaar number (if provided), DigiLocker client ID (if provided), metadata, and verification status
     await this.userRepository.update(userId, {
-      aadhaarNumber: verifyAadhaarDto.aadhaar_number,
-      aadhaarVerified: true,
+      ...(verifyAadhaarDto.aadhaar_number != null &&
+        verifyAadhaarDto.aadhaar_number !== '' && {
+          aadhaarNumber: verifyAadhaarDto.aadhaar_number,
+        }),
+      aadhaarVerified: verifyAadhaarDto.isVerified,
+      ...(verifyAadhaarDto.digilocker_clientid != null && {
+        digilockerClientid: verifyAadhaarDto.digilocker_clientid,
+      }),
+      ...(verifyAadhaarDto.digilocker_metadata != null && {
+        digilockerMetadata: verifyAadhaarDto.digilocker_metadata,
+      }),
     });
 
     // Check and update KYC status
@@ -3212,8 +3220,10 @@ export class UserService {
 
     return {
       success: true,
-      message: 'Aadhaar verified successfully',
-      aadhaar_verified: true,
+      message: 'Aadhaar details saved successfully',
+      aadhaar_verified: verifyAadhaarDto.isVerified,
+      digilocker_clientid: verifyAadhaarDto.digilocker_clientid ?? null,
+      digilocker_metadata: verifyAadhaarDto.digilocker_metadata ?? null,
     };
   }
 
@@ -3323,6 +3333,8 @@ export class UserService {
       success: true,
       aadhaar_number: user.aadhaarNumber ?? null,
       aadhaar_verified: user.aadhaarVerified,
+      digilocker_clientid: user.digilockerClientid ?? null,
+      digilocker_metadata: user.digilockerMetadata ?? null,
     };
   }
 
@@ -3476,6 +3488,8 @@ export class UserService {
       step2_aadhaar: {
         aadhaar_number: user.aadhaarNumber ?? null,
         aadhaar_verified: user.aadhaarVerified,
+        digilocker_clientid: user.digilockerClientid ?? null,
+        digilocker_metadata: user.digilockerMetadata ?? null,
       },
       step3_bank_details: {
         bank_details_filled: user.bankDetailsFilled,

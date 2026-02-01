@@ -60,11 +60,25 @@ export class KycStatusDto {
     example: {
       aadhaar_number: '123456789012',
       aadhaar_verified: true,
+      digilocker_clientid: 'client_abc123',
+      digilocker_metadata: {
+        name: 'Test',
+        gender: 'M',
+        dob: '1992-07-10',
+        mobile_number: '434343434',
+      },
     },
   })
   step2_aadhaar: {
     aadhaar_number: string | null;
     aadhaar_verified: boolean;
+    digilocker_clientid: string | null;
+    digilocker_metadata: {
+      name?: string;
+      gender?: string;
+      dob?: string;
+      mobile_number?: string;
+    } | null;
   };
 
   @ApiProperty({

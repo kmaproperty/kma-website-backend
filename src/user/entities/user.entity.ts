@@ -159,6 +159,26 @@ export class User extends BaseEntity {
   })
   aadhaarVerified: boolean;
 
+  @Column({
+    name: 'digilocker_clientid',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  digilockerClientid: string | null;
+
+  @Column({
+    name: 'digilocker_metadata',
+    type: 'jsonb',
+    nullable: true,
+  })
+  digilockerMetadata: {
+    name?: string;
+    gender?: string;
+    dob?: string;
+    mobile_number?: string;
+  } | null;
+
   // Step 3: Bank Details
   @Column({
     name: 'bank_details_filled',

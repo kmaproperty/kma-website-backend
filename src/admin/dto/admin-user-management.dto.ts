@@ -143,6 +143,13 @@ export class AdminUserDetailResponseDto {
       step2_aadhaar: {
         aadhaar_number: '123456789012',
         aadhaar_verified: true,
+        digilocker_clientid: 'client_abc123',
+        digilocker_metadata: {
+          name: 'sdsds',
+          gender: 'M',
+          dob: '1992-03-10',
+          mobile_number: 'sdsddsdsds',
+        },
       },
       step3_bank_details: {
         bank_details_filled: true,
@@ -160,6 +167,13 @@ export class AdminUserDetailResponseDto {
     step2_aadhaar: {
       aadhaar_number: string | null;
       aadhaar_verified: boolean;
+      digilocker_clientid: string | null;
+      digilocker_metadata: {
+        name?: string;
+        gender?: string;
+        dob?: string;
+        mobile_number?: string;
+      } | null;
     };
     step3_bank_details: {
       bank_details_filled: boolean;
@@ -182,6 +196,30 @@ export class AdminUserDetailResponseDto {
     nullable: true,
   })
   aadhaar_number: string | null;
+
+  @ApiPropertyOptional({
+    description: 'DigiLocker client ID',
+    example: 'client_abc123',
+    nullable: true,
+  })
+  digilocker_clientid: string | null;
+
+  @ApiPropertyOptional({
+    description: 'DigiLocker metadata (name, gender, dob, mobile_number)',
+    example: {
+      name: 'Paras Gambhir',
+      gender: 'M',
+      dob: '1992-07-10',
+      mobile_number: '9467813457',
+    },
+    nullable: true,
+  })
+  digilocker_metadata: {
+    name?: string;
+    gender?: string;
+    dob?: string;
+    mobile_number?: string;
+  } | null;
 
   @ApiPropertyOptional({
     description: 'Bank details (decrypted)',

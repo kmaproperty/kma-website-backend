@@ -2417,6 +2417,8 @@ export class AdminService {
       },
       live_photo_url: user.livePhotoUrl ?? null,
       aadhaar_number: user.aadhaarNumber ?? null,
+      digilocker_clientid: user.digilockerClientid ?? null,
+      digilocker_metadata: user.digilockerMetadata ?? null,
       bank_details: bankDetails ?? null,
     };
   }
