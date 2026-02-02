@@ -16,6 +16,7 @@ export * from './upgrade-channel-partner.dto';
 export * from './docusign.dto';
 export * from './end-user-signup.dto';
 export * from './end-user-properties-search.dto';
+export * from './end-user-session.dto';
 export * from './end-user-channel-partner-list.dto';
 export * from './end-user-property-details.dto';
 export * from './profile-pic.dto';

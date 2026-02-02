@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { SeenPropertyRepository } from '../repositories/seen-property.repository';
+import { SessionRepository } from '../repositories/session.repository';
 
 @Injectable()
 export class PropertyViewTrackerService {
@@ -8,6 +9,7 @@ export class PropertyViewTrackerService {
 
   constructor(
     private readonly seenPropertyRepository: SeenPropertyRepository,
+    private readonly sessionRepository: SessionRepository,
   ) {}
 
   /**
@@ -169,5 +171,23 @@ export class PropertyViewTrackerService {
    */
   async getSessionPropertyViews(sessionId: string): Promise<string[]> {
     return await this.seenPropertyRepository.getPropertyIdsBySession(sessionId);
+  }
+
+  /**
+   * Create a new session for anonymous users. UI should call this once and send
+   * the returned sessionId in the X-Session-Id header on subsequent requests.
+   * Uses random bytes to guarantee uniqueness (no duplicate key on concurrent calls).
+   */
+  async createSession(
+    ip: string,
+    userAgent?: string,
+  ): Promise<{ sessionId: string }> {
+    const sessionId = crypto.randomBytes(16).toString('hex');
+    await this.sessionRepository.create({
+      sessionId,
+      ipAddress: ip || null,
+      userAgent: userAgent ?? null,
+    });
+    return { sessionId };
   }
 }

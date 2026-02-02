@@ -2,6 +2,7 @@ import { Controller, Post, Body, Get, Put, Delete, Req, Query, Param, BadRequest
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiHeader } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { PropertyViewTrackerService } from './services/property-view-tracker.service';
+import { SearchTrackerService } from './services/search-tracker.service';
 import { Public } from '../common/decorators/public.decorator';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import {
@@ -21,6 +22,7 @@ import {
   EndUserVerifyChangeMobileOtpDto,
   EndUserVerifyChangeMobileOtpResponseDto,
   EndUserHomePageResponseDto,
+  CreateSessionResponseDto,
   EndUserCitiesQueryDto,
   EndUserPropertiesSearchQueryDto,
   EndUserPropertiesSearchResponseDto,
@@ -70,6 +72,7 @@ export class EndUserController {
   constructor(
     private readonly userService: UserService,
     private readonly propertyViewTracker: PropertyViewTrackerService,
+    private readonly searchTrackerService: SearchTrackerService,
   ) {}
 
   @Post('signup')
@@ -265,6 +268,27 @@ export class EndUserController {
     return await this.userService.verifyChangeEndUserMobile(req.user.id, verifyOtpDto);
   }
 
+  @Get('session')
+  @Public()
+  @ApiOperation({
+    summary: 'Create Session',
+    description:
+      'Generate a new session ID for anonymous users. Call this once when the app loads, then send the returned sessionId in the X-Session-Id header on all subsequent requests (property search, property details, etc.) so that seen properties and recent searches can be tracked and merged when the user logs in.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Session created successfully',
+    type: CreateSessionResponseDto,
+  })
+  async createSession(@Req() req: Request): Promise<CreateSessionResponseDto> {
+    const ip =
+      (req as Request & { ip?: string }).ip ||
+      req.socket?.remoteAddress ||
+      '';
+    const userAgent = req.headers['user-agent'];
+    return await this.propertyViewTracker.createSession(ip, userAgent);
+  }
+
   @Get('home/cities')
   @Public()
   @ApiOperation({
@@ -303,9 +327,78 @@ export class EndUserController {
     @Query() query: EndUserPropertiesSearchQueryDto,
     @Req() req: Request,
   ): Promise<EndUserPropertiesSearchResponseDto> {
-    // Pass userId if user is logged in (even though endpoint is public, JWT may be present)
     const userId = req.user?.id;
-    return await this.userService.searchEndUserProperties(query, userId);
+    const isAuthenticated = !!userId;
+    const result = await this.userService.searchEndUserProperties(query, userId);
+
+    // Record in search_history when user performs a search or applies any filter
+    const hasSearch =
+      (query.search && query.search.trim().length > 0) ||
+      query.cityId ||
+      (query.categoryIds && query.categoryIds.length > 0) ||
+      (query.listingTypeIds && query.listingTypeIds.length > 0) ||
+      (query.propertyTypeIds && query.propertyTypeIds.length > 0) ||
+      (query.bhkTypeIds && query.bhkTypeIds.length > 0) ||
+      (query.furnishingTypes && query.furnishingTypes.length > 0) ||
+      (query.constructionStatuses && query.constructionStatuses.length > 0) ||
+      query.minPrice != null ||
+      query.maxPrice != null ||
+      (query.latitude != null &&
+        query.longitude != null) ||
+      (query.postedBy && query.postedBy.length > 0);
+
+    if (hasSearch) {
+      const sessionId = (req.headers['x-session-id'] as string) || null;
+      const ip =
+        (req as Request & { ip?: string }).ip ||
+        req.socket?.remoteAddress ||
+        '';
+      const userAgent = req.headers['user-agent'];
+      const searchQuery = query.search?.trim() || 'Properties';
+      const location =
+        query.latitude != null && query.longitude != null
+          ? 'Near Me'
+          : undefined;
+      const priceRange =
+        query.minPrice != null || query.maxPrice != null
+          ? [query.minPrice, query.maxPrice]
+              .filter((n) => n != null)
+              .map((n) => `₹${(n! / 1_00_000).toFixed(0)}L`)
+              .join(' - ')
+          : undefined;
+      const filters: Record<string, unknown> = {};
+      if (query.cityId) filters.cityId = query.cityId;
+      if (query.categoryIds?.length) filters.categoryIds = query.categoryIds;
+      if (query.listingTypeIds?.length)
+        filters.listingTypeIds = query.listingTypeIds;
+      if (query.propertyTypeIds?.length)
+        filters.propertyTypeIds = query.propertyTypeIds;
+      if (query.bhkTypeIds?.length) filters.bhkTypeIds = query.bhkTypeIds;
+      if (query.furnishingTypes?.length)
+        filters.furnishingTypes = query.furnishingTypes;
+      if (query.constructionStatuses?.length)
+        filters.constructionStatuses = query.constructionStatuses;
+      if (query.postedBy?.length) filters.postedBy = query.postedBy;
+
+      try {
+        await this.searchTrackerService.recordSearch(
+          sessionId,
+          ip,
+          userAgent,
+          searchQuery,
+          isAuthenticated,
+          userId ?? null,
+          location,
+          undefined,
+          priceRange,
+          Object.keys(filters).length > 0 ? filters : undefined,
+        );
+      } catch {
+        // Don't fail the search response if recording fails
+      }
+    }
+
+    return result;
   }
 
   @Get('properties/count')

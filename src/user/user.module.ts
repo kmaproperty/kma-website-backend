@@ -16,6 +16,7 @@ import { FavoriteProperty } from './entities/favorite-property.entity';
 import { Session } from './entities/session.entity';
 import { SessionPropertyView } from './entities/session-property-view.entity';
 import { SeenProperty } from './entities/seen-property.entity';
+import { SearchHistory } from './entities/search-history.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
@@ -32,11 +33,13 @@ import { FavoritePropertyRepository } from './repositories/favorite-property.rep
 import { SessionRepository } from './repositories/session.repository';
 import { SessionPropertyViewRepository } from './repositories/session-property-view.repository';
 import { SeenPropertyRepository } from './repositories/seen-property.repository';
+import { SearchHistoryRepository } from './repositories/search-history.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { DocuSignService } from './services/docusign.service';
 import { EncryptionService } from './services/encryption.service';
 import { PropertyViewTrackerService } from './services/property-view-tracker.service';
+import { SearchTrackerService } from './services/search-tracker.service';
 import { UserController } from './user.controller';
 import { ChannelPartnerCodeController } from './channel-partner-code.controller';
 import { EndUserController } from './end-user.controller';
@@ -62,6 +65,7 @@ const entities = [
   Session,
   SessionPropertyView,
   SeenProperty,
+  SearchHistory,
 ];
 const repositories = [
   UserRepository,
@@ -79,6 +83,7 @@ const repositories = [
   SessionRepository,
   SessionPropertyViewRepository,
   SeenPropertyRepository,
+  SearchHistoryRepository,
 ];
 
 @Module({
@@ -110,6 +115,7 @@ const repositories = [
     DocuSignService,
     EncryptionService,
     PropertyViewTrackerService,
+    SearchTrackerService,
     LoggerService,
     ErrorHandlerService,
     AuthMiddleware,

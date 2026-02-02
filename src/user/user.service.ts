@@ -3191,15 +3191,6 @@ export class UserService {
       throw new BadRequestException('User not found');
     }
 
-    // Validate Aadhaar number format (12 digits) when provided
-    if (
-      verifyAadhaarDto.aadhaar_number != null &&
-      verifyAadhaarDto.aadhaar_number !== '' &&
-      !/^\d{12}$/.test(verifyAadhaarDto.aadhaar_number)
-    ) {
-      throw new BadRequestException('Aadhaar number must be exactly 12 digits');
-    }
-
     // Store Aadhaar number (if provided), DigiLocker client ID (if provided), metadata, and verification status
     await this.userRepository.update(userId, {
       ...(verifyAadhaarDto.aadhaar_number != null &&
