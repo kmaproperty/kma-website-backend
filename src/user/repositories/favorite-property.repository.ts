@@ -73,5 +73,17 @@ export class FavoritePropertyRepository {
       },
     });
   }
+
+  /**
+   * Count saved/favorite properties for a user (logged-in only)
+   */
+  async countByUserId(userId: string): Promise<number> {
+    return await this.favoritePropertyRepository.count({
+      where: {
+        userId,
+        deletedAt: IsNull(),
+      },
+    });
+  }
 }
 

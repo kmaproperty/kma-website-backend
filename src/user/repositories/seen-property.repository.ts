@@ -88,6 +88,18 @@ export class SeenPropertyRepository {
   }
 
   /**
+   * Get count of unique properties viewed by user (for logged-in users)
+   */
+  async getUniquePropertyCountByUser(userId: string): Promise<number> {
+    return await this.repository.count({
+      where: {
+        userId,
+        deletedAt: IsNull(),
+      },
+    });
+  }
+
+  /**
    * Attach userId to all records with given sessionId (called on login/register)
    */
   async attachUserToSession(sessionId: string, userId: string): Promise<void> {

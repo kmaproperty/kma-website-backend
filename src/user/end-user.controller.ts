@@ -62,6 +62,7 @@ import {
   GetPropertyMediaResponseDto,
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
+  UserActivityCountsResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -287,6 +288,42 @@ export class EndUserController {
       '';
     const userAgent = req.headers['user-agent'];
     return await this.propertyViewTracker.createSession(ip, userAgent);
+  }
+
+  @Get('activity-counts')
+  @Public()
+  @ApiBearerAuth('access-token')
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - if provided, counts use userId)',
+    required: false,
+  })
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description:
+      'Session ID (optional - for non-logged-in users; used for recentlySearch and recentlyViewed counts)',
+    required: false,
+  })
+  @ApiOperation({
+    summary: 'Get Activity Counts',
+    description:
+      'Returns counts for the user panel: Recently Search, Recently Viewed, Saved Properties, Contacted Properties. For logged-in users use Authorization header (counts by userId). For non-logged-in users use X-Session-Id header or sessionId query param (recentlySearch and recentlyViewed by sessionId; savedProperties and contactedProperties are 0).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Activity counts retrieved successfully',
+    type: UserActivityCountsResponseDto,
+  })
+  async getActivityCounts(
+    @Req() req: Request,
+    @Query('sessionId') sessionIdQuery?: string,
+  ): Promise<UserActivityCountsResponseDto> {
+    const userId = req.user?.id ?? null;
+    const sessionId =
+      (sessionIdQuery?.trim() ||
+        (req.headers['x-session-id'] as string)?.trim() ||
+        null) || null;
+    return await this.userService.getActivityCounts(sessionId, userId);
   }
 
   @Get('home/cities')

@@ -134,9 +134,12 @@ import {
   GetPropertyMediaResponseDto,
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
+  UserActivityCountsResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import { LeadRepository } from './repositories/lead.repository';
+import { SearchHistoryRepository } from './repositories/search-history.repository';
+import { SeenPropertyRepository } from './repositories/seen-property.repository';
 import { LeadType } from './entities/lead.entity';
 import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
 import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
@@ -183,6 +186,8 @@ export class UserService {
     private readonly adminConfigurationRepository: AdminConfigurationRepository,
     private readonly favoritePropertyRepository: FavoritePropertyRepository,
     private readonly propertyViewTracker: PropertyViewTrackerService,
+    private readonly searchHistoryRepository: SearchHistoryRepository,
+    private readonly seenPropertyRepository: SeenPropertyRepository,
   ) {}
 
   /**
@@ -4405,6 +4410,50 @@ export class UserService {
     return {
       success: true,
       propertyTypes: filteredAndSorted,
+    };
+  }
+
+  /**
+   * Get activity counts for the user panel (Recently Search, Recently Viewed, Saved Properties, Contacted Properties).
+   * For logged-in users: use userId from auth; all counts by userId.
+   * For non-logged-in users: use sessionId (header or query); recentlySearch and recentlyViewed by sessionId; savedProperties and contactedProperties are 0.
+   */
+  async getActivityCounts(
+    sessionId: string | null,
+    userId: string | null,
+  ): Promise<UserActivityCountsResponseDto> {
+    const isLoggedIn = !!userId;
+
+    if (isLoggedIn) {
+      const [recentlySearch, recentlyViewed, savedProperties, contactedProperties] =
+        await Promise.all([
+          this.searchHistoryRepository.countByUser(userId),
+          this.seenPropertyRepository.getUniquePropertyCountByUser(userId),
+          this.favoritePropertyRepository.countByUserId(userId),
+          this.leadRepository.countByUserId(userId),
+        ]);
+      return {
+        recentlySearch,
+        recentlyViewed,
+        savedProperties,
+        contactedProperties,
+      };
+    }
+
+    // Non-logged-in: use sessionId for search and viewed; saved and contacted are 0
+    let recentlySearch = 0;
+    let recentlyViewed = 0;
+    if (sessionId) {
+      [recentlySearch, recentlyViewed] = await Promise.all([
+        this.searchHistoryRepository.countBySession(sessionId),
+        this.seenPropertyRepository.getUniquePropertyCountBySession(sessionId),
+      ]);
+    }
+    return {
+      recentlySearch,
+      recentlyViewed,
+      savedProperties: 0,
+      contactedProperties: 0,
     };
   }
 

@@ -60,6 +60,30 @@ export class SearchHistoryRepository {
   }
 
   /**
+   * Count recent searches for a session (for anonymous users)
+   */
+  async countBySession(sessionId: string): Promise<number> {
+    return await this.repository.count({
+      where: {
+        sessionId,
+        deletedAt: IsNull(),
+      },
+    });
+  }
+
+  /**
+   * Count recent searches for a user (for logged-in users)
+   */
+  async countByUser(userId: string): Promise<number> {
+    return await this.repository.count({
+      where: {
+        userId,
+        deletedAt: IsNull(),
+      },
+    });
+  }
+
+  /**
    * Get recent searches for a session (for anonymous users)
    */
   async findBySession(
