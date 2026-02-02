@@ -314,6 +314,12 @@ export class EndUserController {
     description: 'Bearer token (optional - if provided, includes isFavorite status for each property)',
     required: false,
   })
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description:
+      'Session ID from GET /end-user/session (optional - for recording search in search_history when anonymous)',
+    required: false,
+  })
   @ApiOperation({
     summary: 'Search Properties',
     description: 'Search and filter properties with various filters including city, search, category, property type, BHK, furnishing, construction status, price range, location-based search, and posted by (owner/channel partner). If user is logged in, includes isFavorite status for each property.',
@@ -348,7 +354,10 @@ export class EndUserController {
       (query.postedBy && query.postedBy.length > 0);
 
     if (hasSearch) {
-      const sessionId = (req.headers['x-session-id'] as string) || null;
+      const sessionId =
+        (query.sessionId?.trim() ||
+          (req.headers['x-session-id'] as string)?.trim() ||
+          null) || null;
       const ip =
         (req as Request & { ip?: string }).ip ||
         req.socket?.remoteAddress ||
@@ -366,19 +375,17 @@ export class EndUserController {
               .map((n) => `₹${(n! / 1_00_000).toFixed(0)}L`)
               .join(' - ')
           : undefined;
-      const filters: Record<string, unknown> = {};
-      if (query.cityId) filters.cityId = query.cityId;
-      if (query.categoryIds?.length) filters.categoryIds = query.categoryIds;
-      if (query.listingTypeIds?.length)
-        filters.listingTypeIds = query.listingTypeIds;
-      if (query.propertyTypeIds?.length)
-        filters.propertyTypeIds = query.propertyTypeIds;
-      if (query.bhkTypeIds?.length) filters.bhkTypeIds = query.bhkTypeIds;
-      if (query.furnishingTypes?.length)
-        filters.furnishingTypes = query.furnishingTypes;
-      if (query.constructionStatuses?.length)
-        filters.constructionStatuses = query.constructionStatuses;
-      if (query.postedBy?.length) filters.postedBy = query.postedBy;
+
+      // Save query params as-is in filters (exclude sessionId) so UI can replay the same search
+      const filtersToStore: Record<string, unknown> = {};
+      const queryObj = query as unknown as Record<string, unknown>;
+      for (const key of Object.keys(queryObj)) {
+        if (key === 'sessionId') continue;
+        const value = queryObj[key];
+        if (value !== undefined && value !== null) {
+          filtersToStore[key] = value;
+        }
+      }
 
       try {
         await this.searchTrackerService.recordSearch(
@@ -391,7 +398,7 @@ export class EndUserController {
           location,
           undefined,
           priceRange,
-          Object.keys(filters).length > 0 ? filters : undefined,
+          Object.keys(filtersToStore).length > 0 ? filtersToStore : undefined,
         );
       } catch {
         // Don't fail the search response if recording fails

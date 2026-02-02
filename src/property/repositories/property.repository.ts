@@ -576,32 +576,30 @@ export class PropertyRepository {
       );
     }
 
-    // Location-based search (Near Me)
+    // Location-based search (Near Me) - use society, locality, or city coordinates
     if (
       filters.latitude != null &&
       filters.longitude != null &&
       filters.radius != null
     ) {
-      // Haversine formula for distance calculation
       const radiusInKm = filters.radius;
       const lat = filters.latitude;
       const lon = filters.longitude;
 
-      // Filter by distance using Haversine formula
-      qb.andWhere('property.latitude IS NOT NULL')
-        .andWhere('property.longitude IS NOT NULL')
-        .andWhere(
-          `(
-            6371 * acos(
-              cos(radians(:lat)) * 
-              cos(radians(CAST(property.latitude AS DECIMAL))) * 
-              cos(radians(CAST(property.longitude AS DECIMAL)) - radians(:lon)) + 
-              sin(radians(:lat)) * 
-              sin(radians(CAST(property.latitude AS DECIMAL)))
-            )
-          ) <= :radius`,
-          { lat, lon, radius: radiusInKm },
-        );
+      qb.andWhere(
+        `(society.latitude IS NOT NULL AND society.longitude IS NOT NULL) OR (locality.latitude IS NOT NULL AND locality.longitude IS NOT NULL) OR (city.latitude IS NOT NULL AND city.longitude IS NOT NULL)`,
+      ).andWhere(
+        `(
+          6371 * acos(
+            cos(radians(:lat)) * 
+            cos(radians(CAST(COALESCE(society.latitude, locality.latitude, city.latitude) AS DECIMAL))) * 
+            cos(radians(CAST(COALESCE(society.longitude, locality.longitude, city.longitude) AS DECIMAL)) - radians(:lon)) + 
+            sin(radians(:lat)) * 
+            sin(radians(CAST(COALESCE(society.latitude, locality.latitude, city.latitude) AS DECIMAL)))
+          )
+        ) <= :radius`,
+        { lat, lon, radius: radiusInKm },
+      );
     }
 
     // Filter by posted by (user role)

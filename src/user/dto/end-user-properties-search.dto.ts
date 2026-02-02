@@ -207,6 +207,15 @@ export class EndUserPropertiesSearchQueryDto {
   @Transform(({ value }) => parseCsv(value))
   @IsString({ each: true })
   postedBy?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Session ID for anonymous users. When provided with search/filters, the search is recorded in search_history. Can also be sent via X-Session-Id header.',
+    example: 'a1b2c3d4e5f6789012345678abcdef01',
+  })
+  @IsOptional()
+  @IsString()
+  sessionId?: string;
 }
 
 // Response DTOs
