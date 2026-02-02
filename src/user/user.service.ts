@@ -2795,6 +2795,7 @@ export class UserService {
       state: city.state ?? null,
       latitude: city.latitude ? parseFloat(city.latitude.toString()) : null,
       longitude: city.longitude ? parseFloat(city.longitude.toString()) : null,
+      icon: city.icon ?? null,
       imageUrl: city.imageUrl ?? null,
       propertyCount: city.propertyCount,
     }));

@@ -110,8 +110,10 @@ export class CityRepository {
       .limit(limit)
       .getRawMany();
 
-    // Map raw results to entity-like objects with propertyCount
-    return result.map((row) => {
+    // Map raw results to entity-like objects with propertyCount (handle lowercase keys from raw query)
+    return result.map((row: any) => {
+      const icon = row.icon ?? row.Icon;
+      const imageUrl = row.imageUrl ?? row.imageurl ?? row.ImageUrl;
       const city = this.cityRepository.create({
         id: row.id,
         name: row.name,
@@ -120,8 +122,8 @@ export class CityRepository {
         latitude: row.latitude,
         longitude: row.longitude,
         isFeatured: row.isFeatured,
-        icon: row.icon,
-        imageUrl: row.imageUrl,
+        icon,
+        imageUrl,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         deletedAt: row.deletedAt,

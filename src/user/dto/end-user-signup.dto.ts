@@ -563,7 +563,14 @@ export class EndUserTopCityItemDto {
   longitude?: number | null;
 
   @ApiProperty({
-    description: 'City image URL',
+    description: 'City icon URL (small icon)',
+    example: 'https://example.com/icons/delhi.png',
+    required: false,
+  })
+  icon?: string | null;
+
+  @ApiProperty({
+    description: 'City image URL (main image for display)',
     example: 'https://example.com/images/delhi.jpg',
     required: false,
   })
