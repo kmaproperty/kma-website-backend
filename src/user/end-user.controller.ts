@@ -63,6 +63,10 @@ import {
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
   UserActivityCountsResponseDto,
+  SendOtpContactPropertyDto,
+  SendOtpContactPropertyResponseDto,
+  SubmitContactPropertyDto,
+  SubmitContactPropertyResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -662,6 +666,77 @@ export class EndUserController {
       remainingViews: viewCheck.remainingViews,
       sessionId: isAuthenticated ? undefined : newSessionId, // Only return sessionId for non-authenticated users
     };
+  }
+
+  @Post('properties/:propertyId/contact/send-otp')
+  @Public()
+  @ApiParam({
+    name: 'propertyId',
+    description: 'Property ID to contact',
+    example: 'uuid-string',
+  })
+  @ApiOperation({
+    summary: 'Send OTP for Contact Property (Non-logged-in users)',
+    description:
+      'Send OTP to phone number. Required before submitting the contact form when not logged in. Use the OTP in POST /end-user/properties/:propertyId/contact.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+    type: SendOtpContactPropertyResponseDto,
+  })
+  async sendOtpForContactProperty(
+    @Param('propertyId') _propertyId: string,
+    @Body() sendOtpDto: SendOtpContactPropertyDto,
+  ): Promise<SendOtpContactPropertyResponseDto> {
+    return await this.userService.sendOtpForContactProperty(sendOtpDto);
+  }
+
+  @Post('properties/:propertyId/contact')
+  @Public()
+  @ApiParam({
+    name: 'propertyId',
+    description: 'Property ID to contact',
+    example: 'uuid-string',
+  })
+  @ApiBearerAuth('access-token')
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - if provided, no OTP required)',
+    required: false,
+  })
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description:
+      'Session ID (required for non-logged-in users; can also send sessionId in body)',
+    required: false,
+  })
+  @ApiOperation({
+    summary: 'Submit Contact Property Form',
+    description:
+      'Submit the contact form for a property. Logged-in: send Authorization header; no OTP. Non-logged-in: send X-Session-Id (or sessionId in body) and otp from POST .../contact/send-otp.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contact request submitted successfully',
+    type: SubmitContactPropertyResponseDto,
+  })
+  async submitContactProperty(
+    @Param('propertyId') propertyId: string,
+    @Body() submitDto: SubmitContactPropertyDto,
+    @Req() req: Request,
+  ): Promise<SubmitContactPropertyResponseDto> {
+    const userId = (req as any).user?.id ?? null;
+    const sessionId =
+      (submitDto.sessionId?.trim() ||
+        (req.headers['x-session-id'] as string)?.trim() ||
+        null) || null;
+    return await this.userService.submitContactProperty(
+      propertyId,
+      submitDto,
+      userId,
+      sessionId,
+    );
   }
 
   @Post('contact-us/send-otp')

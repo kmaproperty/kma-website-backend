@@ -17,6 +17,7 @@ import { Session } from './entities/session.entity';
 import { SessionPropertyView } from './entities/session-property-view.entity';
 import { SeenProperty } from './entities/seen-property.entity';
 import { SearchHistory } from './entities/search-history.entity';
+import { ContactedProperty } from './entities/contacted-property.entity';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
@@ -34,6 +35,7 @@ import { SessionRepository } from './repositories/session.repository';
 import { SessionPropertyViewRepository } from './repositories/session-property-view.repository';
 import { SeenPropertyRepository } from './repositories/seen-property.repository';
 import { SearchHistoryRepository } from './repositories/search-history.repository';
+import { ContactedPropertyRepository } from './repositories/contacted-property.repository';
 import { UserService } from './user.service';
 import { ChannelPartnerCodeService } from './channel-partner-code.service';
 import { DocuSignService } from './services/docusign.service';
@@ -66,6 +68,7 @@ const entities = [
   SessionPropertyView,
   SeenProperty,
   SearchHistory,
+  ContactedProperty,
 ];
 const repositories = [
   UserRepository,
@@ -84,6 +87,7 @@ const repositories = [
   SessionPropertyViewRepository,
   SeenPropertyRepository,
   SearchHistoryRepository,
+  ContactedPropertyRepository,
 ];
 
 @Module({

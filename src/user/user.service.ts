@@ -135,11 +135,16 @@ import {
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
   UserActivityCountsResponseDto,
+  SendOtpContactPropertyDto,
+  SendOtpContactPropertyResponseDto,
+  SubmitContactPropertyDto,
+  SubmitContactPropertyResponseDto,
 } from './dto';
 import { UpgradeToChannelPartnerDto, UpgradeToChannelPartnerResponseDto } from './dto/upgrade-channel-partner.dto';
 import { LeadRepository } from './repositories/lead.repository';
 import { SearchHistoryRepository } from './repositories/search-history.repository';
 import { SeenPropertyRepository } from './repositories/seen-property.repository';
+import { ContactedPropertyRepository } from './repositories/contacted-property.repository';
 import { LeadType } from './entities/lead.entity';
 import { UserRoleHistoryRepository } from './repositories/user-role-history.repository';
 import { ChannelPartnerAgreementRepository } from './repositories/channel-partner-agreement.repository';
@@ -188,6 +193,7 @@ export class UserService {
     private readonly propertyViewTracker: PropertyViewTrackerService,
     private readonly searchHistoryRepository: SearchHistoryRepository,
     private readonly seenPropertyRepository: SeenPropertyRepository,
+    private readonly contactedPropertyRepository: ContactedPropertyRepository,
   ) {}
 
   /**
@@ -1097,6 +1103,14 @@ export class UserService {
           verifyOtpDto.sessionId,
           savedUser.id,
         );
+        await this.searchHistoryRepository.attachUserToSession(
+          verifyOtpDto.sessionId,
+          savedUser.id,
+        );
+        await this.contactedPropertyRepository.attachUserToSession(
+          verifyOtpDto.sessionId,
+          savedUser.id,
+        );
       }
 
       return {
@@ -1269,6 +1283,14 @@ export class UserService {
       // Merge session with user account if sessionId is provided
       if (verifyOtpDto.sessionId) {
         await this.propertyViewTracker.mergeSessionWithUser(
+          verifyOtpDto.sessionId,
+          updatedUser.id,
+        );
+        await this.searchHistoryRepository.attachUserToSession(
+          verifyOtpDto.sessionId,
+          updatedUser.id,
+        );
+        await this.contactedPropertyRepository.attachUserToSession(
           verifyOtpDto.sessionId,
           updatedUser.id,
         );
@@ -3887,6 +3909,127 @@ export class UserService {
   }
 
   /**
+   * Send OTP for contact property (for non-logged-in users)
+   */
+  async sendOtpForContactProperty(
+    sendOtpDto: SendOtpContactPropertyDto,
+  ): Promise<SendOtpContactPropertyResponseDto> {
+    const { phone } = sendOtpDto;
+    const result = await this.sendOtp({ phone });
+    return {
+      success: result.success,
+      message: result.message,
+      otp: result.otp,
+    };
+  }
+
+  /**
+   * Submit contact property form.
+   * Logged-in: provide Authorization; no OTP, create with userId.
+   * Non-logged-in: provide sessionId (header or body) and otp; create with sessionId after OTP verification.
+   */
+  async submitContactProperty(
+    propertyId: string,
+    submitDto: SubmitContactPropertyDto,
+    userId: string | null,
+    sessionId: string | null,
+  ): Promise<SubmitContactPropertyResponseDto> {
+    const property = await this.propertyRepository.findById(propertyId);
+    if (!property) {
+      throw new BadRequestException('Property not found');
+    }
+    if (property.isDeleted) {
+      throw new BadRequestException('Property not available');
+    }
+
+    const { name, email, phone, countryCode } = submitDto;
+
+    if (userId) {
+      const user = await this.userRepository.findById(userId);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+      if (user.role !== UserRole.END_USER) {
+        throw new BadRequestException('Only end users can contact properties');
+      }
+      const contacted = await this.contactedPropertyRepository.create({
+        userId,
+        sessionId: null,
+        propertyId,
+        name: name || user.name || '',
+        email: email || user.email || '',
+        phone: phone || user.phone,
+        countryCode: countryCode ?? null,
+      });
+      return {
+        success: true,
+        message: 'Contact request submitted successfully',
+        contactedPropertyId: contacted.id,
+      };
+    }
+
+    if (!submitDto.otp) {
+      throw new BadRequestException(
+        'OTP is required for non-logged-in users. Please provide OTP or use POST /end-user/properties/:propertyId/contact/send-otp to get one.',
+      );
+    }
+    if (!sessionId) {
+      throw new BadRequestException(
+        'Session ID is required for non-logged-in users. Send X-Session-Id header or sessionId in body.',
+      );
+    }
+
+    const otpRecord = await this.otpRepository.findActiveByPhone(phone);
+    if (!otpRecord) {
+      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
+    }
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
+    }
+    if (otpRecord.isUsed) {
+      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
+    }
+    if (otpRecord.attempts >= 3) {
+      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
+    }
+    if (otpRecord.otpCode !== submitDto.otp) {
+      await this.otpRepository.incrementAttempts(otpRecord.id);
+      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      await queryRunner.manager.update(
+        'otps',
+        { id: otpRecord.id },
+        { isUsed: true },
+      );
+      const contacted = await this.contactedPropertyRepository.create({
+        sessionId,
+        userId: null,
+        propertyId,
+        name,
+        email,
+        phone,
+        countryCode: countryCode ?? null,
+      });
+      await queryRunner.commitTransaction();
+      return {
+        success: true,
+        message: 'Contact request submitted successfully',
+        contactedPropertyId: contacted.id,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
    * Submit rating and review for KMA (for logged in end users only)
    */
   async submitRatingReview(
@@ -4431,7 +4574,7 @@ export class UserService {
           this.searchHistoryRepository.countByUser(userId),
           this.seenPropertyRepository.getUniquePropertyCountByUser(userId),
           this.favoritePropertyRepository.countByUserId(userId),
-          this.leadRepository.countByUserId(userId),
+          this.contactedPropertyRepository.countByUserId(userId),
         ]);
       return {
         recentlySearch,
@@ -4441,20 +4584,22 @@ export class UserService {
       };
     }
 
-    // Non-logged-in: use sessionId for search and viewed; saved and contacted are 0
+    // Non-logged-in: use sessionId for search, viewed, and contacted; saved is 0
     let recentlySearch = 0;
     let recentlyViewed = 0;
+    let contactedProperties = 0;
     if (sessionId) {
-      [recentlySearch, recentlyViewed] = await Promise.all([
+      [recentlySearch, recentlyViewed, contactedProperties] = await Promise.all([
         this.searchHistoryRepository.countBySession(sessionId),
         this.seenPropertyRepository.getUniquePropertyCountBySession(sessionId),
+        this.contactedPropertyRepository.countBySession(sessionId),
       ]);
     }
     return {
       recentlySearch,
       recentlyViewed,
       savedProperties: 0,
-      contactedProperties: 0,
+      contactedProperties,
     };
   }
 
