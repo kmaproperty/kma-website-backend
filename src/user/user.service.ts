@@ -4352,37 +4352,47 @@ export class UserService {
       propertyTypes = propertyTypes.filter((pt) => pt.id === propertyTypeId);
     }
 
-    // Get property counts for each property type in parallel
+    // Get property counts and sample images for each property type in parallel
     const propertyTypesWithCounts = await Promise.all(
       propertyTypes.map(async (propertyType) => {
-        // Build where clause for property count
+        // Build where clause for property count and sample image
         const whereClause: any = {
           propertyTypeId: propertyType.id,
           status: PropertyStatus.ACTIVE,
           isDeleted: false,
         };
 
-        // Add city filter if provided
-        if (cityId) {
-          whereClause.cityId = cityId;
-        }
+        if (cityId) whereClause.cityId = cityId;
+        if (listingTypeId) whereClause.listingTypeId = listingTypeId;
 
-        // Add listing type filter if provided
-        if (listingTypeId) {
-          whereClause.listingTypeId = listingTypeId;
-        }
+        const [propertyCount, sampleProperty] = await Promise.all([
+          this.dataSource.getRepository(Property).count({ where: whereClause }),
+          this.propertyRepository.findOneActiveWithPhotosByPropertyType(
+            propertyType.id,
+            { cityId: cityId ?? undefined, listingTypeId: listingTypeId ?? undefined },
+          ),
+        ]);
 
-        const propertyCount = await this.dataSource
-          .getRepository(Property)
-          .count({
-            where: whereClause,
-          });
+        let imageUrl: string | null = null;
+        let images: { fileKey: string; view: string; isCoverImage: boolean }[] | undefined;
+        if (sampleProperty?.photos && sampleProperty.photos.length > 0) {
+          const cover = sampleProperty.photos.find((p) => p.isCoverImage);
+          const first = sampleProperty.photos[0];
+          imageUrl = (cover || first).fileKey || null;
+          images = sampleProperty.photos.map((p) => ({
+            fileKey: p.fileKey,
+            view: p.view,
+            isCoverImage: p.isCoverImage ?? false,
+          }));
+        }
 
         return {
           id: propertyType.id,
           name: propertyType.name,
           code: propertyType.code,
           propertyCount,
+          imageUrl: imageUrl ?? undefined,
+          images,
         };
       }),
     );

@@ -27,6 +27,15 @@ export class PropertyTypeExploreQueryDto {
   listingTypeId?: string;
 }
 
+export class PropertyTypeExploreImageDto {
+  @ApiProperty({ description: 'Image file key/URL', example: 'properties/abc123.jpg' })
+  fileKey: string;
+  @ApiProperty({ description: 'View type', example: 'living_room' })
+  view: string;
+  @ApiProperty({ description: 'Whether this is the cover image', example: true })
+  isCoverImage: boolean;
+}
+
 export class PropertyTypeExploreItemDto {
   @ApiProperty({
     description: 'Property type ID',
@@ -51,6 +60,18 @@ export class PropertyTypeExploreItemDto {
     example: 28,
   })
   propertyCount: number;
+
+  @ApiPropertyOptional({
+    description: 'Cover or first image from a sample property of this type (fileKey)',
+    example: 'properties/abc123.jpg',
+  })
+  imageUrl?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'All images from the sample property of this type',
+    type: [PropertyTypeExploreImageDto],
+  })
+  images?: PropertyTypeExploreImageDto[];
 }
 
 export class PropertyTypeExploreResponseDto {

@@ -415,6 +415,30 @@ export class PropertyRepository {
     });
   }
 
+  /**
+   * Find one active property (with photos) by property type for explore/card display.
+   * Returns only id and photos. Used to get a sample image per property type.
+   */
+  async findOneActiveWithPhotosByPropertyType(
+    propertyTypeId: string,
+    filters?: { cityId?: string; listingTypeId?: string },
+  ): Promise<Pick<Property, 'id' | 'photos'> | null> {
+    const where: Record<string, unknown> = {
+      propertyTypeId,
+      status: PropertyStatus.ACTIVE,
+      isDeleted: false,
+    };
+    if (filters?.cityId) where.cityId = filters.cityId;
+    if (filters?.listingTypeId) where.listingTypeId = filters.listingTypeId;
+    const prop = await this.propertyRepository.findOne({
+      where,
+      select: ['id', 'photos'],
+      order: { createdAt: 'DESC' },
+    });
+    if (!prop || !prop.photos || prop.photos.length === 0) return null;
+    return { id: prop.id, photos: prop.photos };
+  }
+
   async updateProperty(
     id: string,
     updateData: Partial<Property>,
