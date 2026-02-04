@@ -158,6 +158,7 @@ import { PropertyRatingReviewRepository } from './repositories/property-rating-r
 import { AboutUsRepository } from '../admin/repositories/about-us.repository';
 import { AdminConfigurationRepository } from '../admin/repositories/admin-configuration.repository';
 import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
+import { MetaWhatsappService } from '../common/whatsapp/meta-whatsapp.service';
 
 @Injectable()
 export class UserService {
@@ -194,6 +195,7 @@ export class UserService {
     private readonly searchHistoryRepository: SearchHistoryRepository,
     private readonly seenPropertyRepository: SeenPropertyRepository,
     private readonly contactedPropertyRepository: ContactedPropertyRepository,
+    private readonly metaWhatsappService: MetaWhatsappService,
   ) {}
 
   /**
@@ -420,8 +422,10 @@ export class UserService {
       attempts: 0,
     });
 
+    // Send OTP via WhatsApp (Meta Cloud API)
+    await this.metaWhatsappService.sendOtp(phone, otpCode, 10);
 
-    // In production, integrate with SMS service
+    // In non-production environments, also log the OTP for easier debugging
     if (process.env.NODE_ENV !== 'production') {
       this.logger.debug(`OTP generated for ${phone}: ${otpCode}`);
     }

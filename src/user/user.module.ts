@@ -50,6 +50,7 @@ import { ErrorHandlerService } from '../common/errorHandler/error-handler.servic
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { AdminModule } from '../admin/admin.module';
 import { PropertyModule } from '../property/property.module';
+import { MetaWhatsappService } from '../common/whatsapp/meta-whatsapp.service';
 
 const entities = [
   User,
@@ -124,6 +125,7 @@ const repositories = [
     ErrorHandlerService,
     AuthMiddleware,
     TokenVerificationMiddleware,
+    MetaWhatsappService,
     ...repositories,
   ],
   exports: [

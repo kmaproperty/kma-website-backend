@@ -143,4 +143,43 @@ export class ConfigService implements TypeOrmOptionsFactory {
     return this.nestConfigService.get<string>('OPENAI_API_KEY') || '';
   }
 
+  /**
+   * Get Meta WhatsApp Cloud API access token
+   */
+  public getMetaWhatsAppAccessToken(): string {
+    return (
+      this.nestConfigService.get<string>('META_WHATSAPP_ACCESS_TOKEN') || ''
+    );
+  }
+
+  /**
+   * Get Meta WhatsApp Cloud API phone number ID
+   */
+  public getMetaWhatsAppPhoneNumberId(): string {
+    return (
+      this.nestConfigService.get<string>('META_WHATSAPP_PHONE_NUMBER_ID') ||
+      ''
+    );
+  }
+
+  /**
+   * Get Meta WhatsApp OTP template name
+   */
+  public getMetaWhatsAppOtpTemplateName(): string {
+    return (
+      this.nestConfigService.get<string>('META_WHATSAPP_OTP_TEMPLATE_NAME') ||
+      ''
+    );
+  }
+
+  /**
+   * Get Meta WhatsApp OTP template language (e.g. en, en_US)
+   */
+  public getMetaWhatsAppOtpTemplateLanguage(): string {
+    return (
+      this.nestConfigService.get<string>(
+        'META_WHATSAPP_OTP_TEMPLATE_LANGUAGE',
+      ) || 'en'
+    );
+  }
 }
