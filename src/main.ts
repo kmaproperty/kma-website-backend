@@ -6,12 +6,31 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS
+  // Enable CORS for all APIs including end-user
   app.enableCors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-correlation-id'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Accept-Language',
+      'Accept-Encoding',
+      'Origin',
+      'X-Requested-With',
+      'x-correlation-id',
+      'x-authorization',
+      'X-Authorization',
+      'x-api-key',
+    ],
+    exposedHeaders: [
+      'Content-Length',
+      'Content-Type',
+      'Authorization',
+      'x-correlation-id',
+    ],
     credentials: false,
+    maxAge: 86400, // 24h preflight cache
   });
 
   // Enable validation
