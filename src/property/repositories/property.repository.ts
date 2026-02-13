@@ -469,6 +469,9 @@ export class PropertyRepository {
       latitude?: number;
       longitude?: number;
       radius?: number;
+      minSize?: number;
+      maxSize?: number;
+      amenityIds?: string[];
       postedBy?: string[];
     };
   }): Promise<{
@@ -492,6 +495,7 @@ export class PropertyRepository {
       .leftJoinAndSelect('property.society', 'society')
       .leftJoinAndSelect('property.locality', 'locality')
       .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
       .leftJoinAndSelect('property.user', 'user')
       .where('property.isDeleted = false')
       .andWhere('property.status = :status', { status: PropertyStatus.ACTIVE });
@@ -541,6 +545,41 @@ export class PropertyRepository {
       qb.andWhere('property.constructionStatus IN (:...constructionStatuses)', {
         constructionStatuses: filters.constructionStatuses,
       });
+    }
+
+    // Filter by size (built-up / carpet area in sq ft); use effective size = COALESCE(property.builtUpArea, metadata super/carpet)
+    // Use quoted identifiers so PostgreSQL preserves column case (builtUpArea, not builtuparea)
+    if (filters.minSize != null && filters.minSize > 0) {
+      qb.andWhere(
+        `COALESCE(
+          "property"."builtUpArea"::decimal,
+          "builtUpAreaMetadata"."super_built_up_area",
+          "builtUpAreaMetadata"."carpet_area"
+        ) >= :minSize`,
+        { minSize: filters.minSize },
+      );
+    }
+    if (filters.maxSize != null && filters.maxSize > 0) {
+      qb.andWhere(
+        `COALESCE(
+          "property"."builtUpArea"::decimal,
+          "builtUpAreaMetadata"."super_built_up_area",
+          "builtUpAreaMetadata"."carpet_area"
+        ) <= :maxSize`,
+        { maxSize: filters.maxSize },
+      );
+    }
+
+    // Filter by amenities (property must have at least one of the given amenity IDs)
+    if (filters.amenityIds?.length) {
+      // property.amenities is simple-array (comma-separated); match any of the IDs
+      qb.andWhere(
+        `EXISTS (
+          SELECT 1 FROM unnest(string_to_array(COALESCE(TRIM(property.amenities), ''), ',')) AS a
+          WHERE TRIM(a) IN (:...amenityIds)
+        )`,
+        { amenityIds: filters.amenityIds },
+      );
     }
 
     // Filter by price range

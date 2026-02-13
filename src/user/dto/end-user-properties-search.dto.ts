@@ -181,6 +181,36 @@ export class EndUserPropertiesSearchQueryDto {
   radius?: number = 10;
 
   @ApiPropertyOptional({
+    description: 'Minimum built-up/carpet area in square feet',
+    example: 500,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  minSize?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum built-up/carpet area in square feet',
+    example: 3000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  maxSize?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by amenity IDs (comma separated). Properties with any of these amenities will be returned.',
+    example: 'uuid-amenity-1,uuid-amenity-2',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsUUID(4, { each: true })
+  amenityIds?: string[];
+
+  @ApiPropertyOptional({
     description: 'Sort by field',
     enum: EndUserPropertiesSortBy,
     default: EndUserPropertiesSortBy.CREATED_AT,
@@ -330,11 +360,25 @@ export class EndUserPropertyListItemDto {
   constructionStatus?: string | null;
 
   @ApiProperty({
-    description: 'Property category',
+    description: 'Property category ID',
+    example: 'uuid-category-id',
+    required: false,
+  })
+  categoryId?: string | null;
+
+  @ApiProperty({
+    description: 'Property category name',
     example: 'Residential',
     required: false,
   })
   category?: string | null;
+
+  @ApiProperty({
+    description: 'Listing type ID',
+    example: 'uuid-listing-type-id',
+    required: false,
+  })
+  listingTypeId?: string | null;
 
   @ApiProperty({
     description: 'Listing type (Sale/Rent)',
@@ -344,14 +388,28 @@ export class EndUserPropertyListItemDto {
   listingType?: string | null;
 
   @ApiProperty({
-    description: 'Property type',
+    description: 'Property type ID',
+    example: 'uuid-property-type-id',
+    required: false,
+  })
+  propertyTypeId?: string | null;
+
+  @ApiProperty({
+    description: 'Property type name',
     example: 'Apartment',
     required: false,
   })
   propertyType?: string | null;
 
   @ApiProperty({
-    description: 'BHK type',
+    description: 'BHK type ID',
+    example: 'uuid-bhk-type-id',
+    required: false,
+  })
+  bhkTypeId?: string | null;
+
+  @ApiProperty({
+    description: 'BHK type name',
     example: '2 BHK',
     required: false,
   })
@@ -631,6 +689,36 @@ export class EndUserPropertiesCountQueryDto {
   @Min(1)
   @Max(100)
   radius?: number = 10;
+
+  @ApiPropertyOptional({
+    description: 'Minimum built-up/carpet area in square feet',
+    example: 500,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  minSize?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum built-up/carpet area in square feet',
+    example: 3000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  maxSize?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by amenity IDs (comma separated). Properties with any of these amenities will be returned.',
+    example: 'uuid-amenity-1,uuid-amenity-2',
+    type: String,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseCsv(value))
+  @IsUUID(4, { each: true })
+  amenityIds?: string[];
 
   @ApiPropertyOptional({
     description: 'Filter by posted by user role (comma separated) - OWNER, CHANNEL_PARTNER, or ALL to get all properties',

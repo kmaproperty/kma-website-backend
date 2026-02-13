@@ -97,6 +97,7 @@ import {
   ListingTypeItemDto,
   CategoryItemDto,
   PropertyTypeItemDto,
+  AmenityItemDto,
   HomePageResponseDto,
   AboutUsDataDto,
   HomePageStatisticsDto,
@@ -118,6 +119,7 @@ import { CityRepository } from '../property/repositories/city.repository';
 import { PropertyListingTypeRepository } from '../property/repositories/property-listing-type.repository';
 import { PropertyCategoryNewRepository } from '../property/repositories/property-category-new.repository';
 import { PropertyTypeRepository } from '../property/repositories/property-type.repository';
+import { AmenityRepository } from '../property/repositories/amenity.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 import { GooglePlacesService } from '../property/services/google-places.service';
@@ -186,6 +188,7 @@ export class UserService {
     private readonly propertyListingTypeRepository: PropertyListingTypeRepository,
     private readonly propertyCategoryRepository: PropertyCategoryNewRepository,
     private readonly propertyTypeRepository: PropertyTypeRepository,
+    private readonly amenityRepository: AmenityRepository,
     private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
     private readonly aboutUsRepository: AboutUsRepository,
@@ -2307,6 +2310,9 @@ export class UserService {
       latitude,
       longitude,
       radius,
+      minSize,
+      maxSize,
+      amenityIds,
       postedBy,
     } = query;
 
@@ -2329,6 +2335,9 @@ export class UserService {
         latitude,
         longitude,
         radius,
+        minSize,
+        maxSize,
+        amenityIds,
         postedBy,
       },
     });
@@ -2427,9 +2436,13 @@ export class UserService {
           videoCount: property.videos?.length || 0,
           isReraRegistered: false, // Add RERA field to Property entity if needed
           constructionStatus: property.constructionStatus || null,
+          categoryId: property.category?.id ?? null,
           category: property.category?.name || null,
+          listingTypeId: property.listingType?.id ?? null,
           listingType: property.listingType?.name || null,
+          propertyTypeId: property.propertyType?.id ?? null,
           propertyType: property.propertyType?.name || null,
+          bhkTypeId: property.bhkType?.id ?? null,
           bhkType: property.bhkType?.name || null,
           plotArea: property.plotArea || null,
           plotAreaUnit: property.plotAreaUnit || null,
@@ -2485,6 +2498,9 @@ export class UserService {
       latitude,
       longitude,
       radius,
+      minSize,
+      maxSize,
+      amenityIds,
       postedBy,
     } = query;
 
@@ -2507,6 +2523,9 @@ export class UserService {
         latitude,
         longitude,
         radius,
+        minSize,
+        maxSize,
+        amenityIds,
         postedBy,
       },
     });
@@ -2614,8 +2633,13 @@ export class UserService {
           videos: videos,
           isReraRegistered: false,
           constructionStatus: property.constructionStatus || null,
+          categoryId: property.category?.id ?? null,
           category: property.category?.name || null,
+          listingTypeId: property.listingType?.id ?? null,
+          listingType: property.listingType?.name || null,
+          propertyTypeId: property.propertyType?.id ?? null,
           propertyType: property.propertyType?.name || null,
+          bhkTypeId: property.bhkType?.id ?? null,
           bhkType: property.bhkType?.name || null,
           price: property.price || null,
           monthlyRent: property.monthlyRent || null,
@@ -3744,8 +3768,13 @@ export class UserService {
         imageUrl,
         isReraRegistered: false, // Add RERA field to Property entity if needed
         constructionStatus: property.constructionStatus || null,
+        categoryId: property.category?.id ?? null,
         category: property.category?.name || null,
+        listingTypeId: property.listingType?.id ?? null,
+        listingType: property.listingType?.name || null,
+        propertyTypeId: property.propertyType?.id ?? null,
         propertyType: property.propertyType?.name || null,
+        bhkTypeId: property.bhkType?.id ?? null,
         bhkType: property.bhkType?.name || null,
         price: property.price || null,
         monthlyRent: property.monthlyRent || null,
@@ -4266,18 +4295,17 @@ export class UserService {
   }
 
   /**
-   * Get property master data (listing types, categories, and property types)
-   * Structure: Listing Types -> Categories -> Property Types
+   * Get property master data (listing types, categories, property types, and amenities)
+   * Structure: Listing Types -> Categories -> Property Types; plus flat list of amenities
    */
   async getPropertyMasterData(): Promise<PropertyMasterDataResponseDto> {
-    // Fetch all listing types
-    const listingTypes = await this.propertyListingTypeRepository.findAll();
-
-    // Fetch all categories
-    const categories = await this.propertyCategoryRepository.findAll();
-
-    // Fetch all property types with their relations
-    const propertyTypes = await this.propertyTypeRepository.findAll();
+    // Fetch all listing types, categories, property types, and amenities in parallel
+    const [listingTypes, categories, propertyTypes, amenities] = await Promise.all([
+      this.propertyListingTypeRepository.findAll(),
+      this.propertyCategoryRepository.findAll(),
+      this.propertyTypeRepository.findAll(),
+      this.amenityRepository.findAll(),
+    ]);
 
     // Build the hierarchical structure
     const listingTypeItems: ListingTypeItemDto[] = listingTypes.map(
@@ -4335,10 +4363,18 @@ export class UserService {
       (lt) => lt.categories.length > 0,
     );
 
+    const amenityItems: AmenityItemDto[] = amenities.map((a) => ({
+      id: a.id,
+      name: a.name,
+      code: a.code,
+      icon: a.icon ?? null,
+    }));
+
     return {
       success: true,
       message: 'Property master data retrieved successfully',
       data: filteredListingTypes,
+      amenities: amenityItems,
     };
   }
 
@@ -4807,9 +4843,13 @@ export class UserService {
           videoCount: property.videos?.length || 0,
           isReraRegistered: false,
           constructionStatus: property.constructionStatus || null,
+          categoryId: property.category?.id ?? null,
           category: property.category?.name || null,
+          listingTypeId: property.listingType?.id ?? null,
           listingType: property.listingType?.name || null,
+          propertyTypeId: property.propertyType?.id ?? null,
           propertyType: property.propertyType?.name || null,
+          bhkTypeId: property.bhkType?.id ?? null,
           bhkType: property.bhkType?.name || null,
           plotArea: property.plotArea || null,
           plotAreaUnit: property.plotAreaUnit || null,
