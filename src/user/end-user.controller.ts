@@ -105,9 +105,14 @@ export class EndUserController {
 
   @Post('verify-otp')
   @Public()
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description: 'Session ID (optional - for merging property views/search after signup; send the same value used on anonymous requests)',
+    required: false,
+  })
   @ApiOperation({
     summary: 'End User Verify OTP - Complete Signup',
-    description: 'Verify the OTP received on mobile number and complete the end user account creation. Returns access and refresh tokens upon successful verification.',
+    description: 'Verify the OTP received on mobile number and complete the end user account creation. Returns access and refresh tokens upon successful verification. Send X-Session-Id header to merge anonymous session data after signup.',
   })
   @ApiResponse({
     status: 200,
@@ -120,8 +125,10 @@ export class EndUserController {
   })
   async verifyOtp(
     @Body() verifyOtpDto: EndUserVerifyOtpDto,
+    @Req() req: Request,
   ): Promise<EndUserVerifyOtpResponseDto> {
-    return await this.userService.verifyEndUserOtp(verifyOtpDto);
+    const sessionId = (req.headers['x-session-id'] as string)?.trim() || null;
+    return await this.userService.verifyEndUserOtp(verifyOtpDto, sessionId);
   }
 
   @Post('login')
@@ -147,9 +154,14 @@ export class EndUserController {
 
   @Post('verify-login-otp')
   @Public()
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description: 'Session ID (optional - for merging property views/search after login; send the same value used on anonymous requests)',
+    required: false,
+  })
   @ApiOperation({
     summary: 'End User Verify Login OTP',
-    description: 'Verify the OTP received on mobile number and complete the login. Returns access and refresh tokens upon successful verification.',
+    description: 'Verify the OTP received on mobile number and complete the login. Returns access and refresh tokens upon successful verification. Send X-Session-Id header to merge anonymous session data after login.',
   })
   @ApiResponse({
     status: 200,
@@ -162,8 +174,10 @@ export class EndUserController {
   })
   async verifyLoginOtp(
     @Body() verifyOtpDto: EndUserVerifyLoginOtpDto,
+    @Req() req: Request,
   ): Promise<EndUserVerifyLoginOtpResponseDto> {
-    return await this.userService.verifyEndUserLoginOtp(verifyOtpDto);
+    const sessionId = (req.headers['x-session-id'] as string)?.trim() || null;
+    return await this.userService.verifyEndUserLoginOtp(verifyOtpDto, sessionId);
   }
 
   @Get('profile')
@@ -313,7 +327,7 @@ export class EndUserController {
   @ApiOperation({
     summary: 'Get Activity Counts',
     description:
-      'Returns counts for the user panel: Recently Search, Recently Viewed, Saved Properties, Contacted Properties. For logged-in users use Authorization header (counts by userId). For non-logged-in users use X-Session-Id header or sessionId query param (recentlySearch and recentlyViewed by sessionId; savedProperties and contactedProperties are 0).',
+      'Returns counts for the user panel: Recently Search, Recently Viewed, Saved Properties, Contacted Properties. For logged-in users use Authorization header (counts by userId). For non-logged-in users use X-Session-Id header (recentlySearch and recentlyViewed by session; savedProperties and contactedProperties are 0).',
   })
   @ApiResponse({
     status: 200,
@@ -322,13 +336,10 @@ export class EndUserController {
   })
   async getActivityCounts(
     @Req() req: Request,
-    @Query('sessionId') sessionIdQuery?: string,
   ): Promise<UserActivityCountsResponseDto> {
     const userId = req.user?.id ?? null;
     const sessionId =
-      (sessionIdQuery?.trim() ||
-        (req.headers['x-session-id'] as string)?.trim() ||
-        null) || null;
+      (req.headers['x-session-id'] as string)?.trim() || null;
     return await this.userService.getActivityCounts(sessionId, userId);
   }
 
@@ -398,9 +409,7 @@ export class EndUserController {
 
     if (hasSearch) {
       const sessionId =
-        (query.sessionId?.trim() ||
-          (req.headers['x-session-id'] as string)?.trim() ||
-          null) || null;
+        (req.headers['x-session-id'] as string)?.trim() || null;
       const ip =
         (req as Request & { ip?: string }).ip ||
         req.socket?.remoteAddress ||
@@ -419,11 +428,10 @@ export class EndUserController {
               .join(' - ')
           : undefined;
 
-      // Save query params as-is in filters (exclude sessionId) so UI can replay the same search
+      // Save query params as-is in filters so UI can replay the same search
       const filtersToStore: Record<string, unknown> = {};
       const queryObj = query as unknown as Record<string, unknown>;
       for (const key of Object.keys(queryObj)) {
-        if (key === 'sessionId') continue;
         const value = queryObj[key];
         if (value !== undefined && value !== null) {
           filtersToStore[key] = value;
@@ -710,13 +718,13 @@ export class EndUserController {
   @ApiHeader({
     name: 'X-Session-Id',
     description:
-      'Session ID (required for non-logged-in users; can also send sessionId in body)',
+      'Session ID (required for non-logged-in users)',
     required: false,
   })
   @ApiOperation({
     summary: 'Submit Contact Property Form',
     description:
-      'Submit the contact form for a property. Logged-in: send Authorization header; no OTP. Non-logged-in: send X-Session-Id (or sessionId in body) and otp from POST .../contact/send-otp.',
+      'Submit the contact form for a property. Logged-in: send Authorization header; no OTP. Non-logged-in: send X-Session-Id header and otp from POST .../contact/send-otp.',
   })
   @ApiResponse({
     status: 200,
@@ -730,9 +738,7 @@ export class EndUserController {
   ): Promise<SubmitContactPropertyResponseDto> {
     const userId = (req as any).user?.id ?? null;
     const sessionId =
-      (submitDto.sessionId?.trim() ||
-        (req.headers['x-session-id'] as string)?.trim() ||
-        null) || null;
+      (req.headers['x-session-id'] as string)?.trim() || null;
     return await this.userService.submitContactProperty(
       propertyId,
       submitDto,

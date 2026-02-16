@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Counts for the user activity panel (Recently Search, Recently Viewed, Saved Properties, Contacted Properties).
- * For non-logged-in users: pass sessionId (header or query); recentlySearch and recentlyViewed use sessionId; savedProperties and contactedProperties are 0.
+ * For non-logged-in users: pass X-Session-Id header; recentlySearch and recentlyViewed use session; savedProperties and contactedProperties are 0.
  * For logged-in users: use auth token; all counts use userId.
  */
 export class UserActivityCountsResponseDto {

@@ -103,15 +103,6 @@ export class EndUserVerifyOtpDto {
     message: 'OTP must be exactly 4 digits',
   })
   otp: string;
-
-  @ApiProperty({
-    description: 'Session ID from client (optional - for merging property views after signup)',
-    example: 'abc123def456',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  sessionId?: string;
 }
 
 export class EndUserVerifyOtpResponseDto {
@@ -222,15 +213,6 @@ export class EndUserVerifyLoginOtpDto {
     message: 'OTP must be exactly 4 digits',
   })
   otp: string;
-
-  @ApiProperty({
-    description: 'Session ID from client (optional - for merging property views after login)',
-    example: 'abc123def456',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  sessionId?: string;
 }
 
 export class EndUserVerifyLoginOtpResponseDto {

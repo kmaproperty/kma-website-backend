@@ -1009,10 +1009,12 @@ export class UserService {
 
   /**
    * End User Verify OTP - Complete Signup
-   * Validates OTP and creates complete END_USER account with name and email
+   * Validates OTP and creates complete END_USER account with name and email.
+   * sessionId (from X-Session-Id header) is optional; when provided, merges anonymous session data with the new user.
    */
   async verifyEndUserOtp(
     verifyOtpDto: EndUserVerifyOtpDto,
+    sessionId: string | null = null,
   ): Promise<EndUserVerifyOtpResponseDto> {
     const { name, email, phone, otp } = verifyOtpDto;
 
@@ -1108,18 +1110,18 @@ export class UserService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
-      // Merge session with user account if sessionId is provided
-      if (verifyOtpDto.sessionId) {
+      // Merge session with user account if sessionId (from X-Session-Id header) is provided
+      if (sessionId) {
         await this.propertyViewTracker.mergeSessionWithUser(
-          verifyOtpDto.sessionId,
+          sessionId,
           savedUser.id,
         );
         await this.searchHistoryRepository.attachUserToSession(
-          verifyOtpDto.sessionId,
+          sessionId,
           savedUser.id,
         );
         await this.contactedPropertyRepository.attachUserToSession(
-          verifyOtpDto.sessionId,
+          sessionId,
           savedUser.id,
         );
       }
@@ -1193,10 +1195,12 @@ export class UserService {
 
   /**
    * End User Verify Login OTP
-   * Validates OTP and logs in the end user
+   * Validates OTP and logs in the end user.
+   * sessionId (from X-Session-Id header) is optional; when provided, merges anonymous session data with the user.
    */
   async verifyEndUserLoginOtp(
     verifyOtpDto: EndUserVerifyLoginOtpDto,
+    sessionId: string | null = null,
   ): Promise<EndUserVerifyLoginOtpResponseDto> {
     const { phone, otp } = verifyOtpDto;
 
@@ -1291,18 +1295,18 @@ export class UserService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
-      // Merge session with user account if sessionId is provided
-      if (verifyOtpDto.sessionId) {
+      // Merge session with user account if sessionId (from X-Session-Id header) is provided
+      if (sessionId) {
         await this.propertyViewTracker.mergeSessionWithUser(
-          verifyOtpDto.sessionId,
+          sessionId,
           updatedUser.id,
         );
         await this.searchHistoryRepository.attachUserToSession(
-          verifyOtpDto.sessionId,
+          sessionId,
           updatedUser.id,
         );
         await this.contactedPropertyRepository.attachUserToSession(
-          verifyOtpDto.sessionId,
+          sessionId,
           updatedUser.id,
         );
       }
@@ -3963,7 +3967,7 @@ export class UserService {
   /**
    * Submit contact property form.
    * Logged-in: provide Authorization; no OTP, create with userId.
-   * Non-logged-in: provide sessionId (header or body) and otp; create with sessionId after OTP verification.
+   * Non-logged-in: provide X-Session-Id header and otp; create with sessionId after OTP verification.
    */
   async submitContactProperty(
     propertyId: string,
@@ -4012,7 +4016,7 @@ export class UserService {
     }
     if (!sessionId) {
       throw new BadRequestException(
-        'Session ID is required for non-logged-in users. Send X-Session-Id header or sessionId in body.',
+        'Session ID is required for non-logged-in users. Send X-Session-Id header.',
       );
     }
 
@@ -4678,7 +4682,7 @@ export class UserService {
   /**
    * Get activity counts for the user panel (Recently Search, Recently Viewed, Saved Properties, Contacted Properties).
    * For logged-in users: use userId from auth; all counts by userId.
-   * For non-logged-in users: use sessionId (header or query); recentlySearch and recentlyViewed by sessionId; savedProperties and contactedProperties are 0.
+   * For non-logged-in users: use X-Session-Id header; recentlySearch and recentlyViewed by session; savedProperties and contactedProperties are 0.
    */
   async getActivityCounts(
     sessionId: string | null,

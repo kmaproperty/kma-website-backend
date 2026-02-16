@@ -71,14 +71,6 @@ export class SubmitContactPropertyDto {
   @IsString()
   @Matches(/^\d{4}$/, { message: 'OTP must be exactly 4 digits' })
   otp?: string;
-
-  @ApiPropertyOptional({
-    description: 'Session ID (required for non-logged-in users; can also use X-Session-Id header)',
-    example: 'a1b2c3d4e5f6789012345678abcdef01',
-  })
-  @IsOptional()
-  @IsString()
-  sessionId?: string;
 }
 
 export class SubmitContactPropertyResponseDto {
