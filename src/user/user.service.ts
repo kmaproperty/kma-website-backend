@@ -112,6 +112,8 @@ import {
   FavoritePropertyListResponseDto,
   CheckFavoritePropertyQueryDto,
   CheckFavoritePropertyResponseDto,
+  ListFiltersQueryDto,
+  ListFiltersResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { Property } from '../property/entities/property.entity';
@@ -119,6 +121,7 @@ import { CityRepository } from '../property/repositories/city.repository';
 import { PropertyListingTypeRepository } from '../property/repositories/property-listing-type.repository';
 import { PropertyCategoryNewRepository } from '../property/repositories/property-category-new.repository';
 import { PropertyTypeRepository } from '../property/repositories/property-type.repository';
+import { BhkTypeRepository } from '../property/repositories/bhk-type.repository';
 import { AmenityRepository } from '../property/repositories/amenity.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
@@ -188,6 +191,7 @@ export class UserService {
     private readonly propertyListingTypeRepository: PropertyListingTypeRepository,
     private readonly propertyCategoryRepository: PropertyCategoryNewRepository,
     private readonly propertyTypeRepository: PropertyTypeRepository,
+    private readonly bhkTypeRepository: BhkTypeRepository,
     private readonly amenityRepository: AmenityRepository,
     private readonly propertyRejectionHistoryRepository: PropertyRejectionHistoryRepository,
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
@@ -4375,6 +4379,80 @@ export class UserService {
       message: 'Property master data retrieved successfully',
       data: filteredListingTypes,
       amenities: amenityItems,
+    };
+  }
+
+  /**
+   * List filters for property search: listing types, categories, property types, and BHK types.
+   * Optional query params listingTypeId and categoryId filter property types.
+   * When propertyTypeId is provided, bhkTypes are returned for that property type; bhkTypes are empty for Plot and Commercial category.
+   */
+  async getListFilters(query: ListFiltersQueryDto): Promise<ListFiltersResponseDto> {
+    const [listingTypes, categories, propertyTypes, amenities] = await Promise.all([
+      this.propertyListingTypeRepository.findAll(),
+      this.propertyCategoryRepository.findAll(),
+      this.propertyTypeRepository.findAll(),
+      this.amenityRepository.findAll(),
+    ]);
+
+    let filteredPropertyTypes = propertyTypes;
+    if (query.listingTypeId) {
+      filteredPropertyTypes = filteredPropertyTypes.filter(
+        (pt) => pt.listingTypeId === query.listingTypeId,
+      );
+    }
+    if (query.categoryId) {
+      filteredPropertyTypes = filteredPropertyTypes.filter(
+        (pt) => pt.categoryId === query.categoryId,
+      );
+    }
+
+    let bhkTypes: { id: string; name: string; code: string }[] = [];
+    if (query.propertyTypeId) {
+      const propertyType = await this.propertyTypeRepository.findById(query.propertyTypeId);
+      const isPlot = propertyType?.name?.toLowerCase() === 'plot';
+      const category = propertyType
+        ? await this.propertyCategoryRepository.findById(propertyType.categoryId)
+        : null;
+      const isCommercial = category?.code?.toLowerCase() === 'commercial';
+      if (!isPlot && !isCommercial && propertyType) {
+        const bhkList = await this.bhkTypeRepository.findByPropertyTypeId(query.propertyTypeId);
+        bhkTypes = bhkList.map((b) => ({ id: b.id, name: b.name, code: b.code }));
+      }
+    } else {
+      const bhkList = await this.bhkTypeRepository.findAll();
+      bhkTypes = bhkList.map((b) => ({ id: b.id, name: b.name, code: b.code }));
+    }
+
+    return {
+      success: true,
+      listingTypes: listingTypes.map((lt) => ({
+        id: lt.id,
+        name: lt.name,
+        code: lt.code,
+      })),
+      categories: categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        code: c.code,
+      })),
+      propertyTypes: filteredPropertyTypes.map((pt) => ({
+        id: pt.id,
+        name: pt.name,
+        code: pt.code,
+      })),
+      bhkTypes,
+      amenities: amenities.map((a) => ({
+        id: a.id,
+        name: a.name,
+        code: a.code,
+        icon: a.icon ?? null,
+      })),
+      furnishing: [
+        { id: 'Furnished', name: 'Furnished', code: 'Furnished' },
+        { id: 'Semi-Furnished', name: 'Semi-Furnished', code: 'Semi-Furnished' },
+        { id: 'Unfurnished', name: 'Unfurnished', code: 'Unfurnished' },
+      ],
     };
   }
 

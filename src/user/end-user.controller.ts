@@ -67,6 +67,8 @@ import {
   SendOtpContactPropertyResponseDto,
   SubmitContactPropertyDto,
   SubmitContactPropertyResponseDto,
+  ListFiltersQueryDto,
+  ListFiltersResponseDto,
 } from './dto';
 import { Request } from 'express';
 
@@ -970,6 +972,22 @@ export class EndUserController {
   })
   async getPropertyMasterData(): Promise<PropertyMasterDataResponseDto> {
     return await this.userService.getPropertyMasterData();
+  }
+
+  @Get('filters')
+  @Public()
+  @ApiOperation({
+    summary: 'List property filters',
+    description:
+      'Get flat lists of listing types, categories, property types, and BHK types for filter dropdowns. Optional listingTypeId and categoryId filter property types. Optional propertyTypeId drives BHK types (empty for Plot and Commercial category).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Filters retrieved successfully',
+    type: ListFiltersResponseDto,
+  })
+  async getListFilters(@Query() query: ListFiltersQueryDto): Promise<ListFiltersResponseDto> {
+    return await this.userService.getListFilters(query);
   }
 
   @Get('home/about-us')
