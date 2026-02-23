@@ -61,9 +61,12 @@ export const AppDataSource = new DataSource({
   ],
   migrations: ['src/migration/*.ts'],
   subscribers: [],
-  ...(useSSL && {
+  ssl: {
+    rejectUnauthorized: false,
+  },
+  extra: {
     ssl: {
       rejectUnauthorized: false,
     },
-  }),
+  },
 });

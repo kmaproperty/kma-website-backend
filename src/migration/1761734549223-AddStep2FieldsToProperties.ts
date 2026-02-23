@@ -4,8 +4,9 @@ export class AddStep2FieldsToProperties1761734549223 implements MigrationInterfa
     name = 'AddStep2FieldsToProperties1761734549223'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "master_bhk_types" DROP CONSTRAINT "fk_bhk_type_society"`);
-        await queryRunner.query(`ALTER TABLE "master_societies" DROP COLUMN "locality_name"`);
+        await queryRunner.query(`ALTER TABLE "master_bhk_types" DROP CONSTRAINT IF EXISTS "fk_bhk_type_society"`);
+        await queryRunner.query(`ALTER TABLE "master_bhk_types" DROP CONSTRAINT IF EXISTS "FK_d4cfa6e919b9e8d9ca71523fb55"`);
+        await queryRunner.query(`ALTER TABLE "master_societies" DROP COLUMN IF EXISTS "locality_name"`);
         await queryRunner.query(`ALTER TABLE "properties" ADD "floorNumber" integer`);
         await queryRunner.query(`ALTER TABLE "properties" ADD "totalFloors" integer`);
         await queryRunner.query(`ALTER TABLE "properties" ADD "flatNumber" character varying(100)`);
@@ -65,7 +66,7 @@ export class AddStep2FieldsToProperties1761734549223 implements MigrationInterfa
         await queryRunner.query(`ALTER TABLE "properties" DROP COLUMN "flatNumber"`);
         await queryRunner.query(`ALTER TABLE "properties" DROP COLUMN "totalFloors"`);
         await queryRunner.query(`ALTER TABLE "properties" DROP COLUMN "floorNumber"`);
-        await queryRunner.query(`ALTER TABLE "master_societies" ADD "locality_name" character varying(200)`);
+        await queryRunner.query(`ALTER TABLE "master_societies" ADD COLUMN IF NOT EXISTS "locality_name" character varying(200)`);
         await queryRunner.query(`ALTER TABLE "master_bhk_types" ADD CONSTRAINT "fk_bhk_type_society" FOREIGN KEY ("societyId") REFERENCES "master_societies"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
     }
 

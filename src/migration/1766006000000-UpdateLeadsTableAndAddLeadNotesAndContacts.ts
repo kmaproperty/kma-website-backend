@@ -6,20 +6,28 @@ export class UpdateLeadsTableAndAddLeadNotesAndContacts1766006000000
   name = 'UpdateLeadsTableAndAddLeadNotesAndContacts1766006000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create enum types
+    // Create enum types (use DO block for compatibility with PostgreSQL < 13 which does not support CREATE TYPE IF NOT EXISTS)
     await queryRunner.query(`
-      CREATE TYPE IF NOT EXISTS "leads_buildingtype_enum" AS ENUM ('RESIDENTIAL', 'COMMERCIAL');
+      DO $$ BEGIN
+        CREATE TYPE "leads_buildingtype_enum" AS ENUM ('RESIDENTIAL', 'COMMERCIAL');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE IF NOT EXISTS "leads_status_enum" AS ENUM (
-        'NEW',
-        'CONTACTED',
-        'INTERESTED',
-        'NOT_INTERESTED',
-        'CONVERTED',
-        'LOST'
-      );
+      DO $$ BEGIN
+        CREATE TYPE "leads_status_enum" AS ENUM (
+          'NEW',
+          'CONTACTED',
+          'INTERESTED',
+          'NOT_INTERESTED',
+          'CONVERTED',
+          'LOST'
+        );
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     // Make userId nullable (for public lead creation)

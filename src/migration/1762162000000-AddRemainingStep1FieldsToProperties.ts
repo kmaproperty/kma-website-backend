@@ -11,104 +11,100 @@ import { MigrationInterface, QueryRunner } from "typeorm";
 export class AddRemainingStep1FieldsToProperties1762162000000 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Create DistanceUnit enum type
+        // Create DistanceUnit enum type (may already exist from AddLocationHubAndZoneTypeToProperties)
         await queryRunner.query(`
-            CREATE TYPE "properties_distanceunit_enum" AS ENUM(
-                'ft', 
-                'm', 
-                'in', 
-                'cm'
-            )
+            DO $$ BEGIN
+                CREATE TYPE "properties_distanceunit_enum" AS ENUM('ft', 'm', 'in', 'cm');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
         `);
 
         // Create AreaUnit enum type
         await queryRunner.query(`
-            CREATE TYPE "properties_areaunit_enum" AS ENUM(
-                'sq_ft', 
-                'sq_yd', 
-                'sq_m', 
-                'acres', 
-                'hectares'
-            )
+            DO $$ BEGIN
+                CREATE TYPE "properties_areaunit_enum" AS ENUM('sq_ft', 'sq_yd', 'sq_m', 'acres', 'hectares');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
         `);
 
         // Create PropertyCondition enum type
         await queryRunner.query(`
-            CREATE TYPE "properties_propertycondition_enum" AS ENUM(
-                'ready_to_use', 
-                'bare_shell'
-            )
+            DO $$ BEGIN
+                CREATE TYPE "properties_propertycondition_enum" AS ENUM('ready_to_use', 'bare_shell');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
         `);
 
         // Create WallConstructionStatus enum type
         await queryRunner.query(`
-            CREATE TYPE "properties_wallconstructionstatus_enum" AS ENUM(
-                'no_walls', 
-                'brick_wall', 
-                'cemented_walls', 
-                'plastered_walls'
-            )
+            DO $$ BEGIN
+                CREATE TYPE "properties_wallconstructionstatus_enum" AS ENUM('no_walls', 'brick_wall', 'cemented_walls', 'plastered_walls');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
         `);
 
         // Create Ownership enum type
         await queryRunner.query(`
-            CREATE TYPE "properties_ownership_enum" AS ENUM(
-                'freehold', 
-                'leasehold', 
-                'cooperative_society', 
-                'power_of_attorney'
-            )
+            DO $$ BEGIN
+                CREATE TYPE "properties_ownership_enum" AS ENUM('freehold', 'leasehold', 'cooperative_society', 'power_of_attorney');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
         `);
 
-        // Create PlotLandType enum type
+        // Create PlotLandType enum type (may already exist from AddLocationHubAndZoneTypeToProperties)
         await queryRunner.query(`
-            CREATE TYPE "properties_plotlandtype_enum" AS ENUM(
-                'agricultural_farm_land', 
-                'industrial_land_plots', 
-                'commercial_land_plot'
-            )
+            DO $$ BEGIN
+                CREATE TYPE "properties_plotlandtype_enum" AS ENUM('agricultural_farm_land', 'industrial_land_plots', 'commercial_land_plot');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
         `);
 
         // Add propertyCondition column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "propertyCondition" "properties_propertycondition_enum"
+            ADD COLUMN IF NOT EXISTS "propertyCondition" "properties_propertycondition_enum"
         `);
 
         // Add wallConstructionStatus column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "wallConstructionStatus" "properties_wallconstructionstatus_enum"
+            ADD COLUMN IF NOT EXISTS "wallConstructionStatus" "properties_wallconstructionstatus_enum"
         `);
 
         // Add ownership column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "ownership" "properties_ownership_enum"
+            ADD COLUMN IF NOT EXISTS "ownership" "properties_ownership_enum"
         `);
 
         // Add builtUpArea column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "builtUpArea" INTEGER
+            ADD COLUMN IF NOT EXISTS "builtUpArea" INTEGER
         `);
 
         // Add builtUpAreaUnit column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "builtUpAreaUnit" "properties_areaunit_enum"
+            ADD COLUMN IF NOT EXISTS "builtUpAreaUnit" "properties_areaunit_enum"
         `);
 
         // Add carpetArea column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "carpetArea" INTEGER
+            ADD COLUMN IF NOT EXISTS "carpetArea" INTEGER
         `);
 
         // Add carpetAreaUnit column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "carpetAreaUnit" "properties_areaunit_enum"
+            ADD COLUMN IF NOT EXISTS "carpetAreaUnit" "properties_areaunit_enum"
         `);
 
         // Modify plotLength to be DECIMAL
@@ -120,7 +116,7 @@ export class AddRemainingStep1FieldsToProperties1762162000000 implements Migrati
         // Add plotLengthUnit column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "plotLengthUnit" "properties_distanceunit_enum"
+            ADD COLUMN IF NOT EXISTS "plotLengthUnit" "properties_distanceunit_enum"
         `);
 
         // Modify plotWidth to be DECIMAL
@@ -132,55 +128,55 @@ export class AddRemainingStep1FieldsToProperties1762162000000 implements Migrati
         // Add plotWidthUnit column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "plotWidthUnit" "properties_distanceunit_enum"
+            ADD COLUMN IF NOT EXISTS "plotWidthUnit" "properties_distanceunit_enum"
         `);
 
         // Add plotLandType column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "plotLandType" "properties_plotlandtype_enum"
+            ADD COLUMN IF NOT EXISTS "plotLandType" "properties_plotlandtype_enum"
         `);
 
         // Add suitableFor column (text array)
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "suitableFor" TEXT
+            ADD COLUMN IF NOT EXISTS "suitableFor" TEXT
         `);
 
         // Add entranceWidth column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "entranceWidth" DECIMAL(10, 2)
+            ADD COLUMN IF NOT EXISTS "entranceWidth" DECIMAL(10, 2)
         `);
 
         // Add entranceWidthUnit column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "entranceWidthUnit" "properties_distanceunit_enum"
+            ADD COLUMN IF NOT EXISTS "entranceWidthUnit" "properties_distanceunit_enum"
         `);
 
         // Add ceilingHeight column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "ceilingHeight" DECIMAL(10, 2)
+            ADD COLUMN IF NOT EXISTS "ceilingHeight" DECIMAL(10, 2)
         `);
 
         // Add ceilingHeightUnit column
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "ceilingHeightUnit" "properties_distanceunit_enum"
+            ADD COLUMN IF NOT EXISTS "ceilingHeightUnit" "properties_distanceunit_enum"
         `);
 
         // Add locatedNear column (text array)
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "locatedNear" TEXT
+            ADD COLUMN IF NOT EXISTS "locatedNear" TEXT
         `);
 
         // Add constructionTypeOptions column (text array)
         await queryRunner.query(`
             ALTER TABLE "properties" 
-            ADD COLUMN "constructionTypeOptions" TEXT
+            ADD COLUMN IF NOT EXISTS "constructionTypeOptions" TEXT
         `);
 
         // Add comments to the columns for documentation

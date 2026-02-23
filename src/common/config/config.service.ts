@@ -102,11 +102,14 @@ export class ConfigService implements TypeOrmOptionsFactory {
         ContactUsKmaQuery,
       ],
       autoLoadEntities: true,
-      ...(useSSL && {
+      ssl: {
+        rejectUnauthorized: false,
+      },
+      extra: {
         ssl: {
           rejectUnauthorized: false,
         },
-      }),
+      },
       // Enable migrations
       migrationsTableName: 'migrations',
       migrations: ['dist/migration/*.js'],
