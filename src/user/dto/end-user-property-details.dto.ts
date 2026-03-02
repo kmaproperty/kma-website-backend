@@ -136,6 +136,29 @@ export class ChannelPartnerDetailsDto {
   propertyListings: ChannelPartnerPropertyListingsDto;
 }
 
+export class PropertyLocationDto {
+  @ApiProperty({ description: 'Latitude for map/nearby places', example: 28.4595, nullable: true })
+  latitude: number | null;
+
+  @ApiProperty({ description: 'Longitude for map/nearby places', example: 77.0266, nullable: true })
+  longitude: number | null;
+
+  @ApiProperty({ description: 'State name', example: 'Haryana', nullable: true })
+  state: string | null;
+
+  @ApiProperty({ description: 'City name', example: 'Gurgaon', nullable: true })
+  city: string | null;
+
+  @ApiProperty({ description: 'Society/building name', example: 'DLF Phase 1', nullable: true })
+  society: string | null;
+
+  @ApiProperty({ description: 'Locality/area name', example: 'Sector 26', nullable: true })
+  locality: string | null;
+
+  @ApiProperty({ description: 'Full formatted address', example: 'DLF Phase 1, Sector 26, Gurgaon', nullable: true })
+  address: string | null;
+}
+
 export class EndUserPropertyDetailsResponseDto {
   @ApiProperty({ description: 'Success status', example: true })
   success: boolean;
@@ -145,6 +168,12 @@ export class EndUserPropertyDetailsResponseDto {
       'Full property entity object with all scalar fields and loaded relations (including photos, videos, and master data mappings).',
   })
   property: any;
+
+  @ApiPropertyOptional({
+    description: 'Extracted location info with lat/lng for map and nearby places lookup',
+    type: PropertyLocationDto,
+  })
+  location?: PropertyLocationDto;
 
   @ApiPropertyOptional({
     description: 'Verification status of the property from property verification request',

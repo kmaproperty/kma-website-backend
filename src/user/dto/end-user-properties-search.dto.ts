@@ -472,6 +472,13 @@ export class EndUserPropertyListItemDto {
   city?: string | null;
 
   @ApiProperty({
+    description: 'State name',
+    example: 'Punjab',
+    required: false,
+  })
+  state?: string | null;
+
+  @ApiProperty({
     description: 'Society name',
     example: 'DLF Valley',
     required: false,

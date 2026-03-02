@@ -1495,6 +1495,90 @@ export class GooglePlacesService {
   }
 
   /**
+   * Search for nearby places of a specific type (schools, hospitals, gyms, restaurants, etc.)
+   * Used by the property detail page "Locality" section
+   */
+  async searchNearbyPlaces(
+    latitude: number,
+    longitude: number,
+    type: string,
+    radius: number = 2000, // 2km default
+  ): Promise<{ name: string; distance: string; address: string | null }[]> {
+    if (!this.apiKey) {
+      this.logger.warn('Google Maps API key not configured - returning empty nearby places');
+      return [];
+    }
+
+    // Map frontend type labels to Google Places API types
+    const typeMap: Record<string, string> = {
+      school: 'school',
+      hospital: 'hospital',
+      clinic: 'doctor',
+      gym: 'gym',
+      gym_fitness: 'gym',
+      restaurant: 'restaurant',
+      bus_stop: 'bus_station',
+      pharmacy: 'pharmacy',
+    };
+    const googleType = typeMap[type.toLowerCase()] || type.toLowerCase();
+
+    try {
+      const nearbySearchUrl = `${this.baseUrl}/nearbysearch/json`;
+      const response = await axios.get(nearbySearchUrl, {
+        params: {
+          location: `${latitude},${longitude}`,
+          radius,
+          type: googleType,
+          key: this.apiKey,
+        },
+      });
+
+      if (
+        response.data.status !== 'OK' &&
+        response.data.status !== 'ZERO_RESULTS'
+      ) {
+        this.logger.error(`Google Places Nearby Search error: ${response.data.status}`);
+        return [];
+      }
+
+      const results = response.data.results || [];
+
+      return results.slice(0, 10).map((place: any) => {
+        // Calculate approximate distance using Haversine
+        const placeLat = place.geometry?.location?.lat;
+        const placeLng = place.geometry?.location?.lng;
+        let distanceStr = '';
+        if (placeLat && placeLng) {
+          const R = 6371;
+          const dLat = ((placeLat - latitude) * Math.PI) / 180;
+          const dLon = ((placeLng - longitude) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((latitude * Math.PI) / 180) *
+              Math.cos((placeLat * Math.PI) / 180) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
+          const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          distanceStr = distKm < 1
+            ? `${Math.round(distKm * 1000)}m`
+            : `${distKm.toFixed(1)}km`;
+        }
+
+        return {
+          name: place.name,
+          distance: distanceStr,
+          address: place.vicinity || null,
+        };
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error fetching nearby places: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      return [];
+    }
+  }
+
+  /**
    * Remove duplicate cities based on placeId or name
    */
   private deduplicateCities(cities: GooglePlaceCity[]): GooglePlaceCity[] {

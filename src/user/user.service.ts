@@ -2459,6 +2459,7 @@ export class UserService {
           price: property.price || null,
           monthlyRent: property.monthlyRent || null,
           city: property.city?.name || null,
+          state: property.city?.state || null,
           society: property.society?.name || null,
           locality: property.locality?.name || null,
           units: units.length > 0 ? units : undefined,
@@ -2999,10 +3000,38 @@ export class UserService {
       createdAt: review.createdAt,
     }));
 
+    // Build location object with lat/lng (prefer society > city)
+    const lat = property.society?.latitude
+      ? parseFloat(property.society.latitude.toString())
+      : property.city?.latitude
+        ? parseFloat(property.city.latitude.toString())
+        : null;
+    const lng = property.society?.longitude
+      ? parseFloat(property.society.longitude.toString())
+      : property.city?.longitude
+        ? parseFloat(property.city.longitude.toString())
+        : null;
+
+    const addrParts: string[] = [];
+    if (property.society?.name) addrParts.push(property.society.name);
+    if (property.locality?.name) addrParts.push(property.locality.name);
+    if (property.city?.name) addrParts.push(property.city.name);
+
+    const location = {
+      latitude: lat,
+      longitude: lng,
+      state: property.city?.state || null,
+      city: property.city?.name || null,
+      society: property.society?.name || null,
+      locality: property.locality?.name || null,
+      address: addrParts.length > 0 ? addrParts.join(', ') : null,
+    };
+
     // Return the full property entity with all loaded relations (photos, videos, master data, owner, etc.)
     return {
       success: true,
       property,
+      location,
       verificationStatus: latestVerificationRequest?.status || null,
       comments: latestVerificationRequest?.rejectionReason || null,
       channelPartnerDetails,
@@ -4681,6 +4710,26 @@ export class UserService {
 
   /**
    * Get activity counts for the user panel (Recently Search, Recently Viewed, Saved Properties, Contacted Properties).
+  /**
+   * Get nearby places of a given type around a lat/lng coordinate.
+   * Used by property detail page "Locality" section (Schools, Hospitals, Gyms, Restaurants, etc.)
+   */
+  async getNearbyPlaces(
+    latitude: number,
+    longitude: number,
+    type: string,
+    radius: number = 2000,
+  ): Promise<{ success: boolean; places: { name: string; distance: string; address: string | null }[] }> {
+    const places = await this.googlePlacesService.searchNearbyPlaces(
+      latitude,
+      longitude,
+      type,
+      radius,
+    );
+    return { success: true, places };
+  }
+
+  /**
    * For logged-in users: use userId from auth; all counts by userId.
    * For non-logged-in users: use X-Session-Id header; recentlySearch and recentlyViewed by session; savedProperties and contactedProperties are 0.
    */

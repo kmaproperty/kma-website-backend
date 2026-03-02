@@ -996,6 +996,26 @@ export class EndUserController {
     return await this.userService.getListFilters(query);
   }
 
+  @Get('nearby-places')
+  @Public()
+  @ApiOperation({
+    summary: 'Get nearby places by type',
+    description:
+      'Returns nearby places (schools, hospitals, gyms, restaurants, bus stops, clinics) for a given lat/lng. Used by the property detail page Locality section. Pass type as: school, hospital, clinic, gym, restaurant, bus_stop.',
+  })
+  @ApiResponse({ status: 200, description: 'Nearby places retrieved successfully' })
+  async getNearbyPlaces(
+    @Query('latitude') latitude: string,
+    @Query('longitude') longitude: string,
+    @Query('type') type: string,
+    @Query('radius') radius?: string,
+  ) {
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    const rad = radius ? parseInt(radius, 10) : 2000;
+    return await this.userService.getNearbyPlaces(lat, lng, type, rad);
+  }
+
   @Get('home/about-us')
   @Public()
   @ApiOperation({
