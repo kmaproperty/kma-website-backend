@@ -52,6 +52,8 @@ export class S3Service {
         accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY', ''),
         secretAccessKey: this.configService.get<string>('AWS_SECRET_KEY', ''),
       },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
   }
 
