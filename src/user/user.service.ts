@@ -3027,10 +3027,17 @@ export class UserService {
       address: addrParts.length > 0 ? addrParts.join(', ') : null,
     };
 
+    // Build propertyName and cityName for the response
+    const propertyName =
+      property.society?.name ||
+      property.propertyDescription?.split('.')[0] ||
+      'Property';
+    const cityName = property.city?.name || null;
+
     // Return the full property entity with all loaded relations (photos, videos, master data, owner, etc.)
     return {
       success: true,
-      property,
+      property: { ...property, propertyName, cityName },
       location,
       verificationStatus: latestVerificationRequest?.status || null,
       comments: latestVerificationRequest?.rejectionReason || null,
