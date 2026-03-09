@@ -63,6 +63,11 @@ import {
   SimilarPropertiesQueryDto,
   SimilarPropertiesResponseDto,
   UserActivityCountsResponseDto,
+  ActivityListQueryDto,
+  RecentlyViewedListResponseDto,
+  ContactedPropertiesListResponseDto,
+  GetSearchHistoryQueryDto,
+  GetSearchHistoryResponseDto,
   SendOtpContactPropertyDto,
   SendOtpContactPropertyResponseDto,
   SubmitContactPropertyDto,
@@ -341,6 +346,105 @@ export class EndUserController {
     const sessionId =
       (req.headers['x-session-id'] as string)?.trim() || null;
     return await this.userService.getActivityCounts(sessionId, userId);
+  }
+
+  @Get('recently-viewed')
+  @Public()
+  @ApiBearerAuth('access-token')
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - if provided, uses userId)',
+    required: false,
+  })
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description: 'Session ID (optional - for non-logged-in users)',
+    required: false,
+  })
+  @ApiOperation({
+    summary: 'Get Recently Viewed Properties',
+    description:
+      'Returns paginated list of recently viewed properties with full property details. For logged-in users use Authorization header. For non-logged-in users use X-Session-Id header.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Recently viewed properties retrieved successfully',
+    type: RecentlyViewedListResponseDto,
+  })
+  async getRecentlyViewed(
+    @Query() query: ActivityListQueryDto,
+    @Req() req: Request,
+  ): Promise<RecentlyViewedListResponseDto> {
+    const userId = req.user?.id ?? null;
+    const sessionId =
+      (req.headers['x-session-id'] as string)?.trim() || null;
+    return await this.userService.getRecentlyViewed(sessionId, userId, query);
+  }
+
+  @Get('recently-searched')
+  @Public()
+  @ApiBearerAuth('access-token')
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - if provided, uses userId)',
+    required: false,
+  })
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description: 'Session ID (optional - for non-logged-in users)',
+    required: false,
+  })
+  @ApiOperation({
+    summary: 'Get Recently Searched',
+    description:
+      'Returns paginated list of recent search queries with filters. For logged-in users use Authorization header. For non-logged-in users use X-Session-Id header.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Recent searches retrieved successfully',
+    type: GetSearchHistoryResponseDto,
+  })
+  async getRecentlySearched(
+    @Query() query: GetSearchHistoryQueryDto,
+    @Req() req: Request,
+  ): Promise<GetSearchHistoryResponseDto> {
+    const userId = req.user?.id ?? null;
+    const sessionId =
+      (req.headers['x-session-id'] as string)?.trim() || null;
+    return await this.userService.getRecentlySearched(sessionId, userId, query);
+  }
+
+  @Get('contacted-properties')
+  @Public()
+  @ApiBearerAuth('access-token')
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token (optional - if provided, uses userId)',
+    required: false,
+  })
+  @ApiHeader({
+    name: 'X-Session-Id',
+    description: 'Session ID (optional - for non-logged-in users)',
+    required: false,
+  })
+  @ApiOperation({
+    summary: 'Get Contacted Properties',
+    description:
+      'Returns paginated list of properties the user has contacted/inquired about. For logged-in users use Authorization header. For non-logged-in users use X-Session-Id header.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contacted properties retrieved successfully',
+    type: ContactedPropertiesListResponseDto,
+  })
+  async getContactedProperties(
+    @Query() query: ActivityListQueryDto,
+    @Req() req: Request,
+  ): Promise<ContactedPropertiesListResponseDto> {
+    const userId = req.user?.id ?? null;
+    const sessionId =
+      (req.headers['x-session-id'] as string)?.trim() || null;
+    return await this.userService.getContactedProperties(sessionId, userId, query);
   }
 
   @Get('home/cities')

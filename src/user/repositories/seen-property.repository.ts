@@ -125,4 +125,72 @@ export class SeenPropertyRepository {
     });
     return records.map((r) => r.propertyId);
   }
+
+  /**
+   * Get recently viewed properties with full property data (for logged-in users)
+   */
+  async findByUserWithProperties(
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ items: SeenProperty[]; total: number }> {
+    const [items, total] = await this.repository.findAndCount({
+      where: {
+        userId,
+        deletedAt: IsNull(),
+      },
+      relations: [
+        'property',
+        'property.listingType',
+        'property.category',
+        'property.propertyType',
+        'property.city',
+        'property.society',
+        'property.locality',
+        'property.bhkType',
+        'property.builtUpAreaMetadata',
+        'property.user',
+        'property.photos',
+        'property.videos',
+      ],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { items, total };
+  }
+
+  /**
+   * Get recently viewed properties with full property data (for anonymous users)
+   */
+  async findBySessionWithProperties(
+    sessionId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ items: SeenProperty[]; total: number }> {
+    const [items, total] = await this.repository.findAndCount({
+      where: {
+        sessionId,
+        deletedAt: IsNull(),
+      },
+      relations: [
+        'property',
+        'property.listingType',
+        'property.category',
+        'property.propertyType',
+        'property.city',
+        'property.society',
+        'property.locality',
+        'property.bhkType',
+        'property.builtUpAreaMetadata',
+        'property.user',
+        'property.photos',
+        'property.videos',
+      ],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { items, total };
+  }
 }

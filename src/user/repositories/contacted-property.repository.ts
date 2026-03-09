@@ -51,4 +51,72 @@ export class ContactedPropertyRepository {
       .andWhere('deleted_at IS NULL')
       .execute();
   }
+
+  /**
+   * Get contacted properties with full property data (for logged-in users)
+   */
+  async findByUserWithProperties(
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ items: ContactedProperty[]; total: number }> {
+    const [items, total] = await this.repository.findAndCount({
+      where: {
+        userId,
+        deletedAt: IsNull(),
+      },
+      relations: [
+        'property',
+        'property.listingType',
+        'property.category',
+        'property.propertyType',
+        'property.city',
+        'property.society',
+        'property.locality',
+        'property.bhkType',
+        'property.builtUpAreaMetadata',
+        'property.user',
+        'property.photos',
+        'property.videos',
+      ],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { items, total };
+  }
+
+  /**
+   * Get contacted properties with full property data (for anonymous users)
+   */
+  async findBySessionWithProperties(
+    sessionId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ items: ContactedProperty[]; total: number }> {
+    const [items, total] = await this.repository.findAndCount({
+      where: {
+        sessionId,
+        deletedAt: IsNull(),
+      },
+      relations: [
+        'property',
+        'property.listingType',
+        'property.category',
+        'property.propertyType',
+        'property.city',
+        'property.society',
+        'property.locality',
+        'property.bhkType',
+        'property.builtUpAreaMetadata',
+        'property.user',
+        'property.photos',
+        'property.videos',
+      ],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { items, total };
+  }
 }

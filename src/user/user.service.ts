@@ -114,6 +114,12 @@ import {
   CheckFavoritePropertyResponseDto,
   ListFiltersQueryDto,
   ListFiltersResponseDto,
+  ActivityListQueryDto,
+  RecentlyViewedListResponseDto,
+  ContactedPropertiesListResponseDto,
+  GetSearchHistoryQueryDto,
+  GetSearchHistoryResponseDto,
+  SearchHistoryItemDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { Property } from '../property/entities/property.entity';
@@ -4778,6 +4784,218 @@ export class UserService {
       recentlyViewed,
       savedProperties: 0,
       contactedProperties,
+    };
+  }
+
+  /**
+   * Map a property entity to the standard list item DTO
+   */
+  private mapPropertyToListItem(property: any): EndUserPropertyListItemDto {
+    // Get primary image and all images
+    let imageUrl: string | null = null;
+    let images: EndUserPropertyImageDto[] | undefined = undefined;
+    if (property.photos && property.photos.length > 0) {
+      const coverImage = property.photos.find((p) => p.isCoverImage);
+      const firstPhoto = property.photos[0];
+      const selectedPhoto = coverImage || firstPhoto;
+      imageUrl = selectedPhoto.fileKey || null;
+      images = property.photos.map((photo) => ({
+        fileKey: photo.fileKey,
+        view: photo.view,
+        isCoverImage: photo.isCoverImage || false,
+      }));
+    }
+
+    // Map all videos
+    let videos: EndUserPropertyVideoDto[] | undefined = undefined;
+    if (property.videos && property.videos.length > 0) {
+      videos = property.videos.map((video) => ({
+        fileKey: video.fileKey,
+        format: video.format,
+      }));
+    }
+
+    // Build address
+    const addressParts: string[] = [];
+    if (property.society?.name) addressParts.push(property.society.name);
+    if (property.locality?.name) addressParts.push(property.locality.name);
+    if (property.city?.name) addressParts.push(property.city.name);
+    const address = addressParts.join(', ') || 'Address not available';
+
+    const propertyName =
+      property.society?.name ||
+      property.propertyDescription?.split('.')[0] ||
+      'Property';
+
+    // Build units array
+    const units: EndUserPropertyUnitDto[] = [];
+    if (property.bhkType?.name) {
+      const builtUpAreaMetadata =
+        property.builtUpAreaMetadata || (property as any).builtUpAreaMetadata;
+      if (builtUpAreaMetadata) {
+        const superBuiltUpArea = builtUpAreaMetadata.superBuiltUpArea
+          ? `${builtUpAreaMetadata.superBuiltUpArea} Sq. Ft.`
+          : builtUpAreaMetadata.carpetArea
+            ? `${builtUpAreaMetadata.carpetArea} Sq. Ft.`
+            : 'Size not available';
+        const price =
+          property.price != null
+            ? `₹ ${property.price.toLocaleString('en-IN')}`
+            : property.monthlyRent != null
+              ? `₹ ${property.monthlyRent.toLocaleString('en-IN')}/month`
+              : 'Price On Request';
+        units.push({
+          unit: property.bhkType.name,
+          size: `${superBuiltUpArea} (Saleable)`,
+          price,
+        });
+      }
+    }
+
+    return {
+      id: property.id,
+      propertyName,
+      address,
+      description: property.propertyDescription || undefined,
+      imageUrl,
+      images,
+      videos,
+      imageCount: property.photos?.length || 0,
+      videoCount: property.videos?.length || 0,
+      isReraRegistered: false,
+      constructionStatus: property.constructionStatus || null,
+      categoryId: property.category?.id ?? null,
+      category: property.category?.name || null,
+      listingTypeId: property.listingType?.id ?? null,
+      listingType: property.listingType?.name || null,
+      propertyTypeId: property.propertyType?.id ?? null,
+      propertyType: property.propertyType?.name || null,
+      bhkTypeId: property.bhkType?.id ?? null,
+      bhkType: property.bhkType?.name || null,
+      plotArea: property.plotArea || null,
+      plotAreaUnit: property.plotAreaUnit || null,
+      facing: property.facing || null,
+      furnishType: property.furnishType || null,
+      price: property.price || null,
+      monthlyRent: property.monthlyRent || null,
+      city: property.city?.name || null,
+      society: property.society?.name || null,
+      locality: property.locality?.name || null,
+      units: units.length > 0 ? units : undefined,
+      owner: property.user
+        ? {
+            name: property.user.name,
+            profileImage: property.user.profileImage,
+            role: property.user.role,
+          }
+        : null,
+    };
+  }
+
+  /**
+   * Get recently viewed properties list
+   */
+  async getRecentlyViewed(
+    sessionId: string | null,
+    userId: string | null,
+    query: ActivityListQueryDto,
+  ): Promise<RecentlyViewedListResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    let result: { items: any[]; total: number };
+
+    if (userId) {
+      result = await this.seenPropertyRepository.findByUserWithProperties(userId, page, limit);
+    } else if (sessionId) {
+      result = await this.seenPropertyRepository.findBySessionWithProperties(sessionId, page, limit);
+    } else {
+      result = { items: [], total: 0 };
+    }
+
+    const properties = result.items
+      .filter((item) => item.property)
+      .map((item) => this.mapPropertyToListItem(item.property));
+
+    return {
+      success: true,
+      properties,
+      total: result.total,
+      page,
+      limit,
+      totalPages: Math.ceil(result.total / limit),
+    };
+  }
+
+  /**
+   * Get recently searched list
+   */
+  async getRecentlySearched(
+    sessionId: string | null,
+    userId: string | null,
+    query: GetSearchHistoryQueryDto,
+  ): Promise<GetSearchHistoryResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    let result: { data: any[]; total: number };
+
+    if (userId) {
+      result = await this.searchHistoryRepository.findByUser(userId, page, limit);
+    } else if (sessionId) {
+      result = await this.searchHistoryRepository.findBySession(sessionId, page, limit);
+    } else {
+      result = { data: [], total: 0 };
+    }
+
+    const searches: SearchHistoryItemDto[] = result.data.map((item) => ({
+      id: item.id,
+      searchQuery: item.searchQuery,
+      location: item.location || undefined,
+      city: item.city || undefined,
+      priceRange: item.priceRange || undefined,
+      filters: item.filters || undefined,
+      createdAt: item.createdAt,
+    }));
+
+    return {
+      searches,
+      total: result.total,
+      page,
+      limit,
+      totalPages: Math.ceil(result.total / limit),
+    };
+  }
+
+  /**
+   * Get contacted properties list
+   */
+  async getContactedProperties(
+    sessionId: string | null,
+    userId: string | null,
+    query: ActivityListQueryDto,
+  ): Promise<ContactedPropertiesListResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    let result: { items: any[]; total: number };
+
+    if (userId) {
+      result = await this.contactedPropertyRepository.findByUserWithProperties(userId, page, limit);
+    } else if (sessionId) {
+      result = await this.contactedPropertyRepository.findBySessionWithProperties(sessionId, page, limit);
+    } else {
+      result = { items: [], total: 0 };
+    }
+
+    const properties = result.items
+      .filter((item) => item.property)
+      .map((item) => this.mapPropertyToListItem(item.property));
+
+    return {
+      success: true,
+      properties,
+      total: result.total,
+      page,
+      limit,
+      totalPages: Math.ceil(result.total / limit),
     };
   }
 
