@@ -261,7 +261,8 @@ export class S3Service {
 
   generateFileUrl(key: string): string {
     if (this.cloudFrontDomain) {
-      return `${this.cloudFrontDomain}/${key}`;
+      const base = this.cloudFrontDomain.replace(/\/+$/, '');
+      return `${base}/${key}`;
     }
 
     return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
