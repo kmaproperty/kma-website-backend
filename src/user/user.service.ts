@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { S3Service } from '../common/aws/s3.service';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource } from 'typeorm';
 import { UserRepository } from './repositories/user.repository';
@@ -209,6 +210,7 @@ export class UserService {
     private readonly seenPropertyRepository: SeenPropertyRepository,
     private readonly contactedPropertyRepository: ContactedPropertyRepository,
     private readonly metaWhatsappService: MetaWhatsappService,
+    private readonly s3Service: S3Service,
   ) {}
 
   /**
@@ -2376,13 +2378,12 @@ export class UserService {
           const coverImage = property.photos.find((p) => p.isCoverImage);
           const firstPhoto = property.photos[0];
           const selectedPhoto = coverImage || firstPhoto;
-          // Note: You may need to generate full URL from fileKey using S3Service
-          // For now, returning fileKey - adjust based on your URL generation logic
-          imageUrl = selectedPhoto.fileKey || null;
-          
+          imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
+
           // Map all images
           images = property.photos.map((photo) => ({
             fileKey: photo.fileKey,
+            url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
             view: photo.view,
             isCoverImage: photo.isCoverImage || false,
           }));
@@ -2393,6 +2394,7 @@ export class UserService {
         if (property.videos && property.videos.length > 0) {
           videos = property.videos.map((video) => ({
             fileKey: video.fileKey,
+            url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
             format: video.format,
           }));
         }
@@ -2578,11 +2580,12 @@ export class UserService {
           const coverImage = property.photos.find((p) => p.isCoverImage);
           const firstPhoto = property.photos[0];
           const selectedPhoto = coverImage || firstPhoto;
-          imageUrl = selectedPhoto.fileKey || null;
-          
+          imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
+
           // Map all images
           images = property.photos.map((photo) => ({
             fileKey: photo.fileKey,
+            url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
             view: photo.view,
             isCoverImage: photo.isCoverImage || false,
           }));
@@ -2593,6 +2596,7 @@ export class UserService {
         if (property.videos && property.videos.length > 0) {
           videos = property.videos.map((video) => ({
             fileKey: video.fileKey,
+            url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
             format: video.format,
           }));
         }
@@ -2732,7 +2736,7 @@ export class UserService {
         const coverImage = property.photos.find((p) => p.isCoverImage);
         const firstPhoto = property.photos[0];
         const selectedPhoto = coverImage || firstPhoto;
-        imageUrl = selectedPhoto.fileKey || null;
+        imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
       }
 
       // Build address
@@ -3040,6 +3044,25 @@ export class UserService {
       'Property';
     const cityName = property.city?.name || null;
 
+    // Convert photo/video file keys to full S3 URLs
+    if (property.photos && Array.isArray(property.photos)) {
+      property.photos = property.photos.map((photo: any) => ({
+        ...photo,
+        url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
+      }));
+    }
+    if (property.videos && Array.isArray(property.videos)) {
+      property.videos = property.videos.map((video: any) => ({
+        ...video,
+        url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
+      }));
+    }
+
+    // Convert channel partner profile image to full URL
+    if (channelPartnerDetails?.profileImage) {
+      channelPartnerDetails.profileImage = this.s3Service.generateFileUrl(channelPartnerDetails.profileImage);
+    }
+
     // Return the full property entity with all loaded relations (photos, videos, master data, owner, etc.)
     return {
       success: true,
@@ -3077,15 +3100,17 @@ export class UserService {
     const livePhotos = approvedVerification?.livePhotos ?? [];
     const liveVideos = approvedVerification?.liveVideos ?? [];
 
-    const allPhotos: Array<{ fileKey: string; view: string; isCoverImage: boolean; isVerified: boolean }> = [
+    const allPhotos: Array<{ fileKey: string; url: string; view: string; isCoverImage: boolean; isVerified: boolean }> = [
       ...listingPhotos.map((p) => ({
         fileKey: p.fileKey,
+        url: this.s3Service.generateFileUrl(p.fileKey),
         view: p.view ?? 'Other',
         isCoverImage: p.isCoverImage ?? false,
         isVerified: false,
       })),
       ...livePhotos.map((p) => ({
         fileKey: p.fileKey,
+        url: this.s3Service.generateFileUrl(p.fileKey),
         view: p.view ?? 'Other',
         isCoverImage: false,
         isVerified: true,
@@ -3093,9 +3118,10 @@ export class UserService {
     ];
 
     const allVideos = [
-      ...listingVideos.map((v) => ({ fileKey: v.fileKey, format: v.format ?? 'mp4', isVerified: false })),
+      ...listingVideos.map((v) => ({ fileKey: v.fileKey, url: this.s3Service.generateFileUrl(v.fileKey), format: v.format ?? 'mp4', isVerified: false })),
       ...liveVideos.map((v) => ({
         fileKey: v.fileKey,
+        url: this.s3Service.generateFileUrl(v.fileKey),
         format: v.format ?? 'mp4',
         isVerified: true,
       })),
@@ -3764,9 +3790,7 @@ export class UserService {
           const coverImage = property.photos.find((p) => p.isCoverImage);
           const firstPhoto = property.photos[0];
           const selectedPhoto = coverImage || firstPhoto;
-          // Note: You may need to generate full URL from fileKey using S3Service
-          // For now, returning fileKey - adjust based on your URL generation logic
-          imageUrl = selectedPhoto.fileKey || null;
+          imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
         }
 
         // Build address
@@ -4691,9 +4715,11 @@ export class UserService {
         if (sampleProperty?.photos && sampleProperty.photos.length > 0) {
           const cover = sampleProperty.photos.find((p) => p.isCoverImage);
           const first = sampleProperty.photos[0];
-          imageUrl = (cover || first).fileKey || null;
+          const selectedKey = (cover || first).fileKey;
+          imageUrl = selectedKey ? this.s3Service.generateFileUrl(selectedKey) : null;
           images = sampleProperty.photos.map((p) => ({
             fileKey: p.fileKey,
+            url: p.fileKey ? this.s3Service.generateFileUrl(p.fileKey) : null,
             view: p.view,
             isCoverImage: p.isCoverImage ?? false,
           }));
@@ -4798,9 +4824,10 @@ export class UserService {
       const coverImage = property.photos.find((p) => p.isCoverImage);
       const firstPhoto = property.photos[0];
       const selectedPhoto = coverImage || firstPhoto;
-      imageUrl = selectedPhoto.fileKey || null;
+      imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
       images = property.photos.map((photo) => ({
         fileKey: photo.fileKey,
+        url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
         view: photo.view,
         isCoverImage: photo.isCoverImage || false,
       }));
@@ -4811,6 +4838,7 @@ export class UserService {
     if (property.videos && property.videos.length > 0) {
       videos = property.videos.map((video) => ({
         fileKey: video.fileKey,
+        url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
         format: video.format,
       }));
     }
@@ -5121,11 +5149,12 @@ export class UserService {
           const coverImage = property.photos.find((p) => p.isCoverImage);
           const firstPhoto = property.photos[0];
           const selectedPhoto = coverImage || firstPhoto;
-          imageUrl = selectedPhoto.fileKey || null;
+          imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
 
           // Map all images
           images = property.photos.map((photo) => ({
             fileKey: photo.fileKey,
+            url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
             view: photo.view,
             isCoverImage: photo.isCoverImage || false,
           }));
@@ -5136,6 +5165,7 @@ export class UserService {
         if (property.videos && property.videos.length > 0) {
           videos = property.videos.map((video) => ({
             fileKey: video.fileKey,
+            url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
             format: video.format,
           }));
         }

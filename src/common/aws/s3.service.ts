@@ -259,7 +259,7 @@ export class S3Service {
     }
   }
 
-  private generateFileUrl(key: string): string {
+  generateFileUrl(key: string): string {
     if (this.cloudFrontDomain) {
       return `${this.cloudFrontDomain}/${key}`;
     }

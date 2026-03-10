@@ -22,6 +22,8 @@ async function bootstrap() {
       'x-authorization',
       'X-Authorization',
       'x-api-key',
+      'X-Session-Id',
+      'x-session-id',
     ],
     exposedHeaders: [
       'Content-Length',

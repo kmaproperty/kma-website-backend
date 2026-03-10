@@ -51,6 +51,7 @@ import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { AdminModule } from '../admin/admin.module';
 import { PropertyModule } from '../property/property.module';
 import { MetaWhatsappService } from '../common/whatsapp/meta-whatsapp.service';
+import { S3Service } from '../common/aws/s3.service';
 
 const entities = [
   User,
@@ -126,6 +127,7 @@ const repositories = [
     AuthMiddleware,
     TokenVerificationMiddleware,
     MetaWhatsappService,
+    S3Service,
     ...repositories,
   ],
   exports: [
