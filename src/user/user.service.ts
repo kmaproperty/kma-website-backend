@@ -3084,10 +3084,75 @@ export class UserService {
       channelPartnerDetails.profileImage = this.s3Service.generateFileUrl(channelPartnerDetails.profileImage);
     }
 
+    // Strip sensitive fields from user object before returning
+    const safeUser = propertyOwner ? {
+      id: propertyOwner.id,
+      name: propertyOwner.name,
+      phone: propertyOwner.phone,
+      email: propertyOwner.email,
+      role: propertyOwner.role,
+      profileImage: propertyOwner.profileImage
+        ? this.s3Service.generateFileUrl(propertyOwner.profileImage)
+        : null,
+    } : null;
+
+    // Build flattened fields for frontend (relation objects → strings)
+    const listingTypeName = (property.listingType as any)?.name || null;
+    const categoryName = (property.category as any)?.name || null;
+    const propertyTypeName = (property.propertyType as any)?.name || null;
+    const localityName = property.locality?.name || null;
+    const societyName = property.society?.name || null;
+    const bhkTypeName = (property.bhkType as any)?.name || null;
+    const totalFloorCount = property.totalFloors || null;
+    const towerOrBlock = property.towerBlock || null;
+    const buildUpAreaSqFt = property.builtUpArea || null;
+    const buildUpAreaUnit = property.builtUpAreaUnit || 'sq ft';
+    const projectName = property.society?.name || null;
+
+    // Format age of property as readable string
+    let age: string | null = null;
+    if (property.ageOfProperty != null) {
+      if (property.ageOfProperty === 0) age = 'Less than 1 year';
+      else if (property.ageOfProperty === 1) age = '1 year';
+      else age = `${property.ageOfProperty} years`;
+    }
+
+    // Join additional rooms array into comma-separated string
+    const additionalRoomsText = property.additionalRooms?.length
+      ? property.additionalRooms.join(', ')
+      : null;
+
+    // Resolve amenities codes to names (amenities field stores codes/names as simple-array)
+    const amenitiesList = property.amenities?.length
+      ? property.amenities.map((a) => a.trim()).filter(Boolean)
+      : [];
+
     // Return the full property entity with all loaded relations (photos, videos, master data, owner, etc.)
+    // Replace raw user object with safe version, add flattened fields
+    const { user: _rawUser, ...propertyWithoutUser } = property as any;
     return {
       success: true,
-      property: { ...property, propertyName, cityName },
+      property: {
+        ...propertyWithoutUser,
+        user: safeUser,
+        propertyName,
+        cityName,
+        // Flattened string fields for frontend property info grid
+        listingTypeName,
+        categoryName,
+        propertyTypeName,
+        localityName,
+        societyName,
+        projectName,
+        bhkTypeName,
+        totalFloorCount,
+        towerOrBlock,
+        buildUpAreaSqFt,
+        buildUpAreaUnit,
+        age,
+        additionalRoomsText,
+        amenitiesList,
+      },
       location,
       verificationStatus: latestVerificationRequest?.status || null,
       comments: latestVerificationRequest?.rejectionReason || null,
