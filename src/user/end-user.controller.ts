@@ -1054,6 +1054,24 @@ export class EndUserController {
     );
   }
 
+  @Get('my-reviews')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Get My Reviews',
+    description: 'Get all property reviews submitted by the logged-in user. Returns paginated list with property details, ratings, and review text.',
+  })
+  @ApiResponse({ status: 200, description: 'User reviews retrieved successfully' })
+  async getMyReviews(
+    @Req() req: Request,
+    @Query() query: any,
+  ) {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getMyReviews(req.user.id, query);
+  }
+
   @Get('home/reviews')
   @Public()
   @ApiOperation({

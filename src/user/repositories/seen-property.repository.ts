@@ -133,28 +133,44 @@ export class SeenPropertyRepository {
     userId: string,
     page: number = 1,
     limit: number = 20,
+    listingTypeCode?: string,
+    sort?: string,
   ): Promise<{ items: SeenProperty[]; total: number }> {
-    const [items, total] = await this.repository.findAndCount({
-      where: {
-        userId,
-        deletedAt: IsNull(),
-      },
-      relations: [
-        'property',
-        'property.listingType',
-        'property.category',
-        'property.propertyType',
-        'property.city',
-        'property.society',
-        'property.locality',
-        'property.bhkType',
-        'property.builtUpAreaMetadata',
-        'property.user',
-      ],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const qb = this.repository
+      .createQueryBuilder('sp')
+      .leftJoinAndSelect('sp.property', 'property')
+      .leftJoinAndSelect('property.listingType', 'listingType')
+      .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
+      .leftJoinAndSelect('property.user', 'owner')
+      .where('sp.userId = :userId', { userId })
+      .andWhere('sp.deleted_at IS NULL');
+
+    if (listingTypeCode) {
+      qb.andWhere('listingType.code = :listingTypeCode', { listingTypeCode });
+    }
+
+    if (sort === 'oldest') {
+      qb.orderBy('sp.createdAt', 'ASC');
+    } else if (sort === 'price_high') {
+      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'DESC');
+    } else if (sort === 'price_low') {
+      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'ASC');
+    } else {
+      qb.orderBy('sp.createdAt', 'DESC');
+    }
+
+    const total = await qb.getCount();
+    const items = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
     return { items, total };
   }
 
@@ -165,28 +181,44 @@ export class SeenPropertyRepository {
     sessionId: string,
     page: number = 1,
     limit: number = 20,
+    listingTypeCode?: string,
+    sort?: string,
   ): Promise<{ items: SeenProperty[]; total: number }> {
-    const [items, total] = await this.repository.findAndCount({
-      where: {
-        sessionId,
-        deletedAt: IsNull(),
-      },
-      relations: [
-        'property',
-        'property.listingType',
-        'property.category',
-        'property.propertyType',
-        'property.city',
-        'property.society',
-        'property.locality',
-        'property.bhkType',
-        'property.builtUpAreaMetadata',
-        'property.user',
-      ],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const qb = this.repository
+      .createQueryBuilder('sp')
+      .leftJoinAndSelect('sp.property', 'property')
+      .leftJoinAndSelect('property.listingType', 'listingType')
+      .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
+      .leftJoinAndSelect('property.user', 'owner')
+      .where('sp.sessionId = :sessionId', { sessionId })
+      .andWhere('sp.deleted_at IS NULL');
+
+    if (listingTypeCode) {
+      qb.andWhere('listingType.code = :listingTypeCode', { listingTypeCode });
+    }
+
+    if (sort === 'oldest') {
+      qb.orderBy('sp.createdAt', 'ASC');
+    } else if (sort === 'price_high') {
+      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'DESC');
+    } else if (sort === 'price_low') {
+      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'ASC');
+    } else {
+      qb.orderBy('sp.createdAt', 'DESC');
+    }
+
+    const total = await qb.getCount();
+    const items = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
     return { items, total };
   }
 }

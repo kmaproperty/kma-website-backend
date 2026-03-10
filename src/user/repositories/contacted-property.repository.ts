@@ -15,33 +15,18 @@ export class ContactedPropertyRepository {
     return await this.repository.save(entity);
   }
 
-  /**
-   * Count contacted properties by session (anonymous users)
-   */
   async countBySession(sessionId: string): Promise<number> {
     return await this.repository.count({
-      where: {
-        sessionId,
-        deletedAt: IsNull(),
-      },
+      where: { sessionId, deletedAt: IsNull() },
     });
   }
 
-  /**
-   * Count contacted properties by user (logged-in users)
-   */
   async countByUserId(userId: string): Promise<number> {
     return await this.repository.count({
-      where: {
-        userId,
-        deletedAt: IsNull(),
-      },
+      where: { userId, deletedAt: IsNull() },
     });
   }
 
-  /**
-   * Attach userId to all contacted_properties records with given sessionId (called on login/signup)
-   */
   async attachUserToSession(sessionId: string, userId: string): Promise<void> {
     await this.repository
       .createQueryBuilder()
@@ -52,67 +37,85 @@ export class ContactedPropertyRepository {
       .execute();
   }
 
-  /**
-   * Get contacted properties with full property data (for logged-in users)
-   */
   async findByUserWithProperties(
     userId: string,
     page: number = 1,
     limit: number = 20,
+    listingTypeCode?: string,
+    sort?: string,
   ): Promise<{ items: ContactedProperty[]; total: number }> {
-    const [items, total] = await this.repository.findAndCount({
-      where: {
-        userId,
-        deletedAt: IsNull(),
-      },
-      relations: [
-        'property',
-        'property.listingType',
-        'property.category',
-        'property.propertyType',
-        'property.city',
-        'property.society',
-        'property.locality',
-        'property.bhkType',
-        'property.builtUpAreaMetadata',
-        'property.user',
-      ],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const qb = this.repository
+      .createQueryBuilder('cp')
+      .leftJoinAndSelect('cp.property', 'property')
+      .leftJoinAndSelect('property.listingType', 'listingType')
+      .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
+      .leftJoinAndSelect('property.user', 'owner')
+      .where('cp.userId = :userId', { userId })
+      .andWhere('cp.deleted_at IS NULL');
+
+    if (listingTypeCode) {
+      qb.andWhere('listingType.code = :listingTypeCode', { listingTypeCode });
+    }
+
+    if (sort === 'oldest') {
+      qb.orderBy('cp.createdAt', 'ASC');
+    } else if (sort === 'price_high') {
+      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'DESC');
+    } else if (sort === 'price_low') {
+      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'ASC');
+    } else {
+      qb.orderBy('cp.createdAt', 'DESC');
+    }
+
+    const total = await qb.getCount();
+    const items = await qb.skip((page - 1) * limit).take(limit).getMany();
     return { items, total };
   }
 
-  /**
-   * Get contacted properties with full property data (for anonymous users)
-   */
   async findBySessionWithProperties(
     sessionId: string,
     page: number = 1,
     limit: number = 20,
+    listingTypeCode?: string,
+    sort?: string,
   ): Promise<{ items: ContactedProperty[]; total: number }> {
-    const [items, total] = await this.repository.findAndCount({
-      where: {
-        sessionId,
-        deletedAt: IsNull(),
-      },
-      relations: [
-        'property',
-        'property.listingType',
-        'property.category',
-        'property.propertyType',
-        'property.city',
-        'property.society',
-        'property.locality',
-        'property.bhkType',
-        'property.builtUpAreaMetadata',
-        'property.user',
-      ],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const qb = this.repository
+      .createQueryBuilder('cp')
+      .leftJoinAndSelect('cp.property', 'property')
+      .leftJoinAndSelect('property.listingType', 'listingType')
+      .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoinAndSelect('property.builtUpAreaMetadata', 'builtUpAreaMetadata')
+      .leftJoinAndSelect('property.user', 'owner')
+      .where('cp.sessionId = :sessionId', { sessionId })
+      .andWhere('cp.deleted_at IS NULL');
+
+    if (listingTypeCode) {
+      qb.andWhere('listingType.code = :listingTypeCode', { listingTypeCode });
+    }
+
+    if (sort === 'oldest') {
+      qb.orderBy('cp.createdAt', 'ASC');
+    } else if (sort === 'price_high') {
+      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'DESC');
+    } else if (sort === 'price_low') {
+      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'ASC');
+    } else {
+      qb.orderBy('cp.createdAt', 'DESC');
+    }
+
+    const total = await qb.getCount();
+    const items = await qb.skip((page - 1) * limit).take(limit).getMany();
     return { items, total };
   }
 }

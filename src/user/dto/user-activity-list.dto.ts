@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsString, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 import { EndUserPropertyListItemDto } from './end-user-properties-search.dto';
 
@@ -26,6 +26,24 @@ export class ActivityListQueryDto {
   @Max(100)
   @IsOptional()
   limit?: number = 20;
+
+  @ApiPropertyOptional({
+    description: 'Filter by listing type code (sale, rent)',
+    example: 'sale',
+  })
+  @IsString()
+  @IsOptional()
+  listingType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    example: 'newest',
+    enum: ['newest', 'oldest', 'price_high', 'price_low'],
+  })
+  @IsString()
+  @IsIn(['newest', 'oldest', 'price_high', 'price_low'])
+  @IsOptional()
+  sort?: string;
 }
 
 export class RecentlyViewedListResponseDto {

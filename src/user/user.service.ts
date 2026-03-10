@@ -2972,6 +2972,27 @@ export class UserService {
       };
     }
 
+    // For OWNER role, provide basic owner details
+    let ownerDetails: {
+      id: string;
+      name: string | null;
+      profileImage: string | null;
+      phone: string;
+      email: string | null;
+    } | undefined = undefined;
+
+    if (propertyOwner && propertyOwner.role === UserRole.OWNER && !channelPartnerDetails) {
+      ownerDetails = {
+        id: propertyOwner.id,
+        name: propertyOwner.name,
+        profileImage: propertyOwner.profileImage
+          ? this.s3Service.generateFileUrl(propertyOwner.profileImage)
+          : null,
+        phone: propertyOwner.phone,
+        email: propertyOwner.email,
+      };
+    }
+
     // Fetch ratings and reviews statistics
     const [ratingStats, likeDislikeTexts, sampleReviews] = await Promise.all([
       this.propertyRatingReviewRepository.getRatingStatistics(propertyId),
@@ -3071,6 +3092,7 @@ export class UserService {
       verificationStatus: latestVerificationRequest?.status || null,
       comments: latestVerificationRequest?.rejectionReason || null,
       channelPartnerDetails,
+      ownerDetails,
       ratingsAndReviews,
       sampleReviews: formattedSampleReviews.length > 0 ? formattedSampleReviews : undefined,
     };
@@ -4933,9 +4955,9 @@ export class UserService {
     let result: { items: any[]; total: number };
 
     if (userId) {
-      result = await this.seenPropertyRepository.findByUserWithProperties(userId, page, limit);
+      result = await this.seenPropertyRepository.findByUserWithProperties(userId, page, limit, query.listingType, query.sort);
     } else if (sessionId) {
-      result = await this.seenPropertyRepository.findBySessionWithProperties(sessionId, page, limit);
+      result = await this.seenPropertyRepository.findBySessionWithProperties(sessionId, page, limit, query.listingType, query.sort);
     } else {
       result = { items: [], total: 0 };
     }
@@ -5006,9 +5028,9 @@ export class UserService {
     let result: { items: any[]; total: number };
 
     if (userId) {
-      result = await this.contactedPropertyRepository.findByUserWithProperties(userId, page, limit);
+      result = await this.contactedPropertyRepository.findByUserWithProperties(userId, page, limit, query.listingType, query.sort);
     } else if (sessionId) {
-      result = await this.contactedPropertyRepository.findBySessionWithProperties(sessionId, page, limit);
+      result = await this.contactedPropertyRepository.findBySessionWithProperties(sessionId, page, limit, query.listingType, query.sort);
     } else {
       result = { items: [], total: 0 };
     }
@@ -5020,6 +5042,70 @@ export class UserService {
     return {
       success: true,
       properties,
+      total: result.total,
+      page,
+      limit,
+      totalPages: Math.ceil(result.total / limit),
+    };
+  }
+
+  /**
+   * Get all reviews submitted by the logged-in user (My Reviews page)
+   */
+  async getMyReviews(
+    userId: string,
+    query: { page?: number; limit?: number; sort?: string },
+  ) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const sort = query.sort || 'newest';
+
+    const result = await this.propertyRatingReviewRepository.findByEndUser(userId, page, limit, sort);
+
+    const reviews = result.items.map((review) => {
+      const property = review.property;
+      let propertyName = 'Property';
+      let propertyAddress: string | null = null;
+      let propertyImageUrl: string | null = null;
+
+      if (property) {
+        propertyName = property.society?.name || property.propertyDescription?.split('.')[0] || 'Property';
+
+        const addrParts: string[] = [];
+        if (property.society?.name) addrParts.push(property.society.name);
+        if (property.locality?.name) addrParts.push(property.locality.name);
+        if (property.city?.name) addrParts.push(property.city.name);
+        propertyAddress = addrParts.length > 0 ? addrParts.join(', ') : null;
+
+        if (property.photos && property.photos.length > 0) {
+          const cover = property.photos.find((p) => p.isCoverImage);
+          const first = property.photos[0];
+          const key = (cover || first).fileKey;
+          propertyImageUrl = key ? this.s3Service.generateFileUrl(key) : null;
+        }
+      }
+
+      return {
+        id: review.id,
+        propertyId: review.propertyId,
+        propertyName,
+        propertyAddress,
+        propertyImageUrl,
+        overallRating: Number(review.overallRating),
+        connectivityRating: review.connectivityRating,
+        neighbourhoodRating: review.neighbourhoodRating,
+        safetyRating: review.safetyRating,
+        livabilityRating: review.livabilityRating,
+        likeText: review.likeText,
+        dislikeText: review.dislikeText,
+        role: review.role,
+        createdAt: review.createdAt,
+      };
+    });
+
+    return {
+      success: true,
+      reviews,
       total: result.total,
       page,
       limit,
@@ -5135,6 +5221,8 @@ export class UserService {
       userId,
       page,
       limit,
+      query.listingType,
+      query.sort,
     );
 
     // Map favorite properties to response DTO (reuse the same mapping logic as searchEndUserProperties)

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsUUID, IsNotEmpty, IsOptional, IsInt, Min } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsOptional, IsInt, Min, IsString, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 import { EndUserPropertyListItemDto } from './end-user-properties-search.dto';
 
@@ -59,6 +59,24 @@ export class FavoritePropertyListQueryDto {
   @Min(1)
   @IsOptional()
   limit: number = 20;
+
+  @ApiPropertyOptional({
+    description: 'Filter by listing type code (sale, rent)',
+    example: 'sale',
+  })
+  @IsString()
+  @IsOptional()
+  listingType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    example: 'newest',
+    enum: ['newest', 'oldest', 'price_high', 'price_low'],
+  })
+  @IsString()
+  @IsIn(['newest', 'oldest', 'price_high', 'price_low'])
+  @IsOptional()
+  sort?: string;
 }
 
 export class FavoritePropertyListResponseDto {

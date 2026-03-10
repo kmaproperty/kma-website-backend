@@ -300,4 +300,95 @@ export class GetPropertyRatingReviewsResponseDto {
   totalPages: number;
 }
 
+// --- My Reviews DTOs ---
 
+export class MyReviewsQueryDto {
+  @ApiPropertyOptional({ description: 'Page number', example: 1, default: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  page?: number = 1;
+
+  @ApiPropertyOptional({ description: 'Items per page', example: 10, default: 10 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  @IsOptional()
+  limit?: number = 10;
+
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    example: 'newest',
+    enum: ['newest', 'oldest', 'highest', 'lowest'],
+  })
+  @IsString()
+  @IsIn(['newest', 'oldest', 'highest', 'lowest'])
+  @IsOptional()
+  sort?: string = 'newest';
+}
+
+export class MyReviewItemDto {
+  @ApiProperty({ description: 'Review ID' })
+  id: string;
+
+  @ApiProperty({ description: 'Property ID' })
+  propertyId: string;
+
+  @ApiProperty({ description: 'Property name' })
+  propertyName: string;
+
+  @ApiPropertyOptional({ description: 'Property address' })
+  propertyAddress: string | null;
+
+  @ApiPropertyOptional({ description: 'Property image URL' })
+  propertyImageUrl: string | null;
+
+  @ApiProperty({ description: 'Overall rating', example: 4.5 })
+  overallRating: number;
+
+  @ApiProperty({ description: 'Connectivity rating', example: 4 })
+  connectivityRating: number;
+
+  @ApiProperty({ description: 'Neighbourhood rating', example: 5 })
+  neighbourhoodRating: number;
+
+  @ApiProperty({ description: 'Safety rating', example: 4 })
+  safetyRating: number;
+
+  @ApiProperty({ description: 'Livability rating', example: 5 })
+  livabilityRating: number;
+
+  @ApiPropertyOptional({ description: 'Positive feedback text' })
+  likeText: string | null;
+
+  @ApiPropertyOptional({ description: 'Negative feedback text' })
+  dislikeText: string | null;
+
+  @ApiProperty({ description: 'Reviewer role', example: 'owner' })
+  role: string;
+
+  @ApiProperty({ description: 'Review creation date' })
+  createdAt: Date;
+}
+
+export class MyReviewsResponseDto {
+  @ApiProperty({ example: true })
+  success: boolean;
+
+  @ApiProperty({ type: [MyReviewItemDto] })
+  reviews: MyReviewItemDto[];
+
+  @ApiProperty({ example: 10 })
+  total: number;
+
+  @ApiProperty({ example: 1 })
+  page: number;
+
+  @ApiProperty({ example: 10 })
+  limit: number;
+
+  @ApiProperty({ example: 1 })
+  totalPages: number;
+}

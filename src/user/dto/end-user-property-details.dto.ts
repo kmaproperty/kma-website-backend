@@ -197,6 +197,17 @@ export class EndUserPropertyDetailsResponseDto {
   channelPartnerDetails?: ChannelPartnerDetailsDto;
 
   @ApiPropertyOptional({
+    description: 'Owner details (when property owner is not a channel partner)',
+  })
+  ownerDetails?: {
+    id: string;
+    name: string | null;
+    profileImage: string | null;
+    phone: string;
+    email: string | null;
+  };
+
+  @ApiPropertyOptional({
     description: 'Ratings and reviews statistics for the property',
     type: PropertyRatingStatisticsDto,
   })

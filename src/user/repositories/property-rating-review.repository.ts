@@ -229,6 +229,41 @@ export class PropertyRatingReviewRepository {
 
     return { likes, dislikes };
   }
+
+  /**
+   * Get all reviews submitted by a user (My Reviews), with property details
+   */
+  async findByEndUser(
+    endUserId: string,
+    page: number = 1,
+    limit: number = 10,
+    sort: string = 'newest',
+  ): Promise<{ items: PropertyRatingReview[]; total: number }> {
+    const qb = this.repository
+      .createQueryBuilder('review')
+      .leftJoinAndSelect('review.property', 'property')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .where('review.endUserId = :endUserId', { endUserId })
+      .andWhere('review.deletedAt IS NULL');
+
+    if (sort === 'oldest') {
+      qb.orderBy('review.createdAt', 'ASC');
+    } else if (sort === 'highest') {
+      qb.orderBy('review.overallRating', 'DESC');
+    } else if (sort === 'lowest') {
+      qb.orderBy('review.overallRating', 'ASC');
+    } else {
+      qb.orderBy('review.createdAt', 'DESC');
+    }
+
+    const total = await qb.getCount();
+    const items = await qb.skip((page - 1) * limit).take(limit).getMany();
+    return { items, total };
+  }
 }
 
 
