@@ -153,7 +153,7 @@ export class UserController {
   @Post('validate-otp')
   @ApiOperation({
     summary: 'Validate OTP and check if user needs additional details',
-    description: 'For OWNER and CHANNEL_PARTNER: role should not be passed. API will automatically check if the phone exists for either OWNER or CHANNEL_PARTNER. For END_USER: role is required.',
+    description: 'For OWNER and CHANNEL_PARTNER: role should not be passed. API will automatically check if the phone exists for either OWNER or CHANNEL_PARTNER. For END_USER: role is required. Send X-Session-Id header to merge anonymous session data after login.',
   })
   @ApiResponse({
     status: 200,
@@ -162,8 +162,10 @@ export class UserController {
   })
   async validateOtp(
     @Body() validateOtpDto: ValidateOtpDto,
+    @Req() req: Request,
   ): Promise<ValidateOtpResponseDto> {
-    return await this.userService.validateOtp(validateOtpDto);
+    const sessionId = (req.headers['x-session-id'] as string)?.trim() || null;
+    return await this.userService.validateOtp(validateOtpDto, sessionId);
   }
 
   @Post('create-owner')

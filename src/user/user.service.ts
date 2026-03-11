@@ -540,6 +540,7 @@ export class UserService {
    */
   async validateOtp(
     validateOtpDto: ValidateOtpDto,
+    sessionId?: string | null,
   ): Promise<ValidateOtpResponseDto> {
     const { phone, otp, role } = validateOtpDto;
 
@@ -677,6 +678,14 @@ export class UserService {
 
       // Commit transaction
       await queryRunner.commitTransaction();
+
+      // Merge session with user account if sessionId (from X-Session-Id header) is provided
+      if (sessionId) {
+        await this.propertyViewTracker.mergeSessionWithUser(
+          sessionId,
+          user.id,
+        );
+      }
 
       // Get property count for the user
       const propertyCount = await this.propertyRepository.countByUserId(user.id);
