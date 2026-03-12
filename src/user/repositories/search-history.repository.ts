@@ -90,21 +90,29 @@ export class SearchHistoryRepository {
     sessionId: string,
     page: number = 1,
     limit: number = 10,
+    sortBy: string = 'recent',
+    listingType?: string,
   ): Promise<{ data: SearchHistory[]; total: number }> {
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.repository.findAndCount({
-      where: {
-        sessionId,
-        deletedAt: IsNull(),
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-      skip,
-      take: limit,
-    });
+    const qb = this.repository
+      .createQueryBuilder('sh')
+      .where('sh.session_id = :sessionId', { sessionId })
+      .andWhere('sh.deleted_at IS NULL');
 
+    if (listingType) {
+      qb.andWhere("sh.filters->>'listingType' = :listingType", { listingType });
+    }
+
+    if (sortBy === 'relevance') {
+      qb.orderBy('sh.search_query', 'ASC');
+    } else {
+      qb.orderBy('sh.created_at', 'DESC');
+    }
+
+    qb.skip(skip).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
     return { data, total };
   }
 
@@ -115,21 +123,29 @@ export class SearchHistoryRepository {
     userId: string,
     page: number = 1,
     limit: number = 10,
+    sortBy: string = 'recent',
+    listingType?: string,
   ): Promise<{ data: SearchHistory[]; total: number }> {
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.repository.findAndCount({
-      where: {
-        userId,
-        deletedAt: IsNull(),
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-      skip,
-      take: limit,
-    });
+    const qb = this.repository
+      .createQueryBuilder('sh')
+      .where('sh.user_id = :userId', { userId })
+      .andWhere('sh.deleted_at IS NULL');
 
+    if (listingType) {
+      qb.andWhere("sh.filters->>'listingType' = :listingType", { listingType });
+    }
+
+    if (sortBy === 'relevance') {
+      qb.orderBy('sh.search_query', 'ASC');
+    } else {
+      qb.orderBy('sh.created_at', 'DESC');
+    }
+
+    qb.skip(skip).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
     return { data, total };
   }
 

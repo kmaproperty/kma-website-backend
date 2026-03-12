@@ -72,9 +72,11 @@ export class SearchTrackerService {
     userId: string | null,
     page: number,
     limit: number,
+    sortBy: string = 'recent',
+    listingType?: string,
   ): Promise<{ data: any[]; total: number }> {
     if (isAuthenticated && userId) {
-      return await this.searchHistoryRepository.findByUser(userId, page, limit);
+      return await this.searchHistoryRepository.findByUser(userId, page, limit, sortBy, listingType);
     }
 
     if (sessionId) {
@@ -82,6 +84,8 @@ export class SearchTrackerService {
         sessionId,
         page,
         limit,
+        sortBy,
+        listingType,
       );
     }
 

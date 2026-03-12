@@ -77,6 +77,14 @@ export class GetSearchHistoryQueryDto {
   @IsIn(['recent', 'relevance'])
   @IsOptional()
   sortBy?: 'recent' | 'relevance' = 'recent';
+
+  @ApiPropertyOptional({
+    description: 'Filter by listing type (from stored filters)',
+    example: 'rent',
+  })
+  @IsString()
+  @IsOptional()
+  listingType?: string;
 }
 
 export class SearchHistoryItemDto {

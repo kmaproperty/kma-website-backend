@@ -5060,12 +5060,14 @@ export class UserService {
   ): Promise<GetSearchHistoryResponseDto> {
     const page = query.page || 1;
     const limit = query.limit || 10;
+    const sortBy = query.sortBy || 'recent';
+    const listingType = query.listingType || undefined;
     let result: { data: any[]; total: number };
 
     if (userId) {
-      result = await this.searchHistoryRepository.findByUser(userId, page, limit);
+      result = await this.searchHistoryRepository.findByUser(userId, page, limit, sortBy, listingType);
     } else if (sessionId) {
-      result = await this.searchHistoryRepository.findBySession(sessionId, page, limit);
+      result = await this.searchHistoryRepository.findBySession(sessionId, page, limit, sortBy, listingType);
     } else {
       result = { data: [], total: 0 };
     }
