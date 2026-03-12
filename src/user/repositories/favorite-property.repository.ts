@@ -60,9 +60,11 @@ export class FavoritePropertyRepository {
     if (sort === 'oldest') {
       qb.orderBy('fav.createdAt', 'ASC');
     } else if (sort === 'price_high') {
-      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'DESC');
+      qb.addSelect('COALESCE("property"."price", "property"."monthlyRent")', 'sort_price');
+      qb.orderBy('sort_price', 'DESC');
     } else if (sort === 'price_low') {
-      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'ASC');
+      qb.addSelect('COALESCE("property"."price", "property"."monthlyRent")', 'sort_price');
+      qb.orderBy('sort_price', 'ASC');
     } else {
       qb.orderBy('fav.createdAt', 'DESC');
     }

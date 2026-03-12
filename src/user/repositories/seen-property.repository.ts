@@ -158,9 +158,11 @@ export class SeenPropertyRepository {
     if (sort === 'oldest') {
       qb.orderBy('sp.createdAt', 'ASC');
     } else if (sort === 'price_high') {
-      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'DESC');
+      qb.addSelect('COALESCE("property"."price", "property"."monthlyRent")', 'sort_price');
+      qb.orderBy('sort_price', 'DESC');
     } else if (sort === 'price_low') {
-      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'ASC');
+      qb.addSelect('COALESCE("property"."price", "property"."monthlyRent")', 'sort_price');
+      qb.orderBy('sort_price', 'ASC');
     } else {
       qb.orderBy('sp.createdAt', 'DESC');
     }
@@ -206,9 +208,11 @@ export class SeenPropertyRepository {
     if (sort === 'oldest') {
       qb.orderBy('sp.createdAt', 'ASC');
     } else if (sort === 'price_high') {
-      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'DESC');
+      qb.addSelect('COALESCE("property"."price", "property"."monthlyRent")', 'sort_price');
+      qb.orderBy('sort_price', 'DESC');
     } else if (sort === 'price_low') {
-      qb.orderBy('COALESCE(property.price, property.monthlyRent)', 'ASC');
+      qb.addSelect('COALESCE("property"."price", "property"."monthlyRent")', 'sort_price');
+      qb.orderBy('sort_price', 'ASC');
     } else {
       qb.orderBy('sp.createdAt', 'DESC');
     }
