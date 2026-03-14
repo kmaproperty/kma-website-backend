@@ -169,6 +169,9 @@ import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repo
 import { PropertyRatingReviewRepository } from './repositories/property-rating-review.repository';
 import { AboutUsRepository } from '../admin/repositories/about-us.repository';
 import { AdminConfigurationRepository } from '../admin/repositories/admin-configuration.repository';
+import { TeamMemberRepository } from '../admin/repositories/team-member.repository';
+import { RegionalOfficeRepository } from '../admin/repositories/regional-office.repository';
+import { HelpCenterFaqRepository } from '../admin/repositories/help-center-faq.repository';
 import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
 import { MetaWhatsappService } from '../common/whatsapp/meta-whatsapp.service';
 
@@ -211,6 +214,9 @@ export class UserService {
     private readonly contactedPropertyRepository: ContactedPropertyRepository,
     private readonly metaWhatsappService: MetaWhatsappService,
     private readonly s3Service: S3Service,
+    private readonly teamMemberRepository: TeamMemberRepository,
+    private readonly regionalOfficeRepository: RegionalOfficeRepository,
+    private readonly helpCenterFaqRepository: HelpCenterFaqRepository,
   ) {}
 
   /**
@@ -5449,6 +5455,78 @@ export class UserService {
     return {
       success: true,
       isFavorite,
+    };
+  }
+
+  // ─── OTHER SCREENS ──────────────────────────────────────────────
+
+  /**
+   * Get all team members for Meet the Team page
+   */
+  async getTeamMembers(): Promise<{
+    success: boolean;
+    teamMembers: any[];
+    total: number;
+  }> {
+    const members = await this.teamMemberRepository.findAll();
+    return {
+      success: true,
+      teamMembers: members.map((m) => ({
+        id: m.id,
+        name: m.name,
+        role: m.role,
+        email: m.email,
+        phone: m.phone,
+        profileImage: m.profileImage,
+        description: m.description,
+        isFounder: m.isFounder,
+      })),
+      total: members.length,
+    };
+  }
+
+  /**
+   * Get all regional offices for Sales Enquiry page
+   */
+  async getRegionalOffices(): Promise<{
+    success: boolean;
+    offices: any[];
+    total: number;
+  }> {
+    const offices = await this.regionalOfficeRepository.findAll();
+    return {
+      success: true,
+      offices: offices.map((o) => ({
+        id: o.id,
+        city: o.city,
+        address: o.address,
+        contactPerson: o.contactPerson,
+        designation: o.designation,
+        phone: o.phone,
+        email: o.email,
+      })),
+      total: offices.length,
+    };
+  }
+
+  /**
+   * Get help center FAQs
+   */
+  async getHelpCenterFaqs(category?: string): Promise<{
+    success: boolean;
+    faqs: any[];
+    total: number;
+  }> {
+    const faqs = await this.helpCenterFaqRepository.findAll(category);
+    return {
+      success: true,
+      faqs: faqs.map((f) => ({
+        id: f.id,
+        question: f.question,
+        answer: f.answer,
+        category: f.category,
+      })),
+      total: faqs.length,
     };
   }
 }

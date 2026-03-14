@@ -30,6 +30,12 @@ import { AboutUs } from './entities/about-us.entity';
 import { AboutUsRepository } from './repositories/about-us.repository';
 import { AdminConfiguration } from './entities/admin-configuration.entity';
 import { AdminConfigurationRepository } from './repositories/admin-configuration.repository';
+import { TeamMember } from './entities/team-member.entity';
+import { TeamMemberRepository } from './repositories/team-member.repository';
+import { RegionalOffice } from './entities/regional-office.entity';
+import { RegionalOfficeRepository } from './repositories/regional-office.repository';
+import { HelpCenterFaq } from './entities/help-center-faq.entity';
+import { HelpCenterFaqRepository } from './repositories/help-center-faq.repository';
 import { Room } from '../property/entities/room.entity';
 import { RoomRepository } from '../property/repositories/room.repository';
 
@@ -50,6 +56,9 @@ import { RoomRepository } from '../property/repositories/room.repository';
       PropertyVerificationRequest,
       AboutUs,
       AdminConfiguration,
+      TeamMember,
+      RegionalOffice,
+      HelpCenterFaq,
       Room,
     ]),
     JwtModule.registerAsync({
@@ -77,9 +86,12 @@ import { RoomRepository } from '../property/repositories/room.repository';
     PropertyVerificationRequestRepository,
     AboutUsRepository,
     AdminConfigurationRepository,
+    TeamMemberRepository,
+    RegionalOfficeRepository,
+    HelpCenterFaqRepository,
     RoomRepository,
   ],
-  exports: [AdminService, AdminRepository, LeadService, AboutUsRepository, AdminConfigurationRepository],
+  exports: [AdminService, AdminRepository, LeadService, AboutUsRepository, AdminConfigurationRepository, TeamMemberRepository, RegionalOfficeRepository, HelpCenterFaqRepository],
 })
 export class AdminModule {}
 

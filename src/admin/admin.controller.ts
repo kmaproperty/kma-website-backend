@@ -1667,5 +1667,83 @@ export class AdminController {
     return this.adminService.deleteAdminConfiguration(id);
   }
 
+  // ─── TEAM MEMBERS ───────────────────────────────────────────────
+
+  @Get('team-members')
+  @ApiOperation({ summary: 'List all team members' })
+  async listTeamMembers() {
+    return this.adminService.listTeamMembers();
+  }
+
+  @Post('team-members')
+  @ApiOperation({ summary: 'Create a team member' })
+  async createTeamMember(@Body() dto: any) {
+    return this.adminService.createTeamMember(dto);
+  }
+
+  @Patch('team-members/:id')
+  @ApiOperation({ summary: 'Update a team member' })
+  async updateTeamMember(@Param('id') id: string, @Body() dto: any) {
+    return this.adminService.updateTeamMember(id, dto);
+  }
+
+  @Delete('team-members/:id')
+  @ApiOperation({ summary: 'Delete a team member' })
+  async deleteTeamMember(@Param('id') id: string) {
+    return this.adminService.deleteTeamMember(id);
+  }
+
+  // ─── REGIONAL OFFICES ──────────────────────────────────────────
+
+  @Get('regional-offices')
+  @ApiOperation({ summary: 'List all regional offices' })
+  async listRegionalOffices() {
+    return this.adminService.listRegionalOffices();
+  }
+
+  @Post('regional-offices')
+  @ApiOperation({ summary: 'Create a regional office' })
+  async createRegionalOffice(@Body() dto: any) {
+    return this.adminService.createRegionalOffice(dto);
+  }
+
+  @Patch('regional-offices/:id')
+  @ApiOperation({ summary: 'Update a regional office' })
+  async updateRegionalOffice(@Param('id') id: string, @Body() dto: any) {
+    return this.adminService.updateRegionalOffice(id, dto);
+  }
+
+  @Delete('regional-offices/:id')
+  @ApiOperation({ summary: 'Delete a regional office' })
+  async deleteRegionalOffice(@Param('id') id: string) {
+    return this.adminService.deleteRegionalOffice(id);
+  }
+
+  // ─── HELP CENTER FAQs ──────────────────────────────────────────
+
+  @Get('help-center-faqs')
+  @ApiOperation({ summary: 'List all help center FAQs' })
+  async listHelpCenterFaqs() {
+    return this.adminService.listHelpCenterFaqs();
+  }
+
+  @Post('help-center-faqs')
+  @ApiOperation({ summary: 'Create a FAQ' })
+  async createHelpCenterFaq(@Body() dto: any) {
+    return this.adminService.createHelpCenterFaq(dto);
+  }
+
+  @Patch('help-center-faqs/:id')
+  @ApiOperation({ summary: 'Update a FAQ' })
+  async updateHelpCenterFaq(@Param('id') id: string, @Body() dto: any) {
+    return this.adminService.updateHelpCenterFaq(id, dto);
+  }
+
+  @Delete('help-center-faqs/:id')
+  @ApiOperation({ summary: 'Delete a FAQ' })
+  async deleteHelpCenterFaq(@Param('id') id: string) {
+    return this.adminService.deleteHelpCenterFaq(id);
+  }
+
 }
 

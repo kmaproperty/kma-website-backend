@@ -50,6 +50,12 @@ import { ErrorHandlerService } from '../common/errorHandler/error-handler.servic
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { AdminModule } from '../admin/admin.module';
 import { PropertyModule } from '../property/property.module';
+import { TeamMember } from '../admin/entities/team-member.entity';
+import { RegionalOffice } from '../admin/entities/regional-office.entity';
+import { HelpCenterFaq } from '../admin/entities/help-center-faq.entity';
+import { TeamMemberRepository } from '../admin/repositories/team-member.repository';
+import { RegionalOfficeRepository } from '../admin/repositories/regional-office.repository';
+import { HelpCenterFaqRepository } from '../admin/repositories/help-center-faq.repository';
 import { MetaWhatsappService } from '../common/whatsapp/meta-whatsapp.service';
 import { S3Service } from '../common/aws/s3.service';
 
@@ -71,6 +77,9 @@ const entities = [
   SeenProperty,
   SearchHistory,
   ContactedProperty,
+  TeamMember,
+  RegionalOffice,
+  HelpCenterFaq,
 ];
 const repositories = [
   UserRepository,
@@ -90,6 +99,9 @@ const repositories = [
   SeenPropertyRepository,
   SearchHistoryRepository,
   ContactedPropertyRepository,
+  TeamMemberRepository,
+  RegionalOfficeRepository,
+  HelpCenterFaqRepository,
 ];
 
 @Module({

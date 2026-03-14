@@ -1277,5 +1277,51 @@ export class EndUserController {
     return await this.userService.checkFavoriteProperty(req.user.id, query.propertyId);
   }
 
+  // ─── OTHER SCREENS PUBLIC ENDPOINTS ─────────────────────────────
+
+  @Get('team-members')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Team Members',
+    description: 'Get all team members for the Meet the Team page. Returns founders first, then sorted by display order.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Team members retrieved successfully',
+  })
+  async getTeamMembers(): Promise<any> {
+    return await this.userService.getTeamMembers();
+  }
+
+  @Get('regional-offices')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Regional Offices',
+    description: 'Get all regional offices for the Sales Enquiry page.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Regional offices retrieved successfully',
+  })
+  async getRegionalOffices(): Promise<any> {
+    return await this.userService.getRegionalOffices();
+  }
+
+  @Get('help-center')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Help Center FAQs',
+    description: 'Get all FAQs for the Help Center page. Optionally filter by category.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'FAQs retrieved successfully',
+  })
+  async getHelpCenterFaqs(
+    @Query('category') category?: string,
+  ): Promise<any> {
+    return await this.userService.getHelpCenterFaqs(category);
+  }
+
 }
 

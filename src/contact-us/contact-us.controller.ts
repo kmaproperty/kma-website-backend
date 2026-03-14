@@ -2,7 +2,14 @@ import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ContactUsService } from './contact-us.service';
 import { ApiResponseDto, ApiResponse as ApiResponseType } from '../common/dto';
-import { CreateContactUsDto, CreateContactUsResponseDto } from './dto';
+import {
+  CreateContactUsDto,
+  CreateContactUsResponseDto,
+  CreateJoinUsDto,
+  CreateJoinUsResponseDto,
+  CreateSalesEnquiryDto,
+  CreateSalesEnquiryResponseDto,
+} from './dto';
 
 @ApiTags('Contact Us')
 @Controller('contact-us')
@@ -40,5 +47,31 @@ export class ContactUsController {
       result,
       'Contact forms retrieved successfully',
     );
+  }
+
+  @Post('join-us')
+  @ApiOperation({ summary: 'Submit Join Us / Channel Partner application' })
+  @ApiResponse({
+    status: 201,
+    description: 'Application submitted successfully',
+    type: CreateJoinUsResponseDto,
+  })
+  async createJoinUsEnquiry(
+    @Body() dto: CreateJoinUsDto,
+  ): Promise<CreateJoinUsResponseDto> {
+    return await this.contactUsService.createJoinUsEnquiry(dto);
+  }
+
+  @Post('sales-enquiry')
+  @ApiOperation({ summary: 'Submit Sales Enquiry / Request Callback' })
+  @ApiResponse({
+    status: 201,
+    description: 'Sales enquiry submitted successfully',
+    type: CreateSalesEnquiryResponseDto,
+  })
+  async createSalesEnquiry(
+    @Body() dto: CreateSalesEnquiryDto,
+  ): Promise<CreateSalesEnquiryResponseDto> {
+    return await this.contactUsService.createSalesEnquiry(dto);
   }
 }

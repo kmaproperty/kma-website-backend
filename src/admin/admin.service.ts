@@ -124,6 +124,12 @@ import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma
 import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 import { AboutUsRepository } from './repositories/about-us.repository';
+import { TeamMemberRepository } from './repositories/team-member.repository';
+import { RegionalOfficeRepository } from './repositories/regional-office.repository';
+import { HelpCenterFaqRepository } from './repositories/help-center-faq.repository';
+import { AdminCreateTeamMemberDto, AdminUpdateTeamMemberDto } from './dto/admin-team-member.dto';
+import { AdminCreateRegionalOfficeDto, AdminUpdateRegionalOfficeDto } from './dto/admin-regional-office.dto';
+import { AdminCreateHelpCenterFaqDto, AdminUpdateHelpCenterFaqDto } from './dto/admin-help-center-faq.dto';
 import { AboutUs } from './entities/about-us.entity';
 import { AdminConfigurationRepository } from './repositories/admin-configuration.repository';
 import { AdminConfiguration } from './entities/admin-configuration.entity';
@@ -301,6 +307,9 @@ export class AdminService {
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
     private readonly aboutUsRepository: AboutUsRepository,
     private readonly adminConfigurationRepository: AdminConfigurationRepository,
+    private readonly teamMemberRepository: TeamMemberRepository,
+    private readonly regionalOfficeRepository: RegionalOfficeRepository,
+    private readonly helpCenterFaqRepository: HelpCenterFaqRepository,
   ) {}
 
   private getJwtSecret(): string {
@@ -3279,6 +3288,84 @@ export class AdminService {
       success: true,
       message: 'Configuration deleted successfully',
     };
+  }
+
+  // ─── TEAM MEMBERS CRUD ──────────────────────────────────────────
+
+  async listTeamMembers(): Promise<{ success: boolean; data: any[]; total: number }> {
+    const members = await this.teamMemberRepository.findAll();
+    return { success: true, data: members, total: members.length };
+  }
+
+  async createTeamMember(dto: AdminCreateTeamMemberDto): Promise<{ success: boolean; message: string; data: any }> {
+    const member = await this.teamMemberRepository.create(dto);
+    return { success: true, message: 'Team member created successfully', data: member };
+  }
+
+  async updateTeamMember(id: string, dto: AdminUpdateTeamMemberDto): Promise<{ success: boolean; message: string }> {
+    const member = await this.teamMemberRepository.findById(id);
+    if (!member) throw new BadRequestException('Team member not found');
+    await this.teamMemberRepository.update(id, dto);
+    return { success: true, message: 'Team member updated successfully' };
+  }
+
+  async deleteTeamMember(id: string): Promise<{ success: boolean; message: string }> {
+    const member = await this.teamMemberRepository.findById(id);
+    if (!member) throw new BadRequestException('Team member not found');
+    await this.teamMemberRepository.delete(id);
+    return { success: true, message: 'Team member deleted successfully' };
+  }
+
+  // ─── REGIONAL OFFICES CRUD ──────────────────────────────────────
+
+  async listRegionalOffices(): Promise<{ success: boolean; data: any[]; total: number }> {
+    const offices = await this.regionalOfficeRepository.findAll();
+    return { success: true, data: offices, total: offices.length };
+  }
+
+  async createRegionalOffice(dto: AdminCreateRegionalOfficeDto): Promise<{ success: boolean; message: string; data: any }> {
+    const office = await this.regionalOfficeRepository.create(dto);
+    return { success: true, message: 'Regional office created successfully', data: office };
+  }
+
+  async updateRegionalOffice(id: string, dto: AdminUpdateRegionalOfficeDto): Promise<{ success: boolean; message: string }> {
+    const office = await this.regionalOfficeRepository.findById(id);
+    if (!office) throw new BadRequestException('Regional office not found');
+    await this.regionalOfficeRepository.update(id, dto);
+    return { success: true, message: 'Regional office updated successfully' };
+  }
+
+  async deleteRegionalOffice(id: string): Promise<{ success: boolean; message: string }> {
+    const office = await this.regionalOfficeRepository.findById(id);
+    if (!office) throw new BadRequestException('Regional office not found');
+    await this.regionalOfficeRepository.delete(id);
+    return { success: true, message: 'Regional office deleted successfully' };
+  }
+
+  // ─── HELP CENTER FAQ CRUD ──────────────────────────────────────
+
+  async listHelpCenterFaqs(): Promise<{ success: boolean; data: any[]; total: number }> {
+    const faqs = await this.helpCenterFaqRepository.findAll();
+    return { success: true, data: faqs, total: faqs.length };
+  }
+
+  async createHelpCenterFaq(dto: AdminCreateHelpCenterFaqDto): Promise<{ success: boolean; message: string; data: any }> {
+    const faq = await this.helpCenterFaqRepository.create(dto);
+    return { success: true, message: 'FAQ created successfully', data: faq };
+  }
+
+  async updateHelpCenterFaq(id: string, dto: AdminUpdateHelpCenterFaqDto): Promise<{ success: boolean; message: string }> {
+    const faq = await this.helpCenterFaqRepository.findById(id);
+    if (!faq) throw new BadRequestException('FAQ not found');
+    await this.helpCenterFaqRepository.update(id, dto);
+    return { success: true, message: 'FAQ updated successfully' };
+  }
+
+  async deleteHelpCenterFaq(id: string): Promise<{ success: boolean; message: string }> {
+    const faq = await this.helpCenterFaqRepository.findById(id);
+    if (!faq) throw new BadRequestException('FAQ not found');
+    await this.helpCenterFaqRepository.delete(id);
+    return { success: true, message: 'FAQ deleted successfully' };
   }
 }
 
