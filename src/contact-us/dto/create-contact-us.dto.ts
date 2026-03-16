@@ -19,10 +19,11 @@ export class CreateContactUsDto {
   @ApiProperty({
     description: 'Last name',
     example: 'Doe',
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  lastName: string;
+  lastName?: string;
 
   @ApiProperty({
     description: 'Email address',
@@ -45,13 +46,12 @@ export class CreateContactUsDto {
   phoneNumber: string;
 
   @ApiProperty({
-    description: 'Message',
+    description: 'Query',
     example: 'I would like to know more about your services',
-    required: false,
   })
-  @IsOptional()
   @IsString()
-  message?: string;
+  @IsNotEmpty()
+  message: string;
 }
 
 export class CreateContactUsResponseDto {

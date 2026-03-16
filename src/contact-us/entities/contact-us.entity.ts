@@ -15,9 +15,9 @@ export class ContactUs extends BaseEntity {
     name: 'last_name',
     type: 'varchar',
     length: 255,
-    nullable: false,
+    nullable: true,
   })
-  lastName: string;
+  lastName: string | null;
 
   @Column({
     name: 'email',
@@ -38,7 +38,7 @@ export class ContactUs extends BaseEntity {
   @Column({
     name: 'message',
     type: 'text',
-    nullable: true,
+    nullable: false,
   })
-  message: string | null;
+  message: string;
 }

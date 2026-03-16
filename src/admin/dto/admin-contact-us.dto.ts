@@ -41,8 +41,8 @@ export class ContactUsResponseDto {
   @ApiProperty({ description: 'First name', example: 'John' })
   firstName: string;
 
-  @ApiProperty({ description: 'Last name', example: 'Doe' })
-  lastName: string;
+  @ApiPropertyOptional({ description: 'Last name', example: 'Doe' })
+  lastName?: string | null;
 
   @ApiPropertyOptional({ description: 'Email address', example: 'john.doe@example.com' })
   email?: string | null;
@@ -50,8 +50,8 @@ export class ContactUsResponseDto {
   @ApiProperty({ description: 'Phone number', example: '9876543210' })
   phoneNumber: string;
 
-  @ApiPropertyOptional({ description: 'Message', example: 'I would like to know more...' })
-  message?: string | null;
+  @ApiProperty({ description: 'Query/Message', example: 'I would like to know more...' })
+  message: string;
 
   @ApiProperty({ description: 'Created at', example: '2025-01-20T10:15:00.000Z' })
   createdAt: Date;
