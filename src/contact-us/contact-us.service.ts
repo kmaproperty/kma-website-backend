@@ -35,10 +35,10 @@ export class ContactUsService {
     try {
       const contactData: Partial<ContactUs> = {
         firstName: createContactUsDto.firstName,
-        lastName: createContactUsDto.lastName,
+        lastName: createContactUsDto.lastName || null,
         email: createContactUsDto.email || null,
         phoneNumber: createContactUsDto.phoneNumber,
-        message: createContactUsDto.message || null,
+        message: createContactUsDto.message,
       };
 
       const contact = await this.contactUsRepository.create(contactData);
