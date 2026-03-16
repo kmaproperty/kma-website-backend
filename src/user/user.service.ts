@@ -2677,6 +2677,7 @@ export class UserService {
           bhkType: property.bhkType?.name || null,
           price: property.price || null,
           monthlyRent: property.monthlyRent || null,
+          cityId: property.city?.id ?? null,
           city: property.city?.name || null,
           society: property.society?.name || null,
           locality: property.locality?.name || null,
