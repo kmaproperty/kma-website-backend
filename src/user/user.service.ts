@@ -691,6 +691,14 @@ export class UserService {
           sessionId,
           user.id,
         );
+        await this.searchHistoryRepository.attachUserToSession(
+          sessionId,
+          user.id,
+        );
+        await this.contactedPropertyRepository.attachUserToSession(
+          sessionId,
+          user.id,
+        );
       }
 
       // Get property count for the user
