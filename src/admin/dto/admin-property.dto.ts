@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class AdminPropertyListQueryDto {
   @ApiPropertyOptional({
@@ -29,6 +29,15 @@ export class AdminPropertyListQueryDto {
   @IsOptional()
   @IsIn(['draft', 'pending_review', 'active', 'rejected', 'deactivated'])
   status?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by city ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+  })
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  cityId?: string;
 }
 
 export class AdminPropertyListResponseDto {

@@ -1367,6 +1367,7 @@ export class AdminService {
       offset,
       limit,
       status: query.status,
+      cityId: query.cityId,
     });
 
     const data = items.map((property) => this.formatPropertyData(property));
