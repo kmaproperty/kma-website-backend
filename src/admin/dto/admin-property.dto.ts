@@ -59,6 +59,14 @@ export class AdminPropertyListResponseDto {
 
   @ApiProperty()
   limit: number;
+
+  @ApiPropertyOptional({ description: 'Property summary counts' })
+  summary?: {
+    totalProperties: number;
+    activeProperties: number;
+    pendingProperties: number;
+    verifiedProperties: number;
+  };
 }
 
 export class AdminReviewPropertyDto {

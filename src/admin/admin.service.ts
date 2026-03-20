@@ -1421,12 +1421,16 @@ export class AdminService {
 
     const data = items.map((property) => this.formatPropertyData(property));
 
+    // Property summary counts
+    const summary = await this.propertyRepository.getPropertySummaryCounts();
+
     return {
       success: true,
       data,
       total,
       page,
       limit,
+      summary,
     };
   }
 

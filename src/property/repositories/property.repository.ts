@@ -196,6 +196,22 @@ export class PropertyRepository {
     return { items, total };
   }
 
+  async getPropertySummaryCounts(): Promise<{
+    totalProperties: number;
+    activeProperties: number;
+    pendingProperties: number;
+    verifiedProperties: number;
+  }> {
+    const base = this.propertyRepository.createQueryBuilder('p').where('p.isDeleted = false');
+
+    const totalProperties = await base.clone().getCount();
+    const activeProperties = await base.clone().andWhere("p.status = 'active'").getCount();
+    const pendingProperties = await base.clone().andWhere("p.status = 'pending_review'").getCount();
+    const verifiedProperties = await base.clone().andWhere("p.isVerified = 'verified'").getCount();
+
+    return { totalProperties, activeProperties, pendingProperties, verifiedProperties };
+  }
+
   async getPropertyCountsByUserIds(userIds: string[]): Promise<Array<{ userId: string; sold: string; rent: string }>> {
     if (userIds.length === 0) return [];
     return this.propertyRepository
