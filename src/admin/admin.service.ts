@@ -1182,6 +1182,18 @@ export class AdminService {
       .filter((user) => user.role === UserRole.CHANNEL_PARTNER)
       .map((user) => user.id);
 
+    // Fetch property counts for channel partners (sold vs rent)
+    const propertyCountsMap = new Map<string, { sold: number; rent: number }>();
+    if (channelPartnerIds.length > 0) {
+      const countResults = await this.propertyRepository.getPropertyCountsByUserIds(channelPartnerIds);
+      for (const row of countResults) {
+        propertyCountsMap.set(row.userId, {
+          sold: parseInt(row.sold, 10) || 0,
+          rent: parseInt(row.rent, 10) || 0,
+        });
+      }
+    }
+
     // Fetch agreement status for channel partners only
     const agreementStatusMap = new Map<string, boolean>();
     for (const userId of channelPartnerIds) {
@@ -1213,10 +1225,46 @@ export class AdminService {
         baseData.cities = user.cities ?? null;
         baseData.businessSince = user.businessSince ?? null;
         baseData.aboutYourSelf = user.aboutYourSelf ?? null;
+        baseData.profileImage = user.profileImage ?? null;
+        baseData.kycCompleted = user.kycCompleted ?? false;
+
+        // Calculate experience from businessSince
+        if (user.businessSince) {
+          const sinceDate = new Date(user.businessSince);
+          const now = new Date();
+          baseData.experience = Math.max(0, Math.floor((now.getTime() - sinceDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)));
+        } else {
+          baseData.experience = null;
+        }
+
+        // Property counts (from propertyCountsMap)
+        const counts = propertyCountsMap.get(user.id);
+        baseData.soldProperties = counts?.sold ?? 0;
+        baseData.rentedProperties = counts?.rent ?? 0;
       }
 
       return baseData;
     });
+
+    // Build summary for channel partner queries
+    let summary = undefined;
+    if (query?.role === 'CHANNEL_PARTNER') {
+      const allCPs = await this.userRepository.findPaginated({
+        page: 1,
+        limit: 1,
+        role: 'CHANNEL_PARTNER',
+      });
+      const activeCPs = await this.userRepository.countByRoleAndActive('CHANNEL_PARTNER', true);
+      const verifiedCPs = await this.userRepository.countByRoleAndVerified('CHANNEL_PARTNER');
+      const kycCPs = await this.userRepository.countByRoleAndKyc('CHANNEL_PARTNER');
+
+      summary = {
+        totalPartners: allCPs.total,
+        activePartners: activeCPs,
+        verifiedPartners: verifiedCPs,
+        kycCompletedPartners: kycCPs,
+      } as any;
+    }
 
     return {
       success: true,
@@ -1224,6 +1272,7 @@ export class AdminService {
       total,
       page,
       limit,
+      ...(summary ? { summary } : {}),
     };
   }
 

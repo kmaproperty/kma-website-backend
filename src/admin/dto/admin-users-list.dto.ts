@@ -182,11 +182,40 @@ export class AdminUsersListResponseDto {
   @ApiPropertyOptional({ nullable: true })
   aboutYourSelf?: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  profileImage?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Years of experience (calculated from businessSince)' })
+  experience?: number | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Number of sale properties' })
+  soldProperties?: number;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Number of rent properties' })
+  rentedProperties?: number;
+
+  @ApiPropertyOptional({ nullable: true, description: 'KYC completed status' })
+  kycCompleted?: boolean;
+
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
+}
+
+export class ChannelPartnerSummaryDto {
+  @ApiProperty()
+  totalPartners: number;
+
+  @ApiProperty()
+  activePartners: number;
+
+  @ApiProperty()
+  verifiedPartners: number;
+
+  @ApiProperty()
+  kycCompletedPartners: number;
 }
 
 export class AdminOwnerListResponseDto<T> {
@@ -204,4 +233,7 @@ export class AdminOwnerListResponseDto<T> {
 
   @ApiProperty()
   limit: number;
+
+  @ApiPropertyOptional({ description: 'Channel partner summary counts (only when role=CHANNEL_PARTNER)' })
+  summary?: ChannelPartnerSummaryDto;
 }

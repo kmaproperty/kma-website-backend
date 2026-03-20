@@ -196,6 +196,20 @@ export class PropertyRepository {
     return { items, total };
   }
 
+  async getPropertyCountsByUserIds(userIds: string[]): Promise<Array<{ userId: string; sold: string; rent: string }>> {
+    if (userIds.length === 0) return [];
+    return this.propertyRepository
+      .createQueryBuilder('p')
+      .select('p.userId', 'userId')
+      .addSelect(`SUM(CASE WHEN lt.code = 'sale' THEN 1 ELSE 0 END)`, 'sold')
+      .addSelect(`SUM(CASE WHEN lt.code = 'rent' THEN 1 ELSE 0 END)`, 'rent')
+      .leftJoin('p.listingType', 'lt')
+      .where('p.userId IN (:...ids)', { ids: userIds })
+      .andWhere('p.isDeleted = false')
+      .groupBy('p.userId')
+      .getRawMany();
+  }
+
   private applyOwnerListingSort(
     qb: SelectQueryBuilder<Property>,
     sortBy: string,

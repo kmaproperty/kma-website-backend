@@ -234,4 +234,22 @@ export class UserRepository {
 
     return { items, total };
   }
+
+  async countByRoleAndActive(role: string, isActive: boolean): Promise<number> {
+    return this.userRepository.count({
+      where: { role: role as UserRole, isActive },
+    });
+  }
+
+  async countByRoleAndVerified(role: string): Promise<number> {
+    return this.userRepository.count({
+      where: { role: role as UserRole, phoneVerified: true, isActive: true },
+    });
+  }
+
+  async countByRoleAndKyc(role: string): Promise<number> {
+    return this.userRepository.count({
+      where: { role: role as UserRole, kycCompleted: true, isActive: true },
+    });
+  }
 }
