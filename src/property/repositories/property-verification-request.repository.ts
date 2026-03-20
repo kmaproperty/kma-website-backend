@@ -92,6 +92,11 @@ export class PropertyVerificationRequestRepository {
     const queryBuilder = this.repository
       .createQueryBuilder('request')
       .leftJoinAndSelect('request.property', 'property')
+      .leftJoinAndSelect('property.bhkType', 'bhkType')
+      .leftJoinAndSelect('property.propertyType', 'propertyType')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.society', 'society')
+      .leftJoinAndSelect('property.locality', 'locality')
       .leftJoinAndSelect('request.requestedByUser', 'requestedByUser')
       .leftJoinAndSelect('request.reviewedByAdmin', 'reviewedByAdmin')
       .orderBy('request.createdAt', 'DESC')
