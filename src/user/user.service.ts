@@ -4035,15 +4035,11 @@ export class UserService {
   ): Promise<ContactUsResponseDto> {
     const { name, phone, email, otp } = submitDto;
 
-    // If user is logged in, verify the user exists and is an end user
+    // If user is logged in, verify the user exists
     if (endUserId) {
       const user = await this.userRepository.findById(endUserId);
       if (!user) {
         throw new BadRequestException('User not found');
-      }
-
-      if (user.role !== UserRole.END_USER) {
-        throw new BadRequestException('Only end users can submit contact us queries');
       }
 
       // Create contact us query for logged in user
@@ -4176,9 +4172,6 @@ export class UserService {
       if (!user) {
         throw new BadRequestException('User not found');
       }
-      if (user.role !== UserRole.END_USER) {
-        throw new BadRequestException('Only end users can contact properties');
-      }
       const contacted = await this.contactedPropertyRepository.create({
         userId,
         sessionId: null,
@@ -4271,9 +4264,6 @@ export class UserService {
       throw new BadRequestException('User not found');
     }
 
-    if (user.role !== UserRole.END_USER) {
-      throw new BadRequestException('Only end users can submit ratings and reviews');
-    }
 
     // Create rating and review for logged in user
     // Get user information from authenticated user profile
@@ -4317,12 +4307,6 @@ export class UserService {
     if (!user) {
       throw new BadRequestException('User not found');
     }
-    if (user.role !== UserRole.END_USER) {
-      throw new BadRequestException(
-        'Only end users can submit property ratings and reviews',
-      );
-    }
-
     // Verify the property exists and is active
     const property = await this.propertyRepository.findById(propertyId);
     if (!property || property.isDeleted || property.status !== PropertyStatus.ACTIVE) {
