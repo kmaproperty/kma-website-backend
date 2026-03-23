@@ -12,6 +12,7 @@ import { BankDetails } from './entities/bank-details.entity';
 import { ContactUsKmaQuery } from './entities/contact-us-kma-query.entity';
 import { KmaRatingReview } from './entities/kma-rating-review.entity';
 import { PropertyRatingReview } from './entities/property-rating-review.entity';
+import { ChannelPartnerReview } from './entities/channel-partner-review.entity';
 import { FavoriteProperty } from './entities/favorite-property.entity';
 import { Session } from './entities/session.entity';
 import { SessionPropertyView } from './entities/session-property-view.entity';
@@ -30,6 +31,7 @@ import { UserRoleHistoryRepository } from './repositories/user-role-history.repo
 import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
 import { PropertyRatingReviewRepository } from './repositories/property-rating-review.repository';
+import { ChannelPartnerReviewRepository } from './repositories/channel-partner-review.repository';
 import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
 import { SessionRepository } from './repositories/session.repository';
 import { SessionPropertyViewRepository } from './repositories/session-property-view.repository';
@@ -71,6 +73,7 @@ const entities = [
   ContactUsKmaQuery,
   KmaRatingReview,
   PropertyRatingReview,
+  ChannelPartnerReview,
   FavoriteProperty,
   Session,
   SessionPropertyView,
@@ -93,6 +96,7 @@ const repositories = [
   ContactUsKmaQueryRepository,
   KmaRatingReviewRepository,
   PropertyRatingReviewRepository,
+  ChannelPartnerReviewRepository,
   FavoritePropertyRepository,
   SessionRepository,
   SessionPropertyViewRepository,

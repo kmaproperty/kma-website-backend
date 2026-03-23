@@ -75,6 +75,13 @@ import {
   ListFiltersQueryDto,
   ListFiltersResponseDto,
 } from './dto';
+import {
+  SubmitCPReviewDto,
+  SubmitCPReviewResponseDto,
+  CPReviewsListQueryDto,
+  CPReviewsListResponseDto,
+  GetMyCPReviewResponseDto,
+} from './dto/channel-partner-review.dto';
 import { Request } from 'express';
 
 @ApiTags('End User')
@@ -1321,6 +1328,108 @@ export class EndUserController {
     @Query('category') category?: string,
   ): Promise<any> {
     return await this.userService.getHelpCenterFaqs(category);
+  }
+
+  // ─── Channel Partner Reviews ───────────────────────────────────────
+
+  @Post('channel-partners/:id/review')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Submit review for a channel partner',
+    description:
+      'Submit or update a rating and review for a channel partner. One review per user per channel partner is maintained (subsequent calls update the existing review). Authenticated users only.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Channel Partner ID (user ID)',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Review submitted successfully',
+    type: SubmitCPReviewResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Channel partner not found or invalid data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Authentication required',
+  })
+  async submitChannelPartnerReview(
+    @Req() req: Request,
+    @Param('id') channelPartnerId: string,
+    @Body() body: SubmitCPReviewDto,
+  ): Promise<SubmitCPReviewResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    return await this.userService.submitChannelPartnerReview(
+      channelPartnerId,
+      req.user.id,
+      body,
+    );
+  }
+
+  @Get('channel-partners/:id/reviews')
+  @Public()
+  @ApiOperation({
+    summary: 'Get reviews for a channel partner',
+    description:
+      'Get aggregated ratings (average, star distribution) and paginated reviews for a channel partner. Supports sorting by newest, oldest, highest, lowest. Public endpoint.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Channel Partner ID (user ID)',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reviews retrieved successfully',
+    type: CPReviewsListResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Channel partner not found',
+  })
+  async getChannelPartnerReviews(
+    @Param('id') channelPartnerId: string,
+    @Query() query: CPReviewsListQueryDto,
+  ): Promise<CPReviewsListResponseDto> {
+    return await this.userService.getChannelPartnerReviews(channelPartnerId, query);
+  }
+
+  @Get('channel-partners/:id/review/me')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Get my review for a channel partner',
+    description:
+      "Fetch the logged-in user's existing review for a given channel partner. Useful to pre-fill the review form if a review was already submitted.",
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Channel Partner ID (user ID)',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Review retrieved successfully',
+    type: GetMyCPReviewResponseDto,
+  })
+  async getMyChannelPartnerReview(
+    @Req() req: Request,
+    @Param('id') channelPartnerId: string,
+  ): Promise<GetMyCPReviewResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+
+    return await this.userService.getMyChannelPartnerReview(
+      req.user.id,
+      channelPartnerId,
+    );
   }
 
 }

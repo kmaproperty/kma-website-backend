@@ -167,6 +167,14 @@ import { PropertyViewTrackerService } from './services/property-view-tracker.ser
 import { ContactUsKmaQueryRepository } from './repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from './repositories/kma-rating-review.repository';
 import { PropertyRatingReviewRepository } from './repositories/property-rating-review.repository';
+import { ChannelPartnerReviewRepository } from './repositories/channel-partner-review.repository';
+import {
+  SubmitCPReviewDto,
+  SubmitCPReviewResponseDto,
+  CPReviewsListQueryDto,
+  CPReviewsListResponseDto,
+  GetMyCPReviewResponseDto,
+} from './dto/channel-partner-review.dto';
 import { AboutUsRepository } from '../admin/repositories/about-us.repository';
 import { AdminConfigurationRepository } from '../admin/repositories/admin-configuration.repository';
 import { TeamMemberRepository } from '../admin/repositories/team-member.repository';
@@ -217,6 +225,7 @@ export class UserService {
     private readonly teamMemberRepository: TeamMemberRepository,
     private readonly regionalOfficeRepository: RegionalOfficeRepository,
     private readonly helpCenterFaqRepository: HelpCenterFaqRepository,
+    private readonly channelPartnerReviewRepository: ChannelPartnerReviewRepository,
   ) {}
 
   /**
@@ -5536,6 +5545,139 @@ export class UserService {
         category: f.category,
       })),
       total: faqs.length,
+    };
+  }
+
+  // ─── Channel Partner Reviews ───────────────────────────────────────
+
+  /**
+   * Submit or update a review for a channel partner
+   */
+  async submitChannelPartnerReview(
+    channelPartnerId: string,
+    reviewerId: string,
+    dto: SubmitCPReviewDto,
+  ): Promise<SubmitCPReviewResponseDto> {
+    // Verify reviewer exists
+    const reviewer = await this.userRepository.findById(reviewerId);
+    if (!reviewer) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Verify channel partner exists and is actually a channel partner
+    const channelPartner = await this.userRepository.findById(channelPartnerId);
+    if (!channelPartner) {
+      throw new BadRequestException('Channel partner not found');
+    }
+    if (channelPartner.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('The specified user is not a channel partner');
+    }
+
+    // Cannot review yourself
+    if (channelPartnerId === reviewerId) {
+      throw new BadRequestException('You cannot review yourself');
+    }
+
+    const saved = await this.channelPartnerReviewRepository.upsert(
+      channelPartnerId,
+      reviewerId,
+      dto.rating,
+      dto.review ?? null,
+    );
+
+    return {
+      success: true,
+      message: 'Review submitted successfully',
+      reviewId: saved.id,
+    };
+  }
+
+  /**
+   * Get paginated reviews for a channel partner with stats
+   */
+  async getChannelPartnerReviews(
+    channelPartnerId: string,
+    query: CPReviewsListQueryDto,
+  ): Promise<CPReviewsListResponseDto> {
+    // Verify channel partner exists and is actually a channel partner
+    const channelPartner = await this.userRepository.findById(channelPartnerId);
+    if (!channelPartner) {
+      throw new BadRequestException('Channel partner not found');
+    }
+    if (channelPartner.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('The specified user is not a channel partner');
+    }
+
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(50, Math.max(1, query.limit ?? 10));
+    const sortBy = query.sortBy ?? 'newest';
+
+    const [{ averageRating, totalReviews }, starDistribution, { items: reviews, total }] =
+      await Promise.all([
+        this.channelPartnerReviewRepository.getAverageRating(channelPartnerId),
+        this.channelPartnerReviewRepository.getStarDistribution(channelPartnerId),
+        this.channelPartnerReviewRepository.findByChannelPartner(
+          channelPartnerId,
+          page,
+          limit,
+          sortBy,
+        ),
+      ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return {
+      success: true,
+      averageRating,
+      totalReviews,
+      starDistribution,
+      reviews: reviews.map((r) => ({
+        id: r.id,
+        reviewerName: r.reviewer?.name ?? 'Anonymous',
+        reviewerProfileImage: r.reviewer?.profileImage ?? null,
+        rating: Number(r.rating),
+        review: r.review ?? null,
+        createdAt: r.createdAt,
+      })),
+      page,
+      limit,
+      total,
+      totalPages,
+    };
+  }
+
+  /**
+   * Get the logged-in user's own review for a channel partner
+   */
+  async getMyChannelPartnerReview(
+    reviewerId: string,
+    channelPartnerId: string,
+  ): Promise<GetMyCPReviewResponseDto> {
+    const user = await this.userRepository.findById(reviewerId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const review = await this.channelPartnerReviewRepository.findByReviewerAndCP(
+      reviewerId,
+      channelPartnerId,
+    );
+
+    if (!review) {
+      return {
+        success: true,
+        review: null,
+      };
+    }
+
+    return {
+      success: true,
+      review: {
+        id: review.id,
+        rating: Number(review.rating),
+        review: review.review ?? null,
+        createdAt: review.createdAt,
+      },
     };
   }
 }
