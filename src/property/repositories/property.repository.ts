@@ -166,8 +166,9 @@ export class PropertyRepository {
     limit: number;
     status?: string;
     cityId?: string;
+    userId?: string;
   }): Promise<{ items: Property[]; total: number }> {
-    const { offset, limit, status, cityId } = options;
+    const { offset, limit, status, cityId, userId } = options;
 
     const qb = this.propertyRepository
       .createQueryBuilder('property')
@@ -190,6 +191,10 @@ export class PropertyRepository {
 
     if (cityId) {
       qb.andWhere('property.cityId = :cityId', { cityId });
+    }
+
+    if (userId) {
+      qb.andWhere('property.userId = :userId', { userId });
     }
 
     const [items, total] = await qb.getManyAndCount();

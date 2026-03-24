@@ -1417,6 +1417,7 @@ export class AdminService {
       limit,
       status: query.status,
       cityId: query.cityId,
+      userId: query.userId,
     });
 
     const data = items.map((property) => this.formatPropertyData(property));

@@ -38,6 +38,15 @@ export class AdminPropertyListQueryDto {
   @IsString()
   @IsUUID()
   cityId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by user/owner ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+  })
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  userId?: string;
 }
 
 export class AdminPropertyListResponseDto {
