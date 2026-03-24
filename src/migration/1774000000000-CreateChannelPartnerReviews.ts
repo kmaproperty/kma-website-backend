@@ -5,7 +5,7 @@ export class CreateChannelPartnerReviews1774000000000
 {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      CREATE TABLE "channel_partner_reviews" (
+      CREATE TABLE IF NOT EXISTS "channel_partner_reviews" (
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),
         "channel_partner_id" uuid NOT NULL,
         "reviewer_id" uuid NOT NULL,
@@ -22,14 +22,14 @@ export class CreateChannelPartnerReviews1774000000000
 
     // Unique index: one review per user per channel partner
     await queryRunner.query(`
-      CREATE UNIQUE INDEX "UQ_channel_partner_reviews_cp_reviewer"
+      CREATE UNIQUE INDEX IF NOT EXISTS "UQ_channel_partner_reviews_cp_reviewer"
       ON "channel_partner_reviews" ("channel_partner_id", "reviewer_id")
       WHERE "deleted_at" IS NULL
     `);
 
     // Index on channel_partner_id for fast lookups
     await queryRunner.query(`
-      CREATE INDEX "IDX_channel_partner_reviews_cp_id"
+      CREATE INDEX IF NOT EXISTS "IDX_channel_partner_reviews_cp_id"
       ON "channel_partner_reviews" ("channel_partner_id")
     `);
   }
