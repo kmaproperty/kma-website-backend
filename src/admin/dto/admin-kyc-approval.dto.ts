@@ -190,6 +190,32 @@ export class AdminApproveKycResponseDto {
   };
 }
 
+// Bank Details Approval
+export class AdminApproveBankDetailsRequestDto {
+  @ApiProperty({ description: 'Whether to approve the bank details', example: true })
+  @IsBoolean()
+  @IsNotEmpty()
+  approved: boolean;
+
+  @ApiPropertyOptional({ description: 'Reason for rejection', example: 'Bank details mismatch' })
+  @IsOptional()
+  @IsString()
+  comment?: string;
+}
+
+// Aadhaar Approval
+export class AdminApproveAadhaarRequestDto {
+  @ApiProperty({ description: 'Whether to approve the aadhaar details', example: true })
+  @IsBoolean()
+  @IsNotEmpty()
+  approved: boolean;
+
+  @ApiPropertyOptional({ description: 'Reason for rejection', example: 'Aadhaar details unclear' })
+  @IsOptional()
+  @IsString()
+  comment?: string;
+}
+
 export class AdminKycStatusResponseDto {
   @ApiProperty({
     description: 'Success status',

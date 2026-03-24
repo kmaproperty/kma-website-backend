@@ -195,6 +195,38 @@ export class User extends BaseEntity {
   })
   docusignAgreementSigned: boolean;
 
+  // Admin approval for bank details (null = pending review, true = approved, false = rejected)
+  @Column({
+    name: 'bank_details_approved',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  bankDetailsApproved: boolean | null;
+
+  @Column({
+    name: 'bank_rejection_reason',
+    type: 'text',
+    nullable: true,
+  })
+  bankRejectionReason: string | null;
+
+  // Admin approval for aadhaar (null = pending review, true = approved, false = rejected)
+  @Column({
+    name: 'aadhaar_admin_approved',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  aadhaarAdminApproved: boolean | null;
+
+  @Column({
+    name: 'aadhaar_rejection_reason',
+    type: 'text',
+    nullable: true,
+  })
+  aadhaarRejectionReason: string | null;
+
   // KYC Completion Status (true when all 4 steps are completed and approved)
   @Column({
     name: 'kyc_completed',

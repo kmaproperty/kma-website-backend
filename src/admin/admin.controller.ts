@@ -82,6 +82,8 @@ import {
   AdminApproveKycDto,
   AdminApproveKycRequestDto,
   AdminApproveKycResponseDto,
+  AdminApproveBankDetailsRequestDto,
+  AdminApproveAadhaarRequestDto,
   AdminMarkTopPropertyDto,
   AdminMarkTopPropertyResponseDto,
   AdminRemoveTopPropertyDto,
@@ -1274,6 +1276,32 @@ export class AdminController {
       { ...dto, userId },
       req.admin.id,
     );
+  }
+
+  @Post('users/:id/approve-bank-details')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Approve or reject bank details for channel partner' })
+  @ApiParam({ name: 'id', description: 'User ID', type: String })
+  async approveBankDetails(
+    @Param('id') userId: string,
+    @Body() dto: AdminApproveBankDetailsRequestDto,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.adminService.approveBankDetails(userId, dto.approved, dto.comment);
+  }
+
+  @Post('users/:id/approve-aadhaar')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.USER_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Approve or reject aadhaar details for channel partner' })
+  @ApiParam({ name: 'id', description: 'User ID', type: String })
+  async approveAadhaar(
+    @Param('id') userId: string,
+    @Body() dto: AdminApproveAadhaarRequestDto,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.adminService.approveAadhaar(userId, dto.approved, dto.comment);
   }
 
   // Contact Us management endpoints

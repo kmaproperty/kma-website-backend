@@ -239,6 +239,24 @@ export class AdminUserDetailResponseDto {
     account_holder_name: string;
     branch_name?: string;
   } | null;
+
+  @ApiPropertyOptional({ description: 'Bank details admin approval status', nullable: true })
+  bank_details_approved: boolean | null;
+
+  @ApiPropertyOptional({ description: 'Bank details rejection reason', nullable: true })
+  bank_rejection_reason: string | null;
+
+  @ApiPropertyOptional({ description: 'Aadhaar admin approval status', nullable: true })
+  aadhaar_admin_approved: boolean | null;
+
+  @ApiPropertyOptional({ description: 'Aadhaar rejection reason', nullable: true })
+  aadhaar_rejection_reason: string | null;
+
+  @ApiPropertyOptional({ description: 'KYC rejection reason', nullable: true })
+  kyc_rejection_reason: string | null;
+
+  @ApiPropertyOptional({ description: 'Profile image URL', nullable: true })
+  profileImage: string | null;
 }
 
 export class AdminBlockUserResponseDto {

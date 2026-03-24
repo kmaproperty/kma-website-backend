@@ -2484,6 +2484,12 @@ export class AdminService {
       digilocker_clientid: user.digilockerClientid ?? null,
       digilocker_metadata: user.digilockerMetadata ?? null,
       bank_details: bankDetails ?? null,
+      bank_details_approved: user.bankDetailsApproved ?? null,
+      bank_rejection_reason: user.bankRejectionReason ?? null,
+      aadhaar_admin_approved: user.aadhaarAdminApproved ?? null,
+      aadhaar_rejection_reason: user.aadhaarRejectionReason ?? null,
+      kyc_rejection_reason: user.kycRejectionReason ?? null,
+      profileImage: user.profileImage ?? null,
     };
   }
 
@@ -2583,6 +2589,70 @@ export class AdminService {
         step3_bank_details: kycStatus.step3_bank_details,
         step4_docusign_agreement: kycStatus.step4_docusign_agreement,
       },
+    };
+  }
+
+  /**
+   * Approve or reject bank details for channel partner
+   */
+  async approveBankDetails(
+    userId: string,
+    approved: boolean,
+    comment?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    if (user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User is not a channel partner');
+    }
+    if (!user.bankDetailsFilled) {
+      throw new BadRequestException('User has not filled bank details');
+    }
+
+    await this.userRepository.update(userId, {
+      bankDetailsApproved: approved,
+      bankRejectionReason: approved ? null : (comment || null),
+    });
+
+    return {
+      success: true,
+      message: approved
+        ? 'Bank details approved successfully'
+        : 'Bank details rejected',
+    };
+  }
+
+  /**
+   * Approve or reject aadhaar details for channel partner
+   */
+  async approveAadhaar(
+    userId: string,
+    approved: boolean,
+    comment?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    if (user.role !== UserRole.CHANNEL_PARTNER) {
+      throw new BadRequestException('User is not a channel partner');
+    }
+    if (!user.aadhaarVerified) {
+      throw new BadRequestException('User has not verified aadhaar');
+    }
+
+    await this.userRepository.update(userId, {
+      aadhaarAdminApproved: approved,
+      aadhaarRejectionReason: approved ? null : (comment || null),
+    });
+
+    return {
+      success: true,
+      message: approved
+        ? 'Aadhaar details approved successfully'
+        : 'Aadhaar details rejected',
     };
   }
 
