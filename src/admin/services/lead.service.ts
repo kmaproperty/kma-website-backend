@@ -416,7 +416,7 @@ export class LeadService {
     }
 
     // Get leads that have contacted user's properties
-    const { leads, total } = await this.leadRepository.findByUserProperties(
+    const { leads, total, tabCounts } = await this.leadRepository.findByUserProperties(
       userId,
       propertyIds,
       {
@@ -425,6 +425,7 @@ export class LeadService {
         search: query.search,
         propertyId: query.propertyId,
         status: query.status,
+        timeFilter: query.timeFilter,
       },
     );
 
@@ -437,6 +438,7 @@ export class LeadService {
       total,
       page,
       limit,
+      tabCounts,
     };
   }
 

@@ -47,12 +47,13 @@ export class LeadRepository {
       search?: string;
       propertyId?: string;
       status?: LeadStatus;
+      timeFilter?: string;
     },
-  ): Promise<{ leads: Lead[]; total: number }> {
-    const { page = 1, limit = 20, search, propertyId, status } = filters;
+  ): Promise<{ leads: Lead[]; total: number; tabCounts: { all: number; new: number; this_month: number; last_month: number } }> {
+    const { page = 1, limit = 20, search, propertyId, status, timeFilter } = filters;
 
     if (propertyIds.length === 0) {
-      return { leads: [], total: 0 };
+      return { leads: [], total: 0, tabCounts: { all: 0, new: 0, this_month: 0, last_month: 0 } };
     }
 
     const queryBuilder = this.repository
@@ -91,6 +92,24 @@ export class LeadRepository {
       queryBuilder.andWhere('lead.status = :status', { status });
     }
 
+    // Time filter for tabs
+    if (timeFilter) {
+      const now = new Date();
+      if (timeFilter === 'new') {
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        queryBuilder.andWhere('lead.createdAt >= :yesterday', { yesterday });
+      } else if (timeFilter === 'this_month') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        queryBuilder.andWhere('lead.createdAt >= :startOfMonth', { startOfMonth });
+      } else if (timeFilter === 'last_month') {
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        queryBuilder.andWhere('lead.createdAt >= :startOfLastMonth', { startOfLastMonth });
+        queryBuilder.andWhere('lead.createdAt <= :endOfLastMonth', { endOfLastMonth });
+      }
+    }
+
     // Get total count
     const total = await queryBuilder.getCount();
 
@@ -104,7 +123,46 @@ export class LeadRepository {
 
     const leads = await queryBuilder.getMany();
 
-    return { leads, total };
+    // Calculate tab counts for the user's leads
+    const baseQuery = this.repository
+      .createQueryBuilder('lead')
+      .innerJoin('lead.propertyContacts', 'pc2')
+      .innerJoin('pc2.property', 'p2')
+      .where('p2.userId = :userId', { userId })
+      .andWhere('p2.id IN (:...propertyIds)', { propertyIds });
+
+    const allCount = await baseQuery.getCount();
+
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const newCount = await baseQuery
+      .clone()
+      .andWhere('lead.createdAt >= :yesterday', { yesterday })
+      .getCount();
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthCount = await baseQuery
+      .clone()
+      .andWhere('lead.createdAt >= :startOfMonth', { startOfMonth })
+      .getCount();
+
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const lastMonthCount = await baseQuery
+      .clone()
+      .andWhere('lead.createdAt >= :startOfLastMonth', { startOfLastMonth })
+      .andWhere('lead.createdAt <= :endOfLastMonth', { endOfLastMonth })
+      .getCount();
+
+    const tabCounts = {
+      all: allCount,
+      new: newCount,
+      this_month: thisMonthCount,
+      last_month: lastMonthCount,
+    };
+
+    return { leads, total, tabCounts };
   }
 
   async findWithFilters(

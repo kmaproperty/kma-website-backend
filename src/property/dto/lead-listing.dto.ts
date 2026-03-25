@@ -52,6 +52,15 @@ export class UserLeadListQueryDto {
   @IsOptional()
   @IsEnum(LeadStatus)
   status?: LeadStatus;
+
+  @ApiPropertyOptional({
+    description: 'Time filter for tabs: new (last 24h), this_month, last_month',
+    example: 'new',
+    enum: ['new', 'this_month', 'last_month'],
+  })
+  @IsOptional()
+  @IsString()
+  timeFilter?: string;
 }
 
 export class UserLeadPropertyContactDto {
@@ -149,5 +158,16 @@ export class UserLeadListResponseDto {
 
   @ApiProperty()
   limit: number;
+
+  @ApiPropertyOptional({
+    description: 'Tab counts for filtering',
+    example: { all: 100, new: 5, this_month: 25, last_month: 30 },
+  })
+  tabCounts?: {
+    all: number;
+    new: number;
+    this_month: number;
+    last_month: number;
+  };
 }
 

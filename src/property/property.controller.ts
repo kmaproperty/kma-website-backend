@@ -70,6 +70,12 @@ import {
   CreatePropertyLeadDto,
   CreatePropertyLeadResponseDto,
 } from './dto/create-property-lead.dto';
+import {
+  UserLeadListQueryDto,
+  UserLeadListResponseDto,
+} from './dto/lead-listing.dto';
+import { Res } from '@nestjs/common';
+import { Response } from 'express';
 
 @ApiTags('Property')
 @Controller('property')
@@ -80,6 +86,101 @@ export class PropertyController {
     private readonly propertyService: PropertyService,
     private readonly leadService: LeadService,
   ) {}
+
+  @Get('leads')
+  @ApiOperation({
+    summary: 'Get leads for owner/channel partner',
+    description:
+      'Returns paginated leads that have contacted the authenticated user\'s properties. Supports search, status filter, and property filter.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Leads retrieved successfully',
+    type: UserLeadListResponseDto,
+  })
+  async getLeadsForUser(
+    @Query() query: UserLeadListQueryDto,
+    @Req() req: Request,
+  ): Promise<UserLeadListResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.leadService.listLeadsForUser(req.user.id, query);
+  }
+
+  @Get('leads/export')
+  @ApiOperation({
+    summary: 'Export leads as CSV for owner/channel partner',
+    description:
+      'Exports all leads that have contacted the authenticated user\'s properties as a CSV file.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'CSV file downloaded successfully',
+  })
+  async exportLeadsForUser(
+    @Query() query: UserLeadListQueryDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    const result = await this.leadService.listLeadsForUser(req.user.id, {
+      ...query,
+      limit: 10000,
+    });
+
+    // Build CSV
+    const headers = [
+      'Name', 'Phone', 'Email', 'Budget Min', 'Budget Max',
+      'Building Type', 'Property Types', 'Locations', 'Status',
+      'Properties Contacted', 'Last Contacted', 'Created At',
+    ];
+    const rows = result.data.map((lead) => [
+      lead.name || '',
+      lead.phone || '',
+      lead.email || '',
+      lead.budgetMin ?? '',
+      lead.budgetMax ?? '',
+      lead.buildingType || '',
+      lead.propertyTypes?.join(', ') || '',
+      lead.locations?.join(', ') || '',
+      lead.status || '',
+      lead.propertiesContactedCount || 0,
+      lead.lastContactedAt ? new Date(lead.lastContactedAt).toISOString() : '',
+      lead.createdAt ? new Date(lead.createdAt).toISOString() : '',
+    ]);
+
+    const csv = [
+      headers.join(','),
+      ...rows.map((row) =>
+        row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(','),
+      ),
+    ].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=leads-export.csv');
+    res.send(csv);
+  }
+
+  @Post('leads/sync')
+  @ApiOperation({
+    summary: 'Sync lead statuses',
+    description: 'Triggers a sync of lead statuses from external systems.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Leads synced successfully',
+  })
+  async syncLeadStatus(
+    @Req() req: Request,
+  ): Promise<{ message: string; synced: number }> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.leadService.syncLeadStatus();
+  }
 
   @Post('contact')
   @Public()
