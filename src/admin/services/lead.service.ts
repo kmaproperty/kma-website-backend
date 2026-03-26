@@ -426,6 +426,12 @@ export class LeadService {
         propertyId: query.propertyId,
         status: query.status,
         timeFilter: query.timeFilter,
+        budgetMin: query.budgetMin,
+        budgetMax: query.budgetMax,
+        sizeMin: query.sizeMin,
+        sizeMax: query.sizeMax,
+        buildingType: query.buildingType,
+        locality: query.locality,
       },
     );
 

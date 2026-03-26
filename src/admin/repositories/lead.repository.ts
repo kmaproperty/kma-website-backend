@@ -48,9 +48,15 @@ export class LeadRepository {
       propertyId?: string;
       status?: LeadStatus;
       timeFilter?: string;
+      budgetMin?: number;
+      budgetMax?: number;
+      sizeMin?: number;
+      sizeMax?: number;
+      buildingType?: LeadBuildingType;
+      locality?: string;
     },
   ): Promise<{ leads: Lead[]; total: number; tabCounts: { all: number; new: number; this_month: number; last_month: number } }> {
-    const { page = 1, limit = 20, search, propertyId, status, timeFilter } = filters;
+    const { page = 1, limit = 20, search, propertyId, status, timeFilter, budgetMin, budgetMax, sizeMin, sizeMax, buildingType, locality } = filters;
 
     if (propertyIds.length === 0) {
       return { leads: [], total: 0, tabCounts: { all: 0, new: 0, this_month: 0, last_month: 0 } };
@@ -108,6 +114,47 @@ export class LeadRepository {
         queryBuilder.andWhere('lead.createdAt >= :startOfLastMonth', { startOfLastMonth });
         queryBuilder.andWhere('lead.createdAt <= :endOfLastMonth', { endOfLastMonth });
       }
+    }
+
+    // Budget filters
+    if (budgetMin !== undefined) {
+      queryBuilder.andWhere(
+        '(lead.budgetMax IS NULL OR lead.budgetMax >= :budgetMin)',
+        { budgetMin },
+      );
+    }
+    if (budgetMax !== undefined) {
+      queryBuilder.andWhere(
+        '(lead.budgetMin IS NULL OR lead.budgetMin <= :budgetMax)',
+        { budgetMax },
+      );
+    }
+
+    // Size filters
+    if (sizeMin !== undefined) {
+      queryBuilder.andWhere(
+        '(lead.sizeMax IS NULL OR lead.sizeMax >= :sizeMin)',
+        { sizeMin },
+      );
+    }
+    if (sizeMax !== undefined) {
+      queryBuilder.andWhere(
+        '(lead.sizeMin IS NULL OR lead.sizeMin <= :sizeMax)',
+        { sizeMax },
+      );
+    }
+
+    // Building type filter
+    if (buildingType) {
+      queryBuilder.andWhere('lead.buildingType = :buildingType', { buildingType });
+    }
+
+    // Locality filter (search within locations array)
+    if (locality) {
+      queryBuilder.andWhere(
+        "EXISTS (SELECT 1 FROM unnest(lead.locations) loc WHERE loc ILIKE :locality)",
+        { locality: `%${locality}%` },
+      );
     }
 
     // Get total count

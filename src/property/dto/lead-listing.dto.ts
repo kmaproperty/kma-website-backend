@@ -61,6 +61,59 @@ export class UserLeadListQueryDto {
   @IsOptional()
   @IsString()
   timeFilter?: string;
+
+  @ApiPropertyOptional({
+    description: 'Minimum budget filter',
+    example: 4000000,
+  })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  budgetMin?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum budget filter',
+    example: 10000000,
+  })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  budgetMax?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum size filter (sq ft)',
+    example: 500,
+  })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  sizeMin?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum size filter (sq ft)',
+    example: 2000,
+  })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  sizeMax?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by building type',
+    enum: LeadBuildingType,
+    example: LeadBuildingType.RESIDENTIAL,
+  })
+  @IsOptional()
+  @IsEnum(LeadBuildingType)
+  buildingType?: LeadBuildingType;
+
+  @ApiPropertyOptional({
+    description: 'Filter by locality (search within locations array)',
+    example: 'Sector 48',
+  })
+  @IsOptional()
+  @IsString()
+  locality?: string;
 }
 
 export class UserLeadPropertyContactDto {
