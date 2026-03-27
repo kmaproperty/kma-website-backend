@@ -1329,11 +1329,26 @@ export class AdminService {
   }
 
   private formatPropertyData(property: any): Record<string, any> {
+    // Calculate progressPercentage
+    const completionStep = property.completionStep ?? 0;
+    const propertyTypeCode = property.propertyType?.code?.toLowerCase() ?? '';
+    const categoryCode = property.category?.code?.toLowerCase() ?? '';
+    const isResidentialPlot =
+      categoryCode === 'residential' && propertyTypeCode.includes('plot');
+    const totalSteps = isResidentialPlot ? 3 : 4;
+    let progressPercentage = 0;
+    if (completionStep > 0 && totalSteps > 0) {
+      const cappedStep = Math.min(Math.max(completionStep, 0), totalSteps);
+      const pct = (cappedStep / totalSteps) * 100;
+      progressPercentage = completionStep >= 5 || pct >= 100 ? 100 : Number(pct.toFixed(2));
+    }
+
     const propertyData: Record<string, any> = {
       ...property,
       adminReviewComment: property.adminReviewComment ?? null,
       adminReviewedAt: property.adminReviewedAt ?? null,
       adminReviewedBy: property.adminReviewedBy ?? null,
+      progressPercentage,
     };
 
     const owner = property.user
