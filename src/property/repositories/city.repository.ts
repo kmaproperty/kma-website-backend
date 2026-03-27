@@ -81,6 +81,24 @@ export class CityRepository {
     await this.cityRepository.softDelete(id);
   }
 
+  async findDistinctStates(): Promise<string[]> {
+    const results = await this.cityRepository
+      .createQueryBuilder('city')
+      .select('DISTINCT city.state', 'state')
+      .where('city.state IS NOT NULL')
+      .andWhere('city.deleted_at IS NULL')
+      .orderBy('city.state', 'ASC')
+      .getRawMany();
+    return results.map((r) => r.state).filter(Boolean);
+  }
+
+  async findByState(state: string): Promise<MasterCity[]> {
+    return await this.cityRepository.find({
+      where: { state },
+      order: { name: 'ASC' },
+    });
+  }
+
   /**
    * Get top cities by active property count
    * Returns top cities with at least 1 active property, ordered by property count descending

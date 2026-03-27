@@ -471,6 +471,30 @@ export class EndUserController {
     return await this.userService.getEndUserHomePage(query);
   }
 
+  @Get('states')
+  @Public()
+  @ApiOperation({
+    summary: 'Get all states',
+    description: 'Returns a list of all distinct states from the cities database.',
+  })
+  @ApiResponse({ status: 200, description: 'States list retrieved successfully' })
+  async getStates() {
+    const states = await this.userService.getStates();
+    return { success: true, data: states };
+  }
+
+  @Get('states/:state/cities')
+  @Public()
+  @ApiOperation({
+    summary: 'Get cities by state',
+    description: 'Returns all cities belonging to the specified state.',
+  })
+  @ApiResponse({ status: 200, description: 'Cities list retrieved successfully' })
+  async getCitiesByState(@Param('state') state: string) {
+    const cities = await this.userService.getCitiesByState(state);
+    return { success: true, data: cities };
+  }
+
   @Get('properties')
   @Public()
   @ApiBearerAuth('access-token')

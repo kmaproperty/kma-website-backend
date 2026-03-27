@@ -2236,6 +2236,20 @@ export class UserService {
   }
 
   /**
+   * Get all distinct states
+   */
+  async getStates(): Promise<string[]> {
+    return await this.cityRepository.findDistinctStates();
+  }
+
+  /**
+   * Get cities by state name
+   */
+  async getCitiesByState(state: string) {
+    return await this.cityRepository.findByState(state);
+  }
+
+  /**
    * Get End User Home Page Data
    * Returns featured cities and all cities list with search and location detection
    */
