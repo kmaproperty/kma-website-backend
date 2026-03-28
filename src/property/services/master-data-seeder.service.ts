@@ -842,41 +842,336 @@ export class MasterDataSeederService {
   private async seedCities(): Promise<void> {
     this.logger.log('Seeding cities...');
     const cities = [
-      {
-        name: 'Gurgaon',
-        code: 'gurgaon',
-        state: 'Haryana',
-        latitude: 28.4595,
-        longitude: 77.0266,
-      },
-      {
-        name: 'Delhi',
-        code: 'delhi',
-        state: 'Delhi',
-        latitude: 28.7041,
-        longitude: 77.1025,
-      },
-      {
-        name: 'Noida',
-        code: 'noida',
-        state: 'Uttar Pradesh',
-        latitude: 28.5355,
-        longitude: 77.391,
-      },
-      {
-        name: 'Mumbai',
-        code: 'mumbai',
-        state: 'Maharashtra',
-        latitude: 19.076,
-        longitude: 72.8777,
-      },
-      {
-        name: 'Bangalore',
-        code: 'bangalore',
-        state: 'Karnataka',
-        latitude: 12.9716,
-        longitude: 77.5946,
-      },
+      // ===== Existing cities (do not change codes) =====
+      { name: 'Gurgaon', code: 'gurgaon', state: 'Haryana', latitude: 28.4595, longitude: 77.0266 },
+      { name: 'Delhi', code: 'delhi', state: 'Delhi', latitude: 28.7041, longitude: 77.1025 },
+      { name: 'Noida', code: 'noida', state: 'Uttar Pradesh', latitude: 28.5355, longitude: 77.391 },
+      { name: 'Mumbai', code: 'mumbai', state: 'Maharashtra', latitude: 19.076, longitude: 72.8777 },
+      { name: 'Bangalore', code: 'bangalore', state: 'Karnataka', latitude: 12.9716, longitude: 77.5946 },
+
+      // ===== Andhra Pradesh =====
+      { name: 'Visakhapatnam', code: 'visakhapatnam', state: 'Andhra Pradesh', latitude: 17.6868, longitude: 83.2185 },
+      { name: 'Vijayawada', code: 'vijayawada', state: 'Andhra Pradesh', latitude: 16.5062, longitude: 80.6480 },
+      { name: 'Guntur', code: 'guntur', state: 'Andhra Pradesh', latitude: 16.3067, longitude: 80.4365 },
+      { name: 'Nellore', code: 'nellore', state: 'Andhra Pradesh', latitude: 14.4426, longitude: 79.9865 },
+      { name: 'Kurnool', code: 'kurnool', state: 'Andhra Pradesh', latitude: 15.8281, longitude: 78.0373 },
+      { name: 'Rajahmundry', code: 'rajahmundry', state: 'Andhra Pradesh', latitude: 17.0005, longitude: 81.8040 },
+      { name: 'Tirupati', code: 'tirupati', state: 'Andhra Pradesh', latitude: 13.6288, longitude: 79.4192 },
+      { name: 'Kakinada', code: 'kakinada', state: 'Andhra Pradesh', latitude: 16.9891, longitude: 82.2475 },
+      { name: 'Kadapa', code: 'kadapa', state: 'Andhra Pradesh', latitude: 14.4674, longitude: 78.8241 },
+      { name: 'Anantapur', code: 'anantapur', state: 'Andhra Pradesh', latitude: 14.6819, longitude: 77.6006 },
+      { name: 'Amaravati', code: 'amaravati', state: 'Andhra Pradesh', latitude: 16.5131, longitude: 80.5150 },
+
+      // ===== Arunachal Pradesh =====
+      { name: 'Itanagar', code: 'itanagar', state: 'Arunachal Pradesh', latitude: 27.0844, longitude: 93.6053 },
+      { name: 'Naharlagun', code: 'naharlagun', state: 'Arunachal Pradesh', latitude: 27.1045, longitude: 93.6942 },
+      { name: 'Pasighat', code: 'pasighat', state: 'Arunachal Pradesh', latitude: 28.0670, longitude: 95.3269 },
+      { name: 'Tawang', code: 'tawang', state: 'Arunachal Pradesh', latitude: 27.5860, longitude: 91.8687 },
+      { name: 'Ziro', code: 'ziro', state: 'Arunachal Pradesh', latitude: 27.5945, longitude: 93.8260 },
+
+      // ===== Assam =====
+      { name: 'Guwahati', code: 'guwahati', state: 'Assam', latitude: 26.1445, longitude: 91.7362 },
+      { name: 'Silchar', code: 'silchar', state: 'Assam', latitude: 24.8333, longitude: 92.7789 },
+      { name: 'Dibrugarh', code: 'dibrugarh', state: 'Assam', latitude: 27.4728, longitude: 94.9120 },
+      { name: 'Jorhat', code: 'jorhat', state: 'Assam', latitude: 26.7509, longitude: 94.2037 },
+      { name: 'Nagaon', code: 'nagaon', state: 'Assam', latitude: 26.3500, longitude: 92.6840 },
+      { name: 'Tinsukia', code: 'tinsukia', state: 'Assam', latitude: 27.4922, longitude: 95.3547 },
+      { name: 'Tezpur', code: 'tezpur', state: 'Assam', latitude: 26.6338, longitude: 92.8006 },
+
+      // ===== Bihar =====
+      { name: 'Patna', code: 'patna', state: 'Bihar', latitude: 25.6093, longitude: 85.1376 },
+      { name: 'Gaya', code: 'gaya', state: 'Bihar', latitude: 24.7955, longitude: 84.9994 },
+      { name: 'Bhagalpur', code: 'bhagalpur', state: 'Bihar', latitude: 25.2425, longitude: 86.9842 },
+      { name: 'Muzaffarpur', code: 'muzaffarpur', state: 'Bihar', latitude: 26.1209, longitude: 85.3647 },
+      { name: 'Purnia', code: 'purnia', state: 'Bihar', latitude: 25.7771, longitude: 87.4753 },
+      { name: 'Darbhanga', code: 'darbhanga', state: 'Bihar', latitude: 26.1542, longitude: 85.8918 },
+      { name: 'Bihar Sharif', code: 'bihar-sharif', state: 'Bihar', latitude: 25.1982, longitude: 85.5204 },
+      { name: 'Arrah', code: 'arrah', state: 'Bihar', latitude: 25.5541, longitude: 84.6603 },
+      { name: 'Begusarai', code: 'begusarai', state: 'Bihar', latitude: 25.4182, longitude: 86.1272 },
+
+      // ===== Chhattisgarh =====
+      { name: 'Raipur', code: 'raipur', state: 'Chhattisgarh', latitude: 21.2514, longitude: 81.6296 },
+      { name: 'Bhilai', code: 'bhilai', state: 'Chhattisgarh', latitude: 21.2094, longitude: 81.3784 },
+      { name: 'Bilaspur', code: 'bilaspur-cg', state: 'Chhattisgarh', latitude: 22.0797, longitude: 82.1409 },
+      { name: 'Korba', code: 'korba', state: 'Chhattisgarh', latitude: 22.3595, longitude: 82.7501 },
+      { name: 'Durg', code: 'durg', state: 'Chhattisgarh', latitude: 21.1904, longitude: 81.2849 },
+      { name: 'Rajnandgaon', code: 'rajnandgaon', state: 'Chhattisgarh', latitude: 21.0974, longitude: 81.0280 },
+      { name: 'Jagdalpur', code: 'jagdalpur', state: 'Chhattisgarh', latitude: 19.0780, longitude: 82.0206 },
+
+      // ===== Goa =====
+      { name: 'Panaji', code: 'panaji', state: 'Goa', latitude: 15.4909, longitude: 73.8278 },
+      { name: 'Margao', code: 'margao', state: 'Goa', latitude: 15.2832, longitude: 73.9862 },
+      { name: 'Vasco da Gama', code: 'vasco-da-gama', state: 'Goa', latitude: 15.3982, longitude: 73.8113 },
+      { name: 'Mapusa', code: 'mapusa', state: 'Goa', latitude: 15.5915, longitude: 73.8101 },
+      { name: 'Ponda', code: 'ponda', state: 'Goa', latitude: 15.4006, longitude: 74.0083 },
+
+      // ===== Gujarat =====
+      { name: 'Ahmedabad', code: 'ahmedabad', state: 'Gujarat', latitude: 23.0225, longitude: 72.5714 },
+      { name: 'Surat', code: 'surat', state: 'Gujarat', latitude: 21.1702, longitude: 72.8311 },
+      { name: 'Vadodara', code: 'vadodara', state: 'Gujarat', latitude: 22.3072, longitude: 73.1812 },
+      { name: 'Rajkot', code: 'rajkot', state: 'Gujarat', latitude: 22.3039, longitude: 70.8022 },
+      { name: 'Bhavnagar', code: 'bhavnagar', state: 'Gujarat', latitude: 21.7645, longitude: 72.1519 },
+      { name: 'Jamnagar', code: 'jamnagar', state: 'Gujarat', latitude: 22.4707, longitude: 70.0577 },
+      { name: 'Junagadh', code: 'junagadh', state: 'Gujarat', latitude: 21.5222, longitude: 70.4579 },
+      { name: 'Gandhinagar', code: 'gandhinagar', state: 'Gujarat', latitude: 23.2156, longitude: 72.6369 },
+      { name: 'Anand', code: 'anand', state: 'Gujarat', latitude: 22.5645, longitude: 72.9289 },
+      { name: 'Morbi', code: 'morbi', state: 'Gujarat', latitude: 22.8120, longitude: 70.8370 },
+
+      // ===== Haryana (additional cities) =====
+      { name: 'Faridabad', code: 'faridabad', state: 'Haryana', latitude: 28.4089, longitude: 77.3178 },
+      { name: 'Panipat', code: 'panipat', state: 'Haryana', latitude: 29.3909, longitude: 76.9635 },
+      { name: 'Ambala', code: 'ambala', state: 'Haryana', latitude: 30.3782, longitude: 76.7767 },
+      { name: 'Karnal', code: 'karnal', state: 'Haryana', latitude: 29.6857, longitude: 76.9905 },
+      { name: 'Hisar', code: 'hisar', state: 'Haryana', latitude: 29.1492, longitude: 75.7217 },
+      { name: 'Rohtak', code: 'rohtak', state: 'Haryana', latitude: 28.8955, longitude: 76.6066 },
+      { name: 'Sonipat', code: 'sonipat', state: 'Haryana', latitude: 28.9931, longitude: 77.0151 },
+      { name: 'Panchkula', code: 'panchkula', state: 'Haryana', latitude: 30.6942, longitude: 76.8606 },
+
+      // ===== Himachal Pradesh =====
+      { name: 'Shimla', code: 'shimla', state: 'Himachal Pradesh', latitude: 31.1048, longitude: 77.1734 },
+      { name: 'Manali', code: 'manali', state: 'Himachal Pradesh', latitude: 32.2396, longitude: 77.1887 },
+      { name: 'Dharamshala', code: 'dharamshala', state: 'Himachal Pradesh', latitude: 32.2190, longitude: 76.3234 },
+      { name: 'Solan', code: 'solan', state: 'Himachal Pradesh', latitude: 30.9045, longitude: 77.0967 },
+      { name: 'Mandi', code: 'mandi', state: 'Himachal Pradesh', latitude: 31.7100, longitude: 76.9316 },
+      { name: 'Kullu', code: 'kullu', state: 'Himachal Pradesh', latitude: 31.9592, longitude: 77.1089 },
+      { name: 'Hamirpur', code: 'hamirpur-hp', state: 'Himachal Pradesh', latitude: 31.6862, longitude: 76.5213 },
+
+      // ===== Jharkhand =====
+      { name: 'Ranchi', code: 'ranchi', state: 'Jharkhand', latitude: 23.3441, longitude: 85.3096 },
+      { name: 'Jamshedpur', code: 'jamshedpur', state: 'Jharkhand', latitude: 22.8046, longitude: 86.2029 },
+      { name: 'Dhanbad', code: 'dhanbad', state: 'Jharkhand', latitude: 23.7957, longitude: 86.4304 },
+      { name: 'Bokaro', code: 'bokaro', state: 'Jharkhand', latitude: 23.6693, longitude: 86.1511 },
+      { name: 'Deoghar', code: 'deoghar', state: 'Jharkhand', latitude: 24.4764, longitude: 86.6944 },
+      { name: 'Hazaribagh', code: 'hazaribagh', state: 'Jharkhand', latitude: 23.9966, longitude: 85.3637 },
+      { name: 'Giridih', code: 'giridih', state: 'Jharkhand', latitude: 24.1854, longitude: 86.3003 },
+
+      // ===== Karnataka (additional cities) =====
+      { name: 'Mysore', code: 'mysore', state: 'Karnataka', latitude: 12.2958, longitude: 76.6394 },
+      { name: 'Hubli', code: 'hubli', state: 'Karnataka', latitude: 15.3647, longitude: 75.1240 },
+      { name: 'Mangalore', code: 'mangalore', state: 'Karnataka', latitude: 12.9141, longitude: 74.8560 },
+      { name: 'Belgaum', code: 'belgaum', state: 'Karnataka', latitude: 15.8497, longitude: 74.4977 },
+      { name: 'Gulbarga', code: 'gulbarga', state: 'Karnataka', latitude: 17.3297, longitude: 76.8343 },
+      { name: 'Davangere', code: 'davangere', state: 'Karnataka', latitude: 14.4644, longitude: 75.9218 },
+      { name: 'Bellary', code: 'bellary', state: 'Karnataka', latitude: 15.1394, longitude: 76.9214 },
+      { name: 'Shimoga', code: 'shimoga', state: 'Karnataka', latitude: 13.9299, longitude: 75.5681 },
+      { name: 'Tumkur', code: 'tumkur', state: 'Karnataka', latitude: 13.3379, longitude: 77.1173 },
+      { name: 'Udupi', code: 'udupi', state: 'Karnataka', latitude: 13.3409, longitude: 74.7421 },
+
+      // ===== Kerala =====
+      { name: 'Thiruvananthapuram', code: 'thiruvananthapuram', state: 'Kerala', latitude: 8.5241, longitude: 76.9366 },
+      { name: 'Kochi', code: 'kochi', state: 'Kerala', latitude: 9.9312, longitude: 76.2673 },
+      { name: 'Kozhikode', code: 'kozhikode', state: 'Kerala', latitude: 11.2588, longitude: 75.7804 },
+      { name: 'Thrissur', code: 'thrissur', state: 'Kerala', latitude: 10.5276, longitude: 76.2144 },
+      { name: 'Kollam', code: 'kollam', state: 'Kerala', latitude: 8.8932, longitude: 76.6141 },
+      { name: 'Kannur', code: 'kannur', state: 'Kerala', latitude: 11.8745, longitude: 75.3704 },
+      { name: 'Alappuzha', code: 'alappuzha', state: 'Kerala', latitude: 9.4981, longitude: 76.3388 },
+      { name: 'Palakkad', code: 'palakkad', state: 'Kerala', latitude: 10.7867, longitude: 76.6548 },
+      { name: 'Malappuram', code: 'malappuram', state: 'Kerala', latitude: 11.0510, longitude: 76.0711 },
+      { name: 'Kottayam', code: 'kottayam', state: 'Kerala', latitude: 9.5916, longitude: 76.5222 },
+
+      // ===== Madhya Pradesh =====
+      { name: 'Bhopal', code: 'bhopal', state: 'Madhya Pradesh', latitude: 23.2599, longitude: 77.4126 },
+      { name: 'Indore', code: 'indore', state: 'Madhya Pradesh', latitude: 22.7196, longitude: 75.8577 },
+      { name: 'Jabalpur', code: 'jabalpur', state: 'Madhya Pradesh', latitude: 23.1815, longitude: 79.9864 },
+      { name: 'Gwalior', code: 'gwalior', state: 'Madhya Pradesh', latitude: 26.2183, longitude: 78.1828 },
+      { name: 'Ujjain', code: 'ujjain', state: 'Madhya Pradesh', latitude: 23.1765, longitude: 75.7885 },
+      { name: 'Sagar', code: 'sagar', state: 'Madhya Pradesh', latitude: 23.8388, longitude: 78.7378 },
+      { name: 'Dewas', code: 'dewas', state: 'Madhya Pradesh', latitude: 22.9676, longitude: 76.0534 },
+      { name: 'Satna', code: 'satna', state: 'Madhya Pradesh', latitude: 24.5004, longitude: 80.8322 },
+      { name: 'Ratlam', code: 'ratlam', state: 'Madhya Pradesh', latitude: 23.3315, longitude: 75.0367 },
+      { name: 'Rewa', code: 'rewa', state: 'Madhya Pradesh', latitude: 24.5373, longitude: 81.2960 },
+
+      // ===== Maharashtra (additional cities) =====
+      { name: 'Pune', code: 'pune', state: 'Maharashtra', latitude: 18.5204, longitude: 73.8567 },
+      { name: 'Nagpur', code: 'nagpur', state: 'Maharashtra', latitude: 21.1458, longitude: 79.0882 },
+      { name: 'Thane', code: 'thane', state: 'Maharashtra', latitude: 19.2183, longitude: 72.9781 },
+      { name: 'Nashik', code: 'nashik', state: 'Maharashtra', latitude: 19.9975, longitude: 73.7898 },
+      { name: 'Aurangabad', code: 'aurangabad', state: 'Maharashtra', latitude: 19.8762, longitude: 75.3433 },
+      { name: 'Solapur', code: 'solapur', state: 'Maharashtra', latitude: 17.6599, longitude: 75.9064 },
+      { name: 'Kolhapur', code: 'kolhapur', state: 'Maharashtra', latitude: 16.7050, longitude: 74.2433 },
+      { name: 'Navi Mumbai', code: 'navi-mumbai', state: 'Maharashtra', latitude: 19.0330, longitude: 73.0297 },
+      { name: 'Amravati', code: 'amravati', state: 'Maharashtra', latitude: 20.9374, longitude: 77.7796 },
+      { name: 'Sangli', code: 'sangli', state: 'Maharashtra', latitude: 16.8524, longitude: 74.5815 },
+
+      // ===== Manipur =====
+      { name: 'Imphal', code: 'imphal', state: 'Manipur', latitude: 24.8170, longitude: 93.9368 },
+      { name: 'Thoubal', code: 'thoubal', state: 'Manipur', latitude: 24.6300, longitude: 94.0100 },
+      { name: 'Bishnupur', code: 'bishnupur-mn', state: 'Manipur', latitude: 24.6260, longitude: 93.7800 },
+      { name: 'Churachandpur', code: 'churachandpur', state: 'Manipur', latitude: 24.3337, longitude: 93.6835 },
+      { name: 'Kakching', code: 'kakching', state: 'Manipur', latitude: 24.4980, longitude: 93.9820 },
+
+      // ===== Meghalaya =====
+      { name: 'Shillong', code: 'shillong', state: 'Meghalaya', latitude: 25.5788, longitude: 91.8933 },
+      { name: 'Tura', code: 'tura', state: 'Meghalaya', latitude: 25.5145, longitude: 90.2186 },
+      { name: 'Jowai', code: 'jowai', state: 'Meghalaya', latitude: 25.4530, longitude: 92.2020 },
+      { name: 'Nongstoin', code: 'nongstoin', state: 'Meghalaya', latitude: 25.5170, longitude: 91.2640 },
+      { name: 'Williamnagar', code: 'williamnagar', state: 'Meghalaya', latitude: 25.4930, longitude: 90.6170 },
+
+      // ===== Mizoram =====
+      { name: 'Aizawl', code: 'aizawl', state: 'Mizoram', latitude: 23.7271, longitude: 92.7176 },
+      { name: 'Lunglei', code: 'lunglei', state: 'Mizoram', latitude: 22.8870, longitude: 92.7336 },
+      { name: 'Champhai', code: 'champhai', state: 'Mizoram', latitude: 23.4567, longitude: 93.3281 },
+      { name: 'Serchhip', code: 'serchhip', state: 'Mizoram', latitude: 23.3044, longitude: 92.8455 },
+      { name: 'Kolasib', code: 'kolasib', state: 'Mizoram', latitude: 24.2238, longitude: 92.6789 },
+
+      // ===== Nagaland =====
+      { name: 'Kohima', code: 'kohima', state: 'Nagaland', latitude: 25.6751, longitude: 94.1086 },
+      { name: 'Dimapur', code: 'dimapur', state: 'Nagaland', latitude: 25.8697, longitude: 93.7220 },
+      { name: 'Mokokchung', code: 'mokokchung', state: 'Nagaland', latitude: 26.3222, longitude: 94.5191 },
+      { name: 'Tuensang', code: 'tuensang', state: 'Nagaland', latitude: 26.2710, longitude: 94.8270 },
+      { name: 'Wokha', code: 'wokha', state: 'Nagaland', latitude: 26.1000, longitude: 94.2660 },
+
+      // ===== Odisha =====
+      { name: 'Bhubaneswar', code: 'bhubaneswar', state: 'Odisha', latitude: 20.2961, longitude: 85.8245 },
+      { name: 'Cuttack', code: 'cuttack', state: 'Odisha', latitude: 20.4625, longitude: 85.8830 },
+      { name: 'Rourkela', code: 'rourkela', state: 'Odisha', latitude: 22.2604, longitude: 84.8536 },
+      { name: 'Berhampur', code: 'berhampur', state: 'Odisha', latitude: 19.3150, longitude: 84.7941 },
+      { name: 'Sambalpur', code: 'sambalpur', state: 'Odisha', latitude: 21.4669, longitude: 83.9812 },
+      { name: 'Puri', code: 'puri', state: 'Odisha', latitude: 19.7983, longitude: 85.8249 },
+      { name: 'Balasore', code: 'balasore', state: 'Odisha', latitude: 21.4942, longitude: 86.9337 },
+      { name: 'Bhadrak', code: 'bhadrak', state: 'Odisha', latitude: 21.0517, longitude: 86.4958 },
+
+      // ===== Punjab =====
+      { name: 'Ludhiana', code: 'ludhiana', state: 'Punjab', latitude: 30.9010, longitude: 75.8573 },
+      { name: 'Amritsar', code: 'amritsar', state: 'Punjab', latitude: 31.6340, longitude: 74.8723 },
+      { name: 'Jalandhar', code: 'jalandhar', state: 'Punjab', latitude: 31.3260, longitude: 75.5762 },
+      { name: 'Patiala', code: 'patiala', state: 'Punjab', latitude: 30.3398, longitude: 76.3869 },
+      { name: 'Bathinda', code: 'bathinda', state: 'Punjab', latitude: 30.2110, longitude: 74.9455 },
+      { name: 'Mohali', code: 'mohali', state: 'Punjab', latitude: 30.7046, longitude: 76.7179 },
+      { name: 'Pathankot', code: 'pathankot', state: 'Punjab', latitude: 32.2643, longitude: 75.6421 },
+      { name: 'Hoshiarpur', code: 'hoshiarpur', state: 'Punjab', latitude: 31.5143, longitude: 75.9115 },
+
+      // ===== Rajasthan =====
+      { name: 'Jaipur', code: 'jaipur', state: 'Rajasthan', latitude: 26.9124, longitude: 75.7873 },
+      { name: 'Jodhpur', code: 'jodhpur', state: 'Rajasthan', latitude: 26.2389, longitude: 73.0243 },
+      { name: 'Udaipur', code: 'udaipur', state: 'Rajasthan', latitude: 24.5854, longitude: 73.7125 },
+      { name: 'Kota', code: 'kota', state: 'Rajasthan', latitude: 25.2138, longitude: 75.8648 },
+      { name: 'Ajmer', code: 'ajmer', state: 'Rajasthan', latitude: 26.4499, longitude: 74.6399 },
+      { name: 'Bikaner', code: 'bikaner', state: 'Rajasthan', latitude: 28.0229, longitude: 73.3119 },
+      { name: 'Bhilwara', code: 'bhilwara', state: 'Rajasthan', latitude: 25.3407, longitude: 74.6313 },
+      { name: 'Alwar', code: 'alwar', state: 'Rajasthan', latitude: 27.5530, longitude: 76.6346 },
+      { name: 'Sikar', code: 'sikar', state: 'Rajasthan', latitude: 27.6094, longitude: 75.1398 },
+      { name: 'Sri Ganganagar', code: 'sri-ganganagar', state: 'Rajasthan', latitude: 29.9094, longitude: 73.8790 },
+
+      // ===== Sikkim =====
+      { name: 'Gangtok', code: 'gangtok', state: 'Sikkim', latitude: 27.3389, longitude: 88.6065 },
+      { name: 'Namchi', code: 'namchi', state: 'Sikkim', latitude: 27.1667, longitude: 88.3500 },
+      { name: 'Gyalshing', code: 'gyalshing', state: 'Sikkim', latitude: 27.2867, longitude: 88.2567 },
+      { name: 'Mangan', code: 'mangan', state: 'Sikkim', latitude: 27.5100, longitude: 88.5300 },
+      { name: 'Rangpo', code: 'rangpo', state: 'Sikkim', latitude: 27.1750, longitude: 88.5330 },
+
+      // ===== Tamil Nadu =====
+      { name: 'Chennai', code: 'chennai', state: 'Tamil Nadu', latitude: 13.0827, longitude: 80.2707 },
+      { name: 'Coimbatore', code: 'coimbatore', state: 'Tamil Nadu', latitude: 11.0168, longitude: 76.9558 },
+      { name: 'Madurai', code: 'madurai', state: 'Tamil Nadu', latitude: 9.9252, longitude: 78.1198 },
+      { name: 'Tiruchirappalli', code: 'tiruchirappalli', state: 'Tamil Nadu', latitude: 10.7905, longitude: 78.7047 },
+      { name: 'Salem', code: 'salem', state: 'Tamil Nadu', latitude: 11.6643, longitude: 78.1460 },
+      { name: 'Tirunelveli', code: 'tirunelveli', state: 'Tamil Nadu', latitude: 8.7139, longitude: 77.7567 },
+      { name: 'Erode', code: 'erode', state: 'Tamil Nadu', latitude: 11.3410, longitude: 77.7172 },
+      { name: 'Vellore', code: 'vellore', state: 'Tamil Nadu', latitude: 12.9165, longitude: 79.1325 },
+      { name: 'Tiruppur', code: 'tiruppur', state: 'Tamil Nadu', latitude: 11.1085, longitude: 77.3411 },
+      { name: 'Thoothukudi', code: 'thoothukudi', state: 'Tamil Nadu', latitude: 8.7642, longitude: 78.1348 },
+
+      // ===== Telangana =====
+      { name: 'Hyderabad', code: 'hyderabad', state: 'Telangana', latitude: 17.3850, longitude: 78.4867 },
+      { name: 'Warangal', code: 'warangal', state: 'Telangana', latitude: 17.9784, longitude: 79.5941 },
+      { name: 'Nizamabad', code: 'nizamabad', state: 'Telangana', latitude: 18.6725, longitude: 78.0941 },
+      { name: 'Karimnagar', code: 'karimnagar', state: 'Telangana', latitude: 18.4386, longitude: 79.1288 },
+      { name: 'Khammam', code: 'khammam', state: 'Telangana', latitude: 17.2473, longitude: 80.1514 },
+      { name: 'Mahbubnagar', code: 'mahbubnagar', state: 'Telangana', latitude: 16.7488, longitude: 77.9850 },
+      { name: 'Nalgonda', code: 'nalgonda', state: 'Telangana', latitude: 17.0500, longitude: 79.2667 },
+      { name: 'Secunderabad', code: 'secunderabad', state: 'Telangana', latitude: 17.4399, longitude: 78.4983 },
+
+      // ===== Tripura =====
+      { name: 'Agartala', code: 'agartala', state: 'Tripura', latitude: 23.8315, longitude: 91.2868 },
+      { name: 'Udaipur', code: 'udaipur-tripura', state: 'Tripura', latitude: 23.5333, longitude: 91.4833 },
+      { name: 'Dharmanagar', code: 'dharmanagar', state: 'Tripura', latitude: 24.3800, longitude: 92.1680 },
+      { name: 'Kailasahar', code: 'kailasahar', state: 'Tripura', latitude: 24.3310, longitude: 92.0050 },
+      { name: 'Ambassa', code: 'ambassa', state: 'Tripura', latitude: 23.9200, longitude: 91.8500 },
+
+      // ===== Uttar Pradesh (additional cities) =====
+      { name: 'Lucknow', code: 'lucknow', state: 'Uttar Pradesh', latitude: 26.8467, longitude: 80.9462 },
+      { name: 'Kanpur', code: 'kanpur', state: 'Uttar Pradesh', latitude: 26.4499, longitude: 80.3319 },
+      { name: 'Agra', code: 'agra', state: 'Uttar Pradesh', latitude: 27.1767, longitude: 78.0081 },
+      { name: 'Varanasi', code: 'varanasi', state: 'Uttar Pradesh', latitude: 25.3176, longitude: 82.9739 },
+      { name: 'Prayagraj', code: 'prayagraj', state: 'Uttar Pradesh', latitude: 25.4358, longitude: 81.8463 },
+      { name: 'Meerut', code: 'meerut', state: 'Uttar Pradesh', latitude: 28.9845, longitude: 77.7064 },
+      { name: 'Ghaziabad', code: 'ghaziabad', state: 'Uttar Pradesh', latitude: 28.6692, longitude: 77.4538 },
+      { name: 'Bareilly', code: 'bareilly', state: 'Uttar Pradesh', latitude: 28.3670, longitude: 79.4304 },
+      { name: 'Aligarh', code: 'aligarh', state: 'Uttar Pradesh', latitude: 27.8974, longitude: 78.0880 },
+      { name: 'Moradabad', code: 'moradabad', state: 'Uttar Pradesh', latitude: 28.8386, longitude: 78.7733 },
+      { name: 'Gorakhpur', code: 'gorakhpur', state: 'Uttar Pradesh', latitude: 26.7606, longitude: 83.3732 },
+      { name: 'Mathura', code: 'mathura', state: 'Uttar Pradesh', latitude: 27.4924, longitude: 77.6737 },
+      { name: 'Greater Noida', code: 'greater-noida', state: 'Uttar Pradesh', latitude: 28.4744, longitude: 77.5040 },
+
+      // ===== Uttarakhand =====
+      { name: 'Dehradun', code: 'dehradun', state: 'Uttarakhand', latitude: 30.3165, longitude: 78.0322 },
+      { name: 'Haridwar', code: 'haridwar', state: 'Uttarakhand', latitude: 29.9457, longitude: 78.1642 },
+      { name: 'Rishikesh', code: 'rishikesh', state: 'Uttarakhand', latitude: 30.0869, longitude: 78.2676 },
+      { name: 'Haldwani', code: 'haldwani', state: 'Uttarakhand', latitude: 29.2183, longitude: 79.5130 },
+      { name: 'Roorkee', code: 'roorkee', state: 'Uttarakhand', latitude: 29.8543, longitude: 77.8880 },
+      { name: 'Kashipur', code: 'kashipur', state: 'Uttarakhand', latitude: 29.2138, longitude: 78.9629 },
+      { name: 'Rudrapur', code: 'rudrapur', state: 'Uttarakhand', latitude: 28.9739, longitude: 79.4040 },
+      { name: 'Nainital', code: 'nainital', state: 'Uttarakhand', latitude: 29.3803, longitude: 79.4636 },
+      { name: 'Mussoorie', code: 'mussoorie', state: 'Uttarakhand', latitude: 30.4598, longitude: 78.0644 },
+
+      // ===== West Bengal =====
+      { name: 'Kolkata', code: 'kolkata', state: 'West Bengal', latitude: 22.5726, longitude: 88.3639 },
+      { name: 'Howrah', code: 'howrah', state: 'West Bengal', latitude: 22.5958, longitude: 88.2636 },
+      { name: 'Durgapur', code: 'durgapur', state: 'West Bengal', latitude: 23.5204, longitude: 87.3119 },
+      { name: 'Asansol', code: 'asansol', state: 'West Bengal', latitude: 23.6739, longitude: 86.9524 },
+      { name: 'Siliguri', code: 'siliguri', state: 'West Bengal', latitude: 26.7271, longitude: 88.3953 },
+      { name: 'Bardhaman', code: 'bardhaman', state: 'West Bengal', latitude: 23.2324, longitude: 87.8615 },
+      { name: 'Malda', code: 'malda', state: 'West Bengal', latitude: 25.0108, longitude: 88.1411 },
+      { name: 'Kharagpur', code: 'kharagpur', state: 'West Bengal', latitude: 22.3460, longitude: 87.2320 },
+      { name: 'Haldia', code: 'haldia', state: 'West Bengal', latitude: 22.0257, longitude: 88.0583 },
+      { name: 'Baharampur', code: 'baharampur', state: 'West Bengal', latitude: 24.1024, longitude: 88.2516 },
+
+      // ===== Andaman and Nicobar Islands =====
+      { name: 'Port Blair', code: 'port-blair', state: 'Andaman and Nicobar Islands', latitude: 11.6234, longitude: 92.7265 },
+      { name: 'Car Nicobar', code: 'car-nicobar', state: 'Andaman and Nicobar Islands', latitude: 9.1556, longitude: 92.8198 },
+      { name: 'Mayabunder', code: 'mayabunder', state: 'Andaman and Nicobar Islands', latitude: 12.9253, longitude: 92.9010 },
+      { name: 'Diglipur', code: 'diglipur', state: 'Andaman and Nicobar Islands', latitude: 13.2673, longitude: 93.0090 },
+      { name: 'Havelock Island', code: 'havelock-island', state: 'Andaman and Nicobar Islands', latitude: 12.0170, longitude: 93.0020 },
+
+      // ===== Chandigarh =====
+      { name: 'Chandigarh', code: 'chandigarh', state: 'Chandigarh', latitude: 30.7333, longitude: 76.7794 },
+
+      // ===== Dadra and Nagar Haveli and Daman and Diu =====
+      { name: 'Silvassa', code: 'silvassa', state: 'Dadra and Nagar Haveli and Daman and Diu', latitude: 20.2766, longitude: 72.9958 },
+      { name: 'Daman', code: 'daman', state: 'Dadra and Nagar Haveli and Daman and Diu', latitude: 20.3974, longitude: 72.8328 },
+      { name: 'Diu', code: 'diu', state: 'Dadra and Nagar Haveli and Daman and Diu', latitude: 20.7141, longitude: 70.9872 },
+
+      // ===== Delhi (additional cities/areas) =====
+      { name: 'New Delhi', code: 'new-delhi', state: 'Delhi', latitude: 28.6139, longitude: 77.2090 },
+      { name: 'Dwarka', code: 'dwarka-delhi', state: 'Delhi', latitude: 28.5921, longitude: 77.0460 },
+      { name: 'Rohini', code: 'rohini', state: 'Delhi', latitude: 28.7495, longitude: 77.0565 },
+      { name: 'Saket', code: 'saket', state: 'Delhi', latitude: 28.5244, longitude: 77.2066 },
+
+      // ===== Jammu and Kashmir =====
+      { name: 'Srinagar', code: 'srinagar', state: 'Jammu and Kashmir', latitude: 34.0837, longitude: 74.7973 },
+      { name: 'Jammu', code: 'jammu', state: 'Jammu and Kashmir', latitude: 32.7266, longitude: 74.8570 },
+      { name: 'Anantnag', code: 'anantnag', state: 'Jammu and Kashmir', latitude: 33.7311, longitude: 75.1547 },
+      { name: 'Baramulla', code: 'baramulla', state: 'Jammu and Kashmir', latitude: 34.1980, longitude: 74.3636 },
+      { name: 'Sopore', code: 'sopore', state: 'Jammu and Kashmir', latitude: 34.2983, longitude: 74.4678 },
+      { name: 'Kathua', code: 'kathua', state: 'Jammu and Kashmir', latitude: 32.3867, longitude: 75.5132 },
+      { name: 'Udhampur', code: 'udhampur', state: 'Jammu and Kashmir', latitude: 32.9160, longitude: 75.1419 },
+
+      // ===== Ladakh =====
+      { name: 'Leh', code: 'leh', state: 'Ladakh', latitude: 34.1526, longitude: 77.5771 },
+      { name: 'Kargil', code: 'kargil', state: 'Ladakh', latitude: 34.5539, longitude: 76.1349 },
+      { name: 'Diskit', code: 'diskit', state: 'Ladakh', latitude: 34.5321, longitude: 77.5610 },
+
+      // ===== Lakshadweep =====
+      { name: 'Kavaratti', code: 'kavaratti', state: 'Lakshadweep', latitude: 10.5626, longitude: 72.6369 },
+      { name: 'Agatti', code: 'agatti', state: 'Lakshadweep', latitude: 10.8565, longitude: 72.1939 },
+      { name: 'Minicoy', code: 'minicoy', state: 'Lakshadweep', latitude: 8.2833, longitude: 73.0500 },
+
+      // ===== Puducherry =====
+      { name: 'Puducherry', code: 'puducherry', state: 'Puducherry', latitude: 11.9416, longitude: 79.8083 },
+      { name: 'Karaikal', code: 'karaikal', state: 'Puducherry', latitude: 10.9254, longitude: 79.8380 },
+      { name: 'Mahe', code: 'mahe', state: 'Puducherry', latitude: 11.7036, longitude: 75.5354 },
+      { name: 'Yanam', code: 'yanam', state: 'Puducherry', latitude: 16.7307, longitude: 82.2132 },
     ];
 
     let created = 0;
