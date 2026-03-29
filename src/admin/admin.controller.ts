@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
   Req,
   UnauthorizedException,
@@ -19,7 +20,7 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { AdminService } from './admin.service';
 import { LeadService } from './services/lead.service';
 import {
@@ -117,6 +118,7 @@ import {
   AdminRoomResponseDto,
   AdminCreateRoomDto,
   AdminUpdateRoomDto,
+  AdminDashboardStatsResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -155,6 +157,19 @@ export class AdminController {
   })
   async login(@Body() dto: AdminLoginDto): Promise<AdminLoginResponseDto> {
     return this.adminService.login(dto);
+  }
+
+  @Get('dashboard/stats')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get dashboard statistics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard statistics retrieved successfully',
+    type: AdminDashboardStatsResponseDto,
+  })
+  async getDashboardStats(): Promise<AdminDashboardStatsResponseDto> {
+    return this.adminService.getDashboardStats();
   }
 
   @Get('properties')
@@ -1771,6 +1786,33 @@ export class AdminController {
   @ApiOperation({ summary: 'Delete a FAQ' })
   async deleteHelpCenterFaq(@Param('id') id: string) {
     return this.adminService.deleteHelpCenterFaq(id);
+  }
+
+  // ─── CHANNEL PARTNER AGREEMENT ──────────────────────────────────────
+
+  @Get('users/:userId/agreement')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get channel partner agreement document (view or download)' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiQuery({ name: 'action', enum: ['view', 'download'], required: false, description: 'view = inline PDF, download = attachment' })
+  @ApiResponse({ status: 200, description: 'Agreement PDF returned' })
+  async getChannelPartnerAgreement(
+    @Param('userId') userId: string,
+    @Query('action') action: string = 'view',
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.adminService.getChannelPartnerAgreement(userId);
+
+    res.set('Content-Type', 'application/pdf');
+
+    if (action === 'download') {
+      res.set('Content-Disposition', `attachment; filename="agreement-${userId}.pdf"`);
+    } else {
+      res.set('Content-Disposition', `inline; filename="agreement-${userId}.pdf"`);
+    }
+
+    res.send(pdfBuffer);
   }
 
 }

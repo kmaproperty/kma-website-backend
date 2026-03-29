@@ -165,10 +165,14 @@ export class PropertyRepository {
     offset: number;
     limit: number;
     status?: string;
+    statuses?: string[];
     cityId?: string;
     userId?: string;
+    listingTypeIds?: string[];
+    categoryIds?: string[];
+    furnishingTypes?: string[];
   }): Promise<{ items: Property[]; total: number }> {
-    const { offset, limit, status, cityId, userId } = options;
+    const { offset, limit, status, statuses, cityId, userId, listingTypeIds, categoryIds, furnishingTypes } = options;
 
     const qb = this.propertyRepository
       .createQueryBuilder('property')
@@ -189,12 +193,28 @@ export class PropertyRepository {
       qb.andWhere('property.status = :status', { status });
     }
 
+    if (statuses?.length) {
+      qb.andWhere('property.status IN (:...statuses)', { statuses });
+    }
+
     if (cityId) {
       qb.andWhere('property.cityId = :cityId', { cityId });
     }
 
     if (userId) {
       qb.andWhere('property.userId = :userId', { userId });
+    }
+
+    if (listingTypeIds?.length) {
+      qb.andWhere('property.listingTypeId IN (:...listingTypeIds)', { listingTypeIds });
+    }
+
+    if (categoryIds?.length) {
+      qb.andWhere('property.categoryId IN (:...categoryIds)', { categoryIds });
+    }
+
+    if (furnishingTypes?.length) {
+      qb.andWhere('property.furnishType IN (:...furnishingTypes)', { furnishingTypes });
     }
 
     const [items, total] = await qb.getManyAndCount();
@@ -215,6 +235,15 @@ export class PropertyRepository {
     const verifiedProperties = await base.clone().andWhere("p.isVerified = 'verified'").getCount();
 
     return { totalProperties, activeProperties, pendingProperties, verifiedProperties };
+  }
+
+  async countByListingTypeCode(code: string): Promise<number> {
+    return this.propertyRepository
+      .createQueryBuilder('p')
+      .leftJoin('p.listingType', 'lt')
+      .where('p.isDeleted = false')
+      .andWhere('lt.code = :code', { code })
+      .getCount();
   }
 
   async getPropertyCountsByUserIds(userIds: string[]): Promise<Array<{ userId: string; sold: string; rent: string }>> {

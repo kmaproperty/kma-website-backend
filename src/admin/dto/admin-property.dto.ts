@@ -22,13 +22,45 @@ export class AdminPropertyListQueryDto {
   limit?: number = 20;
 
   @ApiPropertyOptional({
-    description: 'Filter by property status',
+    description: 'Filter by property status (single value, legacy)',
     example: 'pending_review',
     enum: ['draft', 'pending_review', 'active', 'rejected', 'deactivated'],
   })
   @IsOptional()
   @IsIn(['draft', 'pending_review', 'active', 'rejected', 'deactivated'])
   status?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by multiple statuses (comma-separated)',
+    example: 'active,pending_review',
+  })
+  @IsOptional()
+  @IsString()
+  statuses?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by listing type IDs (comma-separated UUIDs for Rent/Sale)',
+    example: 'uuid1,uuid2',
+  })
+  @IsOptional()
+  @IsString()
+  listingTypeIds?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by category IDs (comma-separated UUIDs for Residential/Commercial)',
+    example: 'uuid1,uuid2',
+  })
+  @IsOptional()
+  @IsString()
+  categoryIds?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by furnishing types (comma-separated: Furnished,Semi-Furnished,Unfurnished)',
+    example: 'Furnished,Semi-Furnished',
+  })
+  @IsOptional()
+  @IsString()
+  furnishingTypes?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by city ID',

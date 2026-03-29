@@ -106,6 +106,7 @@ import {
   AdminRoomResponseDto,
   AdminCreateRoomDto,
   AdminUpdateRoomDto,
+  AdminDashboardStatsResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
@@ -119,6 +120,7 @@ import { RoomRepository } from '../property/repositories/room.repository';
 import { ChannelPartnerCodeRepository } from '../user/repositories/channel-partner-code.repository';
 import { ChannelPartnerAgreementRepository } from '../user/repositories/channel-partner-agreement.repository';
 import { UserRepository } from '../user/repositories/user.repository';
+import { DocuSignService } from '../user/services/docusign.service';
 import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
@@ -310,6 +312,7 @@ export class AdminService {
     private readonly teamMemberRepository: TeamMemberRepository,
     private readonly regionalOfficeRepository: RegionalOfficeRepository,
     private readonly helpCenterFaqRepository: HelpCenterFaqRepository,
+    private readonly docuSignService: DocuSignService,
   ) {}
 
   private getJwtSecret(): string {
@@ -1427,12 +1430,30 @@ export class AdminService {
     const limit = Math.min(100, Math.max(1, query.limit || 20));
     const offset = (page - 1) * limit;
 
+    // Parse comma-separated filter strings into arrays
+    const listingTypeIds = query.listingTypeIds
+      ? query.listingTypeIds.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined;
+    const categoryIds = query.categoryIds
+      ? query.categoryIds.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined;
+    const furnishingTypes = query.furnishingTypes
+      ? query.furnishingTypes.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined;
+    const statuses = query.statuses
+      ? query.statuses.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
     const { items, total } = await this.propertyRepository.findWithPagination({
       offset,
       limit,
       status: query.status,
+      statuses,
       cityId: query.cityId,
       userId: query.userId,
+      listingTypeIds,
+      categoryIds,
+      furnishingTypes,
     });
 
     const data = items.map((property) => this.formatPropertyData(property));
@@ -3506,6 +3527,86 @@ export class AdminService {
     if (!faq) throw new BadRequestException('FAQ not found');
     await this.helpCenterFaqRepository.delete(id);
     return { success: true, message: 'FAQ deleted successfully' };
+  }
+
+  // ─── CHANNEL PARTNER AGREEMENT ──────────────────────────────────────
+
+  async getChannelPartnerAgreement(userId: string): Promise<Buffer> {
+    const agreement = await this.channelPartnerAgreementRepository.findLatestByUserId(userId);
+    if (!agreement) {
+      throw new BadRequestException('No agreement found for this user');
+    }
+
+    if (!agreement.envelopeId) {
+      throw new BadRequestException('Agreement has no associated DocuSign envelope');
+    }
+
+    return this.docuSignService.getEnvelopeDocuments(agreement.envelopeId);
+  }
+
+  async getDashboardStats(): Promise<AdminDashboardStatsResponseDto> {
+    const [
+      propertySummary,
+      forRent,
+      forSale,
+      cpActive,
+      cpInactive,
+      cpVerified,
+      cpKyc,
+      ownerActive,
+      ownerInactive,
+      ownerVerified,
+      customerActive,
+      customerInactive,
+      customerVerified,
+    ] = await Promise.all([
+      this.propertyRepository.getPropertySummaryCounts(),
+      this.propertyRepository.countByListingTypeCode('rent'),
+      this.propertyRepository.countByListingTypeCode('sale'),
+      this.userRepository.countByRoleAndActive(UserRole.CHANNEL_PARTNER, true),
+      this.userRepository.countByRoleAndActive(UserRole.CHANNEL_PARTNER, false),
+      this.userRepository.countByRoleAndVerified(UserRole.CHANNEL_PARTNER),
+      this.userRepository.countByRoleAndKyc(UserRole.CHANNEL_PARTNER),
+      this.userRepository.countByRoleAndActive(UserRole.OWNER, true),
+      this.userRepository.countByRoleAndActive(UserRole.OWNER, false),
+      this.userRepository.countByRoleAndVerified(UserRole.OWNER),
+      this.userRepository.countByRoleAndActive(UserRole.END_USER, true),
+      this.userRepository.countByRoleAndActive(UserRole.END_USER, false),
+      this.userRepository.countByRoleAndVerified(UserRole.END_USER),
+    ]);
+
+    const cpTotal = cpActive + cpInactive;
+    const ownerTotal = ownerActive + ownerInactive;
+    const customerTotal = customerActive + customerInactive;
+
+    return {
+      success: true,
+      properties: {
+        forRent,
+        forSale,
+        active: propertySummary.activeProperties,
+        pending: propertySummary.pendingProperties,
+        verified: propertySummary.verifiedProperties,
+      },
+      channelPartners: {
+        total: cpTotal,
+        active: cpActive,
+        verified: cpVerified,
+        kycCompleted: cpKyc,
+      },
+      owners: {
+        total: ownerTotal,
+        active: ownerActive,
+        pending: ownerInactive,
+        verified: ownerVerified,
+      },
+      customers: {
+        total: customerTotal,
+        active: customerActive,
+        pending: customerInactive,
+        verified: customerVerified,
+      },
+    };
   }
 }
 

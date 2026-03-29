@@ -154,6 +154,7 @@ const repositories = [
     ChannelPartnerCodeRepository,
     ChannelPartnerAgreementRepository,
     LeadRepository,
+    DocuSignService,
   ],
 })
 export class UserModule implements NestModule {
