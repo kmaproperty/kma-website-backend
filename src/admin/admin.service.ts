@@ -1219,6 +1219,7 @@ export class AdminService {
         isBlocked: user.isBlocked,
         phoneVerified: user.phoneVerified,
         intent: user.intent ?? null,
+        profileImage: user.profileImage ?? null,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
@@ -1231,7 +1232,6 @@ export class AdminService {
         baseData.cities = user.cities ?? null;
         baseData.businessSince = user.businessSince ?? null;
         baseData.aboutYourSelf = user.aboutYourSelf ?? null;
-        baseData.profileImage = user.profileImage ?? null;
         baseData.kycCompleted = user.kycCompleted ?? false;
 
         // Calculate experience from businessSince
@@ -1368,6 +1368,7 @@ export class AdminService {
           'cities',
           'phoneVerified',
           'isActive',
+          'profileImage',
         ])
       : null;
 
@@ -2483,9 +2484,31 @@ export class AdminService {
     // Get bank details (decrypted)
     const bankDetails = await this.userService.getBankDetails(userId);
 
+    // Get property counts
+    const [totalResult, rentResult, saleResult] = await Promise.all([
+      this.dataSource.query(
+        `SELECT COUNT(*) as count FROM properties WHERE "userId" = $1 AND "isDeleted" = false`,
+        [userId],
+      ),
+      this.dataSource.query(
+        `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'rent' AND p."isDeleted" = false`,
+        [userId],
+      ),
+      this.dataSource.query(
+        `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'sale' AND p."isDeleted" = false`,
+        [userId],
+      ),
+    ]);
+
+    const propertyCounts = {
+      totalProperties: parseInt(totalResult[0]?.count, 10) || 0,
+      rentedProperties: parseInt(rentResult[0]?.count, 10) || 0,
+      saleProperties: parseInt(saleResult[0]?.count, 10) || 0,
+    };
+
     return {
       success: true,
-      data: this.toUserDetailResponse(user, kycStatus, bankDetails),
+      data: this.toUserDetailResponse(user, kycStatus, bankDetails, propertyCounts),
     };
   }
 
@@ -2493,6 +2516,7 @@ export class AdminService {
     user: User,
     kycStatus: any,
     bankDetails: any,
+    propertyCounts: { totalProperties: number; rentedProperties: number; saleProperties: number } = { totalProperties: 0, rentedProperties: 0, saleProperties: 0 },
   ): AdminUserDetailResponseDto {
     return {
       id: user.id,
@@ -2529,6 +2553,9 @@ export class AdminService {
       aadhaar_rejection_reason: user.aadhaarRejectionReason ?? null,
       kyc_rejection_reason: user.kycRejectionReason ?? null,
       profileImage: user.profileImage ?? null,
+      totalProperties: propertyCounts.totalProperties,
+      rentedProperties: propertyCounts.rentedProperties,
+      saleProperties: propertyCounts.saleProperties,
     };
   }
 
@@ -3169,7 +3196,7 @@ export class AdminService {
         ? {
             ...owner,
             // Add more owner details if needed
-            profilePhotoUrl: property.user?.profilePhotoUrl || null,
+            profileImage: property.user?.profileImage || null,
           }
         : null,
       // Rating information (platform-wide KMA rating)

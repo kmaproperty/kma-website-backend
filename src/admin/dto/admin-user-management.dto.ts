@@ -257,6 +257,15 @@ export class AdminUserDetailResponseDto {
 
   @ApiPropertyOptional({ description: 'Profile image URL', nullable: true })
   profileImage: string | null;
+
+  @ApiProperty({ description: 'Total properties count' })
+  totalProperties: number;
+
+  @ApiProperty({ description: 'Rented properties count' })
+  rentedProperties: number;
+
+  @ApiProperty({ description: 'Sale properties count' })
+  saleProperties: number;
 }
 
 export class AdminBlockUserResponseDto {
