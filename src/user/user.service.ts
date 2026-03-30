@@ -133,6 +133,7 @@ import { AmenityRepository } from '../property/repositories/amenity.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 import { GooglePlacesService } from '../property/services/google-places.service';
+import { LeadService } from '../admin/services/lead.service';
 import { PropertyStatus } from '../property/enum/property-status.enum';
 import { PropertyVerificationStatus } from '../property/entities/property-verification-request.entity';
 import { MAX_LISTINGS_PER_OWNER } from '../property/constants/property.constants';
@@ -226,6 +227,7 @@ export class UserService {
     private readonly regionalOfficeRepository: RegionalOfficeRepository,
     private readonly helpCenterFaqRepository: HelpCenterFaqRepository,
     private readonly channelPartnerReviewRepository: ChannelPartnerReviewRepository,
+    private readonly leadService: LeadService,
   ) {}
 
   /**
@@ -4195,6 +4197,21 @@ export class UserService {
         phone: phone || user.phone,
         countryCode: countryCode ?? null,
       });
+
+      // Auto-create lead for the property owner/channel partner
+      try {
+        const leadPhone = `${countryCode || '+91'}${phone || user.phone}`;
+        await this.leadService.createLeadFromPropertyContact({
+          propertyId,
+          name: name || user.name || '',
+          phone: leadPhone,
+          email: email || user.email || undefined,
+        });
+      } catch (err) {
+        // Don't fail the contact request if lead creation fails
+        this.logger.warn(`Failed to create lead for property ${propertyId}: ${err.message}`);
+      }
+
       return {
         success: true,
         message: 'Contact request submitted successfully',
@@ -4250,6 +4267,20 @@ export class UserService {
         countryCode: countryCode ?? null,
       });
       await queryRunner.commitTransaction();
+
+      // Auto-create lead for the property owner/channel partner
+      try {
+        const leadPhone = `${countryCode || '+91'}${phone}`;
+        await this.leadService.createLeadFromPropertyContact({
+          propertyId,
+          name,
+          phone: leadPhone,
+          email: email || undefined,
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to create lead for property ${propertyId}: ${err.message}`);
+      }
+
       return {
         success: true,
         message: 'Contact request submitted successfully',
