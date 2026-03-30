@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
+import { DataSource } from 'typeorm';
 import { AdminRepository } from './repositories/admin.repository';
 import {
   AdminLoginDto,
@@ -107,6 +108,7 @@ import {
   AdminCreateRoomDto,
   AdminUpdateRoomDto,
   AdminDashboardStatsResponseDto,
+  AdminDashboardChartsResponseDto,
 } from './dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
@@ -313,6 +315,7 @@ export class AdminService {
     private readonly regionalOfficeRepository: RegionalOfficeRepository,
     private readonly helpCenterFaqRepository: HelpCenterFaqRepository,
     private readonly docuSignService: DocuSignService,
+    private readonly dataSource: DataSource,
   ) {}
 
   private getJwtSecret(): string {
@@ -3605,6 +3608,100 @@ export class AdminService {
         active: customerActive,
         pending: customerInactive,
         verified: customerVerified,
+      },
+    };
+  }
+
+  async getDashboardCharts(): Promise<AdminDashboardChartsResponseDto> {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // --- Properties by type (all-time) ---
+    const propertiesByTypeAll: { name: string; count: string }[] = await this.dataSource.query(`
+      SELECT pt.name, COUNT(*)::text as count
+      FROM properties p
+      JOIN master_property_types pt ON p."propertyTypeId" = pt.id
+      WHERE p.is_deleted = false OR p.deleted_at IS NULL
+      GROUP BY pt.name
+      ORDER BY pt.name
+    `);
+
+    // Properties by type (last 7 days)
+    const propertiesByTypeWeekly: { name: string; count: string }[] = await this.dataSource.query(`
+      SELECT pt.name, COUNT(*)::text as count
+      FROM properties p
+      JOIN master_property_types pt ON p."propertyTypeId" = pt.id
+      WHERE (p.is_deleted = false OR p.deleted_at IS NULL)
+        AND p.created_at > NOW() - INTERVAL '7 days'
+      GROUP BY pt.name
+      ORDER BY pt.name
+    `);
+
+    // --- Helper to get user registrations by month for a given role ---
+    const getUserMonthly = async (role: string) => {
+      const rows: { month: string; count: string }[] = await this.dataSource.query(`
+        SELECT EXTRACT(MONTH FROM created_at)::text as month, COUNT(*)::text as count
+        FROM users
+        WHERE role = $1
+          AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())
+        GROUP BY EXTRACT(MONTH FROM created_at)
+        ORDER BY EXTRACT(MONTH FROM created_at)
+      `, [role]);
+
+      return monthNames.map((name, idx) => {
+        const found = rows.find(r => parseInt(r.month) === idx + 1);
+        return { category: name, value: found ? parseInt(found.count) : 0 };
+      });
+    };
+
+    // --- Helper to get user registrations by week (last 4 weeks) for a given role ---
+    const getUserWeekly = async (role: string) => {
+      const rows: { week_num: string; count: string }[] = await this.dataSource.query(`
+        SELECT
+          CEIL(EXTRACT(DAY FROM (NOW() - created_at)) / 7.0)::text as week_num,
+          COUNT(*)::text as count
+        FROM users
+        WHERE role = $1
+          AND created_at > NOW() - INTERVAL '28 days'
+        GROUP BY CEIL(EXTRACT(DAY FROM (NOW() - created_at)) / 7.0)
+        ORDER BY CEIL(EXTRACT(DAY FROM (NOW() - created_at)) / 7.0)
+      `, [role]);
+
+      return [1, 2, 3, 4].map(w => {
+        const found = rows.find(r => parseInt(r.week_num) === w);
+        return { category: `Week ${w}`, value: found ? parseInt(found.count) : 0 };
+      });
+    };
+
+    const [
+      cpMonthly, cpWeekly,
+      ownerMonthly, ownerWeekly,
+      customerMonthly, customerWeekly,
+    ] = await Promise.all([
+      getUserMonthly(UserRole.CHANNEL_PARTNER),
+      getUserWeekly(UserRole.CHANNEL_PARTNER),
+      getUserMonthly(UserRole.OWNER),
+      getUserWeekly(UserRole.OWNER),
+      getUserMonthly(UserRole.END_USER),
+      getUserWeekly(UserRole.END_USER),
+    ]);
+
+    return {
+      success: true,
+      properties: {
+        monthly: propertiesByTypeAll.map(r => ({ category: r.name, value: parseInt(r.count) })),
+        weekly: propertiesByTypeWeekly.map(r => ({ category: r.name, value: parseInt(r.count) })),
+      },
+      channelPartners: {
+        monthly: cpMonthly,
+        weekly: cpWeekly,
+      },
+      owners: {
+        monthly: ownerMonthly,
+        weekly: ownerWeekly,
+      },
+      customers: {
+        monthly: customerMonthly,
+        weekly: customerWeekly,
       },
     };
   }

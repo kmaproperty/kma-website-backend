@@ -119,6 +119,7 @@ import {
   AdminCreateRoomDto,
   AdminUpdateRoomDto,
   AdminDashboardStatsResponseDto,
+  AdminDashboardChartsResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -170,6 +171,19 @@ export class AdminController {
   })
   async getDashboardStats(): Promise<AdminDashboardStatsResponseDto> {
     return this.adminService.getDashboardStats();
+  }
+
+  @Get('dashboard/charts')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get dashboard chart data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard chart data retrieved successfully',
+    type: AdminDashboardChartsResponseDto,
+  })
+  async getDashboardCharts(): Promise<AdminDashboardChartsResponseDto> {
+    return this.adminService.getDashboardCharts();
   }
 
   @Get('properties')
