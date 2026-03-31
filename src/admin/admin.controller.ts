@@ -91,6 +91,12 @@ import {
   AdminRemoveTopPropertyResponseDto,
   AdminTopPropertiesListQueryDto,
   AdminTopPropertiesListResponseDto,
+  AdminMarkFeaturedPropertyDto,
+  AdminMarkFeaturedPropertyResponseDto,
+  AdminRemoveFeaturedPropertyDto,
+  AdminRemoveFeaturedPropertyResponseDto,
+  AdminFeaturedPropertiesListQueryDto,
+  AdminFeaturedPropertiesListResponseDto,
   AdminContactUsListQueryDto,
   AdminContactUsListResponseDto,
   AdminContactUsKmaQueryListQueryDto,
@@ -216,6 +222,22 @@ export class AdminController {
     @Query() query: AdminTopPropertiesListQueryDto,
   ): Promise<AdminTopPropertiesListResponseDto> {
     return this.adminService.listTopProperties(query);
+  }
+
+  @Get('properties/featured')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List featured properties with pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured properties list retrieved successfully',
+    type: AdminFeaturedPropertiesListResponseDto,
+  })
+  async listFeaturedProperties(
+    @Query() query: AdminFeaturedPropertiesListQueryDto,
+  ): Promise<AdminFeaturedPropertiesListResponseDto> {
+    return this.adminService.listFeaturedProperties(query);
   }
 
   @Get('properties/:id')
@@ -1579,6 +1601,50 @@ export class AdminController {
     @Param('id') propertyId: string,
   ): Promise<AdminRemoveTopPropertyResponseDto> {
     return this.adminService.removeTopProperty({ propertyId });
+  }
+
+  @Post('properties/:id/mark-featured')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Mark property as featured property' })
+  @ApiParam({
+    name: 'id',
+    description: 'Property ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property marked as featured successfully',
+    type: AdminMarkFeaturedPropertyResponseDto,
+  })
+  async markFeaturedProperty(
+    @Param('id') propertyId: string,
+  ): Promise<AdminMarkFeaturedPropertyResponseDto> {
+    return this.adminService.markFeaturedProperty({ propertyId });
+  }
+
+  @Post('properties/:id/remove-featured')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Remove property from featured properties' })
+  @ApiParam({
+    name: 'id',
+    description: 'Property ID',
+    example: 'd6f12fb4-0b88-4d36-8927-63a9dd86b321',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Property removed from featured successfully',
+    type: AdminRemoveFeaturedPropertyResponseDto,
+  })
+  async removeFeaturedProperty(
+    @Param('id') propertyId: string,
+  ): Promise<AdminRemoveFeaturedPropertyResponseDto> {
+    return this.adminService.removeFeaturedProperty({ propertyId });
   }
 
   // About Us management endpoints

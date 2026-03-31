@@ -54,6 +54,8 @@ import {
   EndUserPropertyVideoDto,
   EndUserTopPropertiesQueryDto,
   EndUserTopPropertiesResponseDto,
+  EndUserFeaturedPropertiesQueryDto,
+  EndUserFeaturedPropertiesResponseDto,
   EndUserTopCityItemDto,
   EndUserTopCitiesResponseDto,
   EndUserPropertyDetailsResponseDto,
@@ -2619,6 +2621,131 @@ export class UserService {
     });
 
     // Map properties to response DTO (reuse the same mapping logic as searchEndUserProperties)
+    const properties: EndUserPropertyListItemDto[] = result.items.map(
+      (property) => {
+        // Get primary image (cover image or first image) and all images
+        let imageUrl: string | null = null;
+        let images: EndUserPropertyImageDto[] | undefined = undefined;
+        if (property.photos && property.photos.length > 0) {
+          const coverImage = property.photos.find((p) => p.isCoverImage);
+          const firstPhoto = property.photos[0];
+          const selectedPhoto = coverImage || firstPhoto;
+          imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
+
+          // Map all images
+          images = property.photos.map((photo) => ({
+            fileKey: photo.fileKey,
+            url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
+            view: photo.view,
+            isCoverImage: photo.isCoverImage || false,
+          }));
+        }
+
+        // Map all videos
+        let videos: EndUserPropertyVideoDto[] | undefined = undefined;
+        if (property.videos && property.videos.length > 0) {
+          videos = property.videos.map((video) => ({
+            fileKey: video.fileKey,
+            url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
+            format: video.format,
+          }));
+        }
+
+        // Build address
+        const addressParts: string[] = [];
+        if (property.society?.name) {
+          addressParts.push(property.society.name);
+        }
+        if (property.locality?.name) {
+          addressParts.push(property.locality.name);
+        }
+        if (property.city?.name) {
+          addressParts.push(property.city.name);
+        }
+        const address = addressParts.join(', ') || 'Address not available';
+
+        // Build property name (use society name or property description)
+        const propertyName =
+          property.society?.name ||
+          property.propertyDescription?.split('.')[0] ||
+          'Property';
+
+        // Build units array
+        const units: EndUserPropertyUnitDto[] = [];
+        if (property.bhkType?.name && property.builtUpAreaMetadata) {
+          const superBuiltUpArea = property.builtUpAreaMetadata.superBuiltUpArea
+            ? `${property.builtUpAreaMetadata.superBuiltUpArea} Sq. Ft.`
+            : property.builtUpAreaMetadata.carpetArea
+              ? `${property.builtUpAreaMetadata.carpetArea} Sq. Ft.`
+              : 'Size not available';
+          const price =
+            property.price != null
+              ? `₹ ${property.price.toLocaleString('en-IN')}`
+              : property.monthlyRent != null
+                ? `₹ ${property.monthlyRent.toLocaleString('en-IN')}/month`
+                : 'Price On Request';
+
+          units.push({
+            unit: property.bhkType.name,
+            size: `${superBuiltUpArea} (Saleable)`,
+            price,
+          });
+        }
+
+        return {
+          id: property.id,
+          propertyName,
+          address,
+          description: property.propertyDescription || undefined,
+          imageUrl,
+          images: images,
+          videos: videos,
+          isReraRegistered: false,
+          constructionStatus: property.constructionStatus || null,
+          categoryId: property.category?.id ?? null,
+          category: property.category?.name || null,
+          listingTypeId: property.listingType?.id ?? null,
+          listingType: property.listingType?.name || null,
+          propertyTypeId: property.propertyType?.id ?? null,
+          propertyType: property.propertyType?.name || null,
+          bhkTypeId: property.bhkType?.id ?? null,
+          bhkType: property.bhkType?.name || null,
+          price: property.price || null,
+          monthlyRent: property.monthlyRent || null,
+          cityId: property.city?.id ?? null,
+          city: property.city?.name || null,
+          society: property.society?.name || null,
+          locality: property.locality?.name || null,
+          units: units.length > 0 ? units : undefined,
+        };
+      },
+    );
+
+    return {
+      success: true,
+      properties,
+      total: result.total,
+    };
+  }
+
+  /**
+   * Get featured properties for end users
+   * Returns featured properties filtered by city
+   */
+  async getFeaturedProperties(
+    query: EndUserFeaturedPropertiesQueryDto,
+  ): Promise<EndUserFeaturedPropertiesResponseDto> {
+    const { cityId } = query;
+    const limit = 5; // Featured properties limit
+
+    const result = await this.propertyRepository.findFeaturedProperties({
+      page: 1,
+      limit,
+      cityId,
+      status: PropertyStatus.ACTIVE,
+    });
+
+    // Map properties to response DTO (reuse the same mapping logic as top properties)
     const properties: EndUserPropertyListItemDto[] = result.items.map(
       (property) => {
         // Get primary image (cover image or first image) and all images

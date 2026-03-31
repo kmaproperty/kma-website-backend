@@ -15,6 +15,7 @@ export * from './admin-contact-us.dto';
 export * from './admin-property-verification.dto';
 export * from './admin-rating-review.dto';
 export * from './admin-top-property.dto';
+export * from './admin-featured-property.dto';
 export * from './admin-about-us.dto';
 export * from './admin-configuration.dto';
 export * from './admin-room.dto';

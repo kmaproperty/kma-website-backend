@@ -30,6 +30,8 @@ import {
   EndUserPropertiesCountResponseDto,
   EndUserTopPropertiesQueryDto,
   EndUserTopPropertiesResponseDto,
+  EndUserFeaturedPropertiesQueryDto,
+  EndUserFeaturedPropertiesResponseDto,
   EndUserTopCitiesResponseDto,
   EndUserChannelPartnerListQueryDto,
   EndUserChannelPartnerListResponseDto,
@@ -626,6 +628,23 @@ export class EndUserController {
     @Query() query: EndUserTopPropertiesQueryDto,
   ): Promise<EndUserTopPropertiesResponseDto> {
     return await this.userService.getTopProperties(query);
+  }
+
+  @Get('featured-properties')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Featured Properties',
+    description: 'Returns featured properties filtered by city. Only returns active properties marked as featured.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured properties retrieved successfully',
+    type: EndUserFeaturedPropertiesResponseDto,
+  })
+  async getFeaturedProperties(
+    @Query() query: EndUserFeaturedPropertiesQueryDto,
+  ): Promise<EndUserFeaturedPropertiesResponseDto> {
+    return await this.userService.getFeaturedProperties(query);
   }
 
   @Get('top-cities')

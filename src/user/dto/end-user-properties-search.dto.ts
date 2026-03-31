@@ -564,6 +564,30 @@ export class EndUserTopPropertiesResponseDto {
   total: number;
 }
 
+export class EndUserFeaturedPropertiesQueryDto {
+  @ApiProperty({
+    description: 'City ID to filter featured properties',
+    example: 'uuid-city-id',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  cityId: string;
+}
+
+export class EndUserFeaturedPropertiesResponseDto {
+  @ApiProperty({ description: 'Success status', example: true })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'List of featured properties',
+    type: [EndUserPropertyListItemDto],
+  })
+  properties: EndUserPropertyListItemDto[];
+
+  @ApiProperty({ description: 'Total number of featured properties', example: 5 })
+  total: number;
+}
+
 export class EndUserPropertiesCountQueryDto {
   @ApiPropertyOptional({
     description: 'City ID to filter properties',

@@ -173,6 +173,13 @@ export class Property extends BaseEntity {
   })
   isTop: boolean;
 
+  @Column({
+    type: 'boolean',
+    name: 'is_featured',
+    default: false,
+  })
+  isFeatured: boolean;
+
   // Step 2 fields
   @Column({ type: 'int', nullable: true })
   floorNumber: number | null;

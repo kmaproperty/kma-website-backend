@@ -76,6 +76,12 @@ import {
   AdminRemoveTopPropertyResponseDto,
   AdminTopPropertiesListQueryDto,
   AdminTopPropertiesListResponseDto,
+  AdminMarkFeaturedPropertyDto,
+  AdminMarkFeaturedPropertyResponseDto,
+  AdminRemoveFeaturedPropertyDto,
+  AdminRemoveFeaturedPropertyResponseDto,
+  AdminFeaturedPropertiesListQueryDto,
+  AdminFeaturedPropertiesListResponseDto,
   AdminContactUsListQueryDto,
   AdminContactUsListResponseDto,
   ContactUsResponseDto,
@@ -3221,6 +3227,89 @@ export class AdminService {
       bhkTypeName: property.bhkType?.name || null,
       // Property type name
       propertyTypeName: property.propertyType?.name || null,
+    };
+  }
+
+  /**
+   * Mark property as featured
+   */
+  async markFeaturedProperty(
+    dto: AdminMarkFeaturedPropertyDto,
+  ): Promise<AdminMarkFeaturedPropertyResponseDto> {
+    const property = await this.ensurePropertyExists(dto.propertyId);
+
+    await this.propertyRepository.updateProperty(dto.propertyId, {
+      isFeatured: true,
+    });
+
+    return {
+      success: true,
+      message: 'Property marked as featured successfully',
+      propertyId: dto.propertyId,
+      isFeatured: true,
+    };
+  }
+
+  /**
+   * Remove property from featured
+   */
+  async removeFeaturedProperty(
+    dto: AdminRemoveFeaturedPropertyDto,
+  ): Promise<AdminRemoveFeaturedPropertyResponseDto> {
+    const property = await this.ensurePropertyExists(dto.propertyId);
+
+    await this.propertyRepository.updateProperty(dto.propertyId, {
+      isFeatured: false,
+    });
+
+    return {
+      success: true,
+      message: 'Property removed from featured successfully',
+      propertyId: dto.propertyId,
+      isFeatured: false,
+    };
+  }
+
+  /**
+   * List featured properties with pagination and optional city filter
+   * Includes detailed information: bathroom, bedroom, owner details, rating, possession status
+   */
+  async listFeaturedProperties(
+    query: AdminFeaturedPropertiesListQueryDto,
+  ): Promise<AdminFeaturedPropertiesListResponseDto> {
+    const page = Math.max(1, query?.page || 1);
+    const limit = Math.min(100, Math.max(1, query?.limit || 20));
+
+    const { items, total } = await this.propertyRepository.findFeaturedProperties({
+      page,
+      limit,
+      cityId: query.cityId,
+    });
+
+    // Get rating statistics once (platform-wide KMA rating)
+    let averageRating: number | null = null;
+    let ratingCount: number = 0;
+    try {
+      const ratingStats = await this.kmaRatingReviewRepository.getApprovedReviewsStatistics();
+      if (ratingStats && ratingStats.averageRating) {
+        averageRating = ratingStats.averageRating;
+        ratingCount = ratingStats.totalCount || 0;
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to get rating statistics: ${error.message}`);
+    }
+
+    // Format each property with enhanced details
+    const data = items.map((property) =>
+      this.formatTopPropertyData(property, averageRating, ratingCount),
+    );
+
+    return {
+      success: true,
+      data,
+      total,
+      page,
+      limit,
     };
   }
 
