@@ -2493,15 +2493,15 @@ export class AdminService {
     // Get property counts
     const [totalResult, rentResult, saleResult] = await Promise.all([
       this.dataSource.query(
-        `SELECT COUNT(*) as count FROM properties WHERE "userId" = $1 AND "isDeleted" = false`,
+        `SELECT COUNT(*) as count FROM properties WHERE "userId" = $1 AND is_deleted = false`,
         [userId],
       ),
       this.dataSource.query(
-        `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'rent' AND p."isDeleted" = false`,
+        `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'rent' AND p.is_deleted = false`,
         [userId],
       ),
       this.dataSource.query(
-        `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'sale' AND p."isDeleted" = false`,
+        `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'sale' AND p.is_deleted = false`,
         [userId],
       ),
     ]);
