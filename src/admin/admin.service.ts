@@ -2649,8 +2649,13 @@ export class AdminService {
       throw new BadRequestException(`User with ID ${userId} not found`);
     }
 
-    // Get KYC status
-    const kycStatus = await this.userService.getVerificationStepsStatus(userId);
+    // Get KYC status — gracefully handle failures
+    let kycStatus: any = {};
+    try {
+      kycStatus = await this.userService.getVerificationStepsStatus(userId);
+    } catch {
+      // May fail if DocuSign or other services are not configured
+    }
 
     // Get bank details (decrypted) — gracefully handle decrypt failures
     let bankDetails: any = null;
@@ -2661,26 +2666,30 @@ export class AdminService {
     }
 
     // Get property counts
-    const [totalResult, rentResult, saleResult] = await Promise.all([
-      this.dataSource.query(
-        `SELECT COUNT(*) as count FROM properties WHERE "userId" = $1 AND is_deleted = false`,
-        [userId],
-      ),
-      this.dataSource.query(
-        `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'rent' AND p.is_deleted = false`,
-        [userId],
-      ),
-      this.dataSource.query(
-        `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'sale' AND p.is_deleted = false`,
-        [userId],
-      ),
-    ]);
-
-    const propertyCounts = {
-      totalProperties: parseInt(totalResult[0]?.count, 10) || 0,
-      rentedProperties: parseInt(rentResult[0]?.count, 10) || 0,
-      saleProperties: parseInt(saleResult[0]?.count, 10) || 0,
-    };
+    let propertyCounts = { totalProperties: 0, rentedProperties: 0, saleProperties: 0 };
+    try {
+      const [totalResult, rentResult, saleResult] = await Promise.all([
+        this.dataSource.query(
+          `SELECT COUNT(*) as count FROM properties WHERE "userId" = $1 AND is_deleted = false`,
+          [userId],
+        ),
+        this.dataSource.query(
+          `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'rent' AND p.is_deleted = false`,
+          [userId],
+        ),
+        this.dataSource.query(
+          `SELECT COUNT(*) as count FROM properties p JOIN master_property_listing_types lt ON p."listingTypeId" = lt.id WHERE p."userId" = $1 AND lt.code = 'sale' AND p.is_deleted = false`,
+          [userId],
+        ),
+      ]);
+      propertyCounts = {
+        totalProperties: parseInt(totalResult[0]?.count, 10) || 0,
+        rentedProperties: parseInt(rentResult[0]?.count, 10) || 0,
+        saleProperties: parseInt(saleResult[0]?.count, 10) || 0,
+      };
+    } catch {
+      // Table may not exist if migrations haven't been run
+    }
 
     return {
       success: true,
