@@ -132,6 +132,7 @@ import { DocuSignService } from '../user/services/docusign.service';
 import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
+import { PropertyRatingReviewRepository } from '../user/repositories/property-rating-review.repository';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 import { AboutUsRepository } from './repositories/about-us.repository';
 import { TeamMemberRepository } from './repositories/team-member.repository';
@@ -314,6 +315,7 @@ export class AdminService {
     private readonly contactUsRepository: ContactUsRepository,
     private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
     private readonly kmaRatingReviewRepository: KmaRatingReviewRepository,
+    private readonly propertyRatingReviewRepository: PropertyRatingReviewRepository,
     private readonly propertyVerificationRequestRepository: PropertyVerificationRequestRepository,
     private readonly aboutUsRepository: AboutUsRepository,
     private readonly adminConfigurationRepository: AdminConfigurationRepository,
@@ -1492,6 +1494,42 @@ export class AdminService {
 
     const data = this.formatPropertyData(property);
 
+    const [ratingStats, likeDislikeTexts, recentReviews] = await Promise.all([
+      this.propertyRatingReviewRepository.getRatingStatistics(propertyId),
+      this.propertyRatingReviewRepository.getLikeDislikeTexts(propertyId),
+      this.propertyRatingReviewRepository.findAllByProperty(propertyId, 5),
+    ]);
+
+    data.ratingDetails = {
+      summary: {
+        totalReviews: ratingStats.totalReviews,
+        averageOverallRating: ratingStats.averageOverallRating,
+        starDistribution: ratingStats.starDistribution,
+      },
+      featureRatings: {
+        connectivity: ratingStats.averageConnectivityRating,
+        neighbourhood: ratingStats.averageNeighbourhoodRating,
+        safety: ratingStats.averageSafetyRating,
+        livability: ratingStats.averageLivabilityRating,
+      },
+      whatsGood: likeDislikeTexts.likes,
+      whatsBad: likeDislikeTexts.dislikes,
+      recentReviews: recentReviews.map((review) => ({
+        id: review.id,
+        reviewerName: review.endUser?.name || 'Anonymous',
+        reviewerProfilePic: review.endUser?.profileImage || null,
+        role: review.role,
+        overallRating: Number(review.overallRating),
+        connectivityRating: review.connectivityRating,
+        neighbourhoodRating: review.neighbourhoodRating,
+        safetyRating: review.safetyRating,
+        livabilityRating: review.livabilityRating,
+        likeText: review.likeText,
+        dislikeText: review.dislikeText,
+        createdAt: review.createdAt,
+      })),
+    };
+
     return {
       success: true,
       data,
@@ -2588,8 +2626,13 @@ export class AdminService {
     // Get KYC status
     const kycStatus = await this.userService.getVerificationStepsStatus(userId);
 
-    // Get bank details (decrypted)
-    const bankDetails = await this.userService.getBankDetails(userId);
+    // Get bank details (decrypted) — gracefully handle decrypt failures
+    let bankDetails: any = null;
+    try {
+      bankDetails = await this.userService.getBankDetails(userId);
+    } catch {
+      // Decryption may fail if ENCRYPTION_KEY doesn't match
+    }
 
     return {
       success: true,
@@ -2609,8 +2652,13 @@ export class AdminService {
     // Get KYC status
     const kycStatus = await this.userService.getVerificationStepsStatus(userId);
 
-    // Get bank details (decrypted)
-    const bankDetails = await this.userService.getBankDetails(userId);
+    // Get bank details (decrypted) — gracefully handle decrypt failures
+    let bankDetails: any = null;
+    try {
+      bankDetails = await this.userService.getBankDetails(userId);
+    } catch {
+      // Decryption may fail if ENCRYPTION_KEY doesn't match
+    }
 
     // Get property counts
     const [totalResult, rentResult, saleResult] = await Promise.all([

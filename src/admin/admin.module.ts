@@ -24,6 +24,8 @@ import { ContactUsKmaQuery } from '../user/entities/contact-us-kma-query.entity'
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
 import { KmaRatingReview } from '../user/entities/kma-rating-review.entity';
 import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
+import { PropertyRatingReview } from '../user/entities/property-rating-review.entity';
+import { PropertyRatingReviewRepository } from '../user/repositories/property-rating-review.repository';
 import { PropertyVerificationRequest } from '../property/entities/property-verification-request.entity';
 import { PropertyVerificationRequestRepository } from '../property/repositories/property-verification-request.repository';
 import { AboutUs } from './entities/about-us.entity';
@@ -53,6 +55,7 @@ import { RoomRepository } from '../property/repositories/room.repository';
       ContactUs,
       ContactUsKmaQuery,
       KmaRatingReview,
+      PropertyRatingReview,
       PropertyVerificationRequest,
       AboutUs,
       AdminConfiguration,
@@ -83,6 +86,7 @@ import { RoomRepository } from '../property/repositories/room.repository';
     ContactUsRepository,
     ContactUsKmaQueryRepository,
     KmaRatingReviewRepository,
+    PropertyRatingReviewRepository,
     PropertyVerificationRequestRepository,
     AboutUsRepository,
     AdminConfigurationRepository,
