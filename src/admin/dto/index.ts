@@ -20,4 +20,5 @@ export * from './admin-about-us.dto';
 export * from './admin-configuration.dto';
 export * from './admin-room.dto';
 export * from './admin-dashboard.dto';
+export * from './admin-media-approval.dto';
 

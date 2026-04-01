@@ -2421,17 +2421,19 @@ export class UserService {
     // Map properties to response DTO
     const properties: EndUserPropertyListItemDto[] = result.items.map(
       (property) => {
-        // Get primary image (cover image or first image) and all images
+        // Filter to only approved media, then get primary image and all images
+        const approvedPhotos = this.filterApprovedPhotos(property.photos);
+        const approvedVideos = this.filterApprovedVideos(property.videos);
         let imageUrl: string | null = null;
         let images: EndUserPropertyImageDto[] | undefined = undefined;
-        if (property.photos && property.photos.length > 0) {
-          const coverImage = property.photos.find((p) => p.isCoverImage);
-          const firstPhoto = property.photos[0];
+        if (approvedPhotos.length > 0) {
+          const coverImage = approvedPhotos.find((p) => p.isCoverImage);
+          const firstPhoto = approvedPhotos[0];
           const selectedPhoto = coverImage || firstPhoto;
           imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
 
-          // Map all images
-          images = property.photos.map((photo) => ({
+          // Map all approved images
+          images = approvedPhotos.map((photo) => ({
             fileKey: photo.fileKey,
             url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
             view: photo.view,
@@ -2439,10 +2441,10 @@ export class UserService {
           }));
         }
 
-        // Map all videos
+        // Map all approved videos
         let videos: EndUserPropertyVideoDto[] | undefined = undefined;
-        if (property.videos && property.videos.length > 0) {
-          videos = property.videos.map((video) => ({
+        if (approvedVideos.length > 0) {
+          videos = approvedVideos.map((video) => ({
             fileKey: video.fileKey,
             url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
             format: video.format,
@@ -2498,8 +2500,8 @@ export class UserService {
           imageUrl,
           images: images,
           videos: videos,
-          imageCount: property.photos?.length || 0,
-          videoCount: property.videos?.length || 0,
+          imageCount: approvedPhotos.length,
+          videoCount: approvedVideos.length,
           isReraRegistered: false, // Add RERA field to Property entity if needed
           constructionStatus: property.constructionStatus || null,
           categoryId: property.category?.id ?? null,
@@ -2623,17 +2625,19 @@ export class UserService {
     // Map properties to response DTO (reuse the same mapping logic as searchEndUserProperties)
     const properties: EndUserPropertyListItemDto[] = result.items.map(
       (property) => {
-        // Get primary image (cover image or first image) and all images
+        // Filter to only approved media, then get primary image and all images
+        const approvedPhotos = this.filterApprovedPhotos(property.photos);
+        const approvedVideos = this.filterApprovedVideos(property.videos);
         let imageUrl: string | null = null;
         let images: EndUserPropertyImageDto[] | undefined = undefined;
-        if (property.photos && property.photos.length > 0) {
-          const coverImage = property.photos.find((p) => p.isCoverImage);
-          const firstPhoto = property.photos[0];
+        if (approvedPhotos.length > 0) {
+          const coverImage = approvedPhotos.find((p) => p.isCoverImage);
+          const firstPhoto = approvedPhotos[0];
           const selectedPhoto = coverImage || firstPhoto;
           imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
 
-          // Map all images
-          images = property.photos.map((photo) => ({
+          // Map all approved images
+          images = approvedPhotos.map((photo) => ({
             fileKey: photo.fileKey,
             url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
             view: photo.view,
@@ -2641,10 +2645,10 @@ export class UserService {
           }));
         }
 
-        // Map all videos
+        // Map all approved videos
         let videos: EndUserPropertyVideoDto[] | undefined = undefined;
-        if (property.videos && property.videos.length > 0) {
-          videos = property.videos.map((video) => ({
+        if (approvedVideos.length > 0) {
+          videos = approvedVideos.map((video) => ({
             fileKey: video.fileKey,
             url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
             format: video.format,
@@ -2748,17 +2752,19 @@ export class UserService {
     // Map properties to response DTO (reuse the same mapping logic as top properties)
     const properties: EndUserPropertyListItemDto[] = result.items.map(
       (property) => {
-        // Get primary image (cover image or first image) and all images
+        // Filter to only approved media, then get primary image and all images
+        const approvedPhotos = this.filterApprovedPhotos(property.photos);
+        const approvedVideos = this.filterApprovedVideos(property.videos);
         let imageUrl: string | null = null;
         let images: EndUserPropertyImageDto[] | undefined = undefined;
-        if (property.photos && property.photos.length > 0) {
-          const coverImage = property.photos.find((p) => p.isCoverImage);
-          const firstPhoto = property.photos[0];
+        if (approvedPhotos.length > 0) {
+          const coverImage = approvedPhotos.find((p) => p.isCoverImage);
+          const firstPhoto = approvedPhotos[0];
           const selectedPhoto = coverImage || firstPhoto;
           imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
 
-          // Map all images
-          images = property.photos.map((photo) => ({
+          // Map all approved images
+          images = approvedPhotos.map((photo) => ({
             fileKey: photo.fileKey,
             url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
             view: photo.view,
@@ -2766,10 +2772,10 @@ export class UserService {
           }));
         }
 
-        // Map all videos
+        // Map all approved videos
         let videos: EndUserPropertyVideoDto[] | undefined = undefined;
-        if (property.videos && property.videos.length > 0) {
-          videos = property.videos.map((video) => ({
+        if (approvedVideos.length > 0) {
+          videos = approvedVideos.map((video) => ({
             fileKey: video.fileKey,
             url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
             format: video.format,
@@ -2906,11 +2912,12 @@ export class UserService {
 
     // Map properties to response DTO
     const properties = result.items.map((property) => {
-      // Get primary image (cover image or first image)
+      // Filter to only approved media, then get primary image
+      const approvedPhotos = this.filterApprovedPhotos(property.photos);
       let imageUrl: string | null = null;
-      if (property.photos && property.photos.length > 0) {
-        const coverImage = property.photos.find((p) => p.isCoverImage);
-        const firstPhoto = property.photos[0];
+      if (approvedPhotos.length > 0) {
+        const coverImage = approvedPhotos.find((p) => p.isCoverImage);
+        const firstPhoto = approvedPhotos[0];
         const selectedPhoto = coverImage || firstPhoto;
         imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
       }
@@ -3241,15 +3248,15 @@ export class UserService {
       'Property';
     const cityName = property.city?.name || null;
 
-    // Convert photo/video file keys to full S3 URLs
+    // Filter to only approved media and convert file keys to full S3 URLs
     if (property.photos && Array.isArray(property.photos)) {
-      property.photos = property.photos.map((photo: any) => ({
+      property.photos = this.filterApprovedPhotos(property.photos).map((photo: any) => ({
         ...photo,
         url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
       }));
     }
     if (property.videos && Array.isArray(property.videos)) {
-      property.videos = property.videos.map((video: any) => ({
+      property.videos = this.filterApprovedVideos(property.videos).map((video: any) => ({
         ...video,
         url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
       }));
@@ -3358,8 +3365,8 @@ export class UserService {
       (r) => r.status === PropertyVerificationStatus.APPROVED,
     );
 
-    const listingPhotos = property.photos ?? [];
-    const listingVideos = property.videos ?? [];
+    const listingPhotos = this.filterApprovedPhotos(property.photos);
+    const listingVideos = this.filterApprovedVideos(property.videos);
     const livePhotos = approvedVerification?.livePhotos ?? [];
     const liveVideos = approvedVerification?.liveVideos ?? [];
 
@@ -3421,6 +3428,16 @@ export class UserService {
       categories,
       videos: allVideos,
     };
+  }
+
+  private filterApprovedPhotos(photos: any[] | null | undefined): any[] {
+    if (!photos || !Array.isArray(photos)) return [];
+    return photos.filter((p) => p.approvalStatus === 'approved');
+  }
+
+  private filterApprovedVideos(videos: any[] | null | undefined): any[] {
+    if (!videos || !Array.isArray(videos)) return [];
+    return videos.filter((v) => v.approvalStatus === 'approved');
   }
 
   private groupPhotosByCategory(
@@ -4047,11 +4064,12 @@ export class UserService {
 
     // Helper function to map property to EndUserPropertyListItemDto
     const mapProperty = (property: any): EndUserPropertyListItemDto => {
-        // Get primary image (cover image or first image)
+        // Filter to only approved media, then get primary image
+        const approvedPhotos = this.filterApprovedPhotos(property.photos);
         let imageUrl: string | null = null;
-        if (property.photos && property.photos.length > 0) {
-          const coverImage = property.photos.find((p) => p.isCoverImage);
-          const firstPhoto = property.photos[0];
+        if (approvedPhotos.length > 0) {
+          const coverImage = approvedPhotos.find((p) => p.isCoverImage);
+          const firstPhoto = approvedPhotos[0];
           const selectedPhoto = coverImage || firstPhoto;
           imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
         }
@@ -4988,12 +5006,13 @@ export class UserService {
 
         let imageUrl: string | null = null;
         let images: { fileKey: string; view: string; isCoverImage: boolean }[] | undefined;
-        if (sampleProperty?.photos && sampleProperty.photos.length > 0) {
-          const cover = sampleProperty.photos.find((p) => p.isCoverImage);
-          const first = sampleProperty.photos[0];
+        const sampleApprovedPhotos = this.filterApprovedPhotos(sampleProperty?.photos);
+        if (sampleApprovedPhotos.length > 0) {
+          const cover = sampleApprovedPhotos.find((p) => p.isCoverImage);
+          const first = sampleApprovedPhotos[0];
           const selectedKey = (cover || first).fileKey;
           imageUrl = selectedKey ? this.s3Service.generateFileUrl(selectedKey) : null;
-          images = sampleProperty.photos.map((p) => ({
+          images = sampleApprovedPhotos.map((p) => ({
             fileKey: p.fileKey,
             url: p.fileKey ? this.s3Service.generateFileUrl(p.fileKey) : null,
             view: p.view,
@@ -5093,15 +5112,17 @@ export class UserService {
    * Map a property entity to the standard list item DTO
    */
   private mapPropertyToListItem(property: any): EndUserPropertyListItemDto {
-    // Get primary image and all images
+    // Filter to only approved media, then get primary image and all images
+    const approvedPhotos = this.filterApprovedPhotos(property.photos);
+    const approvedVideos = this.filterApprovedVideos(property.videos);
     let imageUrl: string | null = null;
     let images: EndUserPropertyImageDto[] | undefined = undefined;
-    if (property.photos && property.photos.length > 0) {
-      const coverImage = property.photos.find((p) => p.isCoverImage);
-      const firstPhoto = property.photos[0];
+    if (approvedPhotos.length > 0) {
+      const coverImage = approvedPhotos.find((p) => p.isCoverImage);
+      const firstPhoto = approvedPhotos[0];
       const selectedPhoto = coverImage || firstPhoto;
       imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
-      images = property.photos.map((photo) => ({
+      images = approvedPhotos.map((photo) => ({
         fileKey: photo.fileKey,
         url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
         view: photo.view,
@@ -5109,10 +5130,10 @@ export class UserService {
       }));
     }
 
-    // Map all videos
+    // Map all approved videos
     let videos: EndUserPropertyVideoDto[] | undefined = undefined;
-    if (property.videos && property.videos.length > 0) {
-      videos = property.videos.map((video) => ({
+    if (approvedVideos.length > 0) {
+      videos = approvedVideos.map((video) => ({
         fileKey: video.fileKey,
         url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
         format: video.format,
@@ -5164,8 +5185,8 @@ export class UserService {
       imageUrl,
       images,
       videos,
-      imageCount: property.photos?.length || 0,
-      videoCount: property.videos?.length || 0,
+      imageCount: approvedPhotos.length,
+      videoCount: approvedVideos.length,
       isReraRegistered: false,
       constructionStatus: property.constructionStatus || null,
       categoryId: property.category?.id ?? null,
@@ -5333,9 +5354,10 @@ export class UserService {
         if (property.city?.name) addrParts.push(property.city.name);
         propertyAddress = addrParts.length > 0 ? addrParts.join(', ') : null;
 
-        if (property.photos && property.photos.length > 0) {
-          const cover = property.photos.find((p) => p.isCoverImage);
-          const first = property.photos[0];
+        const approvedPhotos = this.filterApprovedPhotos(property.photos);
+        if (approvedPhotos.length > 0) {
+          const cover = approvedPhotos.find((p) => p.isCoverImage);
+          const first = approvedPhotos[0];
           const key = (cover || first).fileKey;
           propertyImageUrl = key ? this.s3Service.generateFileUrl(key) : null;
         }
@@ -5486,17 +5508,19 @@ export class UserService {
       (favorite) => {
         const property = favorite.property;
 
-        // Get primary image (cover image or first image) and all images
+        // Filter to only approved media, then get primary image and all images
+        const approvedPhotos = this.filterApprovedPhotos(property.photos);
+        const approvedVideos = this.filterApprovedVideos(property.videos);
         let imageUrl: string | null = null;
         let images: EndUserPropertyImageDto[] | undefined = undefined;
-        if (property.photos && property.photos.length > 0) {
-          const coverImage = property.photos.find((p) => p.isCoverImage);
-          const firstPhoto = property.photos[0];
+        if (approvedPhotos.length > 0) {
+          const coverImage = approvedPhotos.find((p) => p.isCoverImage);
+          const firstPhoto = approvedPhotos[0];
           const selectedPhoto = coverImage || firstPhoto;
           imageUrl = selectedPhoto.fileKey ? this.s3Service.generateFileUrl(selectedPhoto.fileKey) : null;
 
-          // Map all images
-          images = property.photos.map((photo) => ({
+          // Map all approved images
+          images = approvedPhotos.map((photo) => ({
             fileKey: photo.fileKey,
             url: photo.fileKey ? this.s3Service.generateFileUrl(photo.fileKey) : null,
             view: photo.view,
@@ -5504,10 +5528,10 @@ export class UserService {
           }));
         }
 
-        // Map all videos
+        // Map all approved videos
         let videos: EndUserPropertyVideoDto[] | undefined = undefined;
-        if (property.videos && property.videos.length > 0) {
-          videos = property.videos.map((video) => ({
+        if (approvedVideos.length > 0) {
+          videos = approvedVideos.map((video) => ({
             fileKey: video.fileKey,
             url: video.fileKey ? this.s3Service.generateFileUrl(video.fileKey) : null,
             format: video.format,
@@ -5569,8 +5593,8 @@ export class UserService {
           imageUrl,
           images: images,
           videos: videos,
-          imageCount: property.photos?.length || 0,
-          videoCount: property.videos?.length || 0,
+          imageCount: approvedPhotos.length,
+          videoCount: approvedVideos.length,
           isReraRegistered: false,
           constructionStatus: property.constructionStatus || null,
           categoryId: property.category?.id ?? null,

@@ -1624,6 +1624,128 @@ export class AdminService {
     };
   }
 
+  async approveMedia(propertyId: string, fileKey: string, adminId: string) {
+    const property = await this.ensurePropertyExists(propertyId);
+
+    let found = false;
+
+    if (property.photos && Array.isArray(property.photos)) {
+      const updatedPhotos = property.photos.map((photo: any) => {
+        if (photo.fileKey === fileKey) {
+          found = true;
+          return { ...photo, approvalStatus: 'approved', rejectionReason: undefined };
+        }
+        return photo;
+      });
+      if (found) {
+        await this.propertyRepository.updateProperty(propertyId, { photos: updatedPhotos });
+      }
+    }
+
+    if (!found && property.videos && Array.isArray(property.videos)) {
+      const updatedVideos = property.videos.map((video: any) => {
+        if (video.fileKey === fileKey) {
+          found = true;
+          return { ...video, approvalStatus: 'approved', rejectionReason: undefined };
+        }
+        return video;
+      });
+      if (found) {
+        await this.propertyRepository.updateProperty(propertyId, { videos: updatedVideos });
+      }
+    }
+
+    if (!found) {
+      throw new BadRequestException(`Media with fileKey "${fileKey}" not found in this property`);
+    }
+
+    return {
+      success: true,
+      message: 'Media approved successfully',
+      fileKey,
+      approvalStatus: 'approved',
+    };
+  }
+
+  async rejectMedia(propertyId: string, fileKey: string, reason: string, adminId: string) {
+    const property = await this.ensurePropertyExists(propertyId);
+
+    let found = false;
+
+    if (property.photos && Array.isArray(property.photos)) {
+      const updatedPhotos = property.photos.map((photo: any) => {
+        if (photo.fileKey === fileKey) {
+          found = true;
+          return { ...photo, approvalStatus: 'rejected', rejectionReason: reason };
+        }
+        return photo;
+      });
+      if (found) {
+        await this.propertyRepository.updateProperty(propertyId, { photos: updatedPhotos });
+      }
+    }
+
+    if (!found && property.videos && Array.isArray(property.videos)) {
+      const updatedVideos = property.videos.map((video: any) => {
+        if (video.fileKey === fileKey) {
+          found = true;
+          return { ...video, approvalStatus: 'rejected', rejectionReason: reason };
+        }
+        return video;
+      });
+      if (found) {
+        await this.propertyRepository.updateProperty(propertyId, { videos: updatedVideos });
+      }
+    }
+
+    if (!found) {
+      throw new BadRequestException(`Media with fileKey "${fileKey}" not found in this property`);
+    }
+
+    return {
+      success: true,
+      message: 'Media rejected successfully',
+      fileKey,
+      approvalStatus: 'rejected',
+      rejectionReason: reason,
+    };
+  }
+
+  async bulkApproveMedia(propertyId: string, fileKeys: string[], adminId: string) {
+    const property = await this.ensurePropertyExists(propertyId);
+    const fileKeySet = new Set(fileKeys);
+
+    const updateData: any = {};
+
+    if (property.photos && Array.isArray(property.photos)) {
+      updateData.photos = property.photos.map((photo: any) => {
+        if (fileKeySet.has(photo.fileKey)) {
+          return { ...photo, approvalStatus: 'approved', rejectionReason: undefined };
+        }
+        return photo;
+      });
+    }
+
+    if (property.videos && Array.isArray(property.videos)) {
+      updateData.videos = property.videos.map((video: any) => {
+        if (fileKeySet.has(video.fileKey)) {
+          return { ...video, approvalStatus: 'approved', rejectionReason: undefined };
+        }
+        return video;
+      });
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await this.propertyRepository.updateProperty(propertyId, updateData);
+    }
+
+    return {
+      success: true,
+      message: `${fileKeys.length} media item(s) approved successfully`,
+      approvedCount: fileKeys.length,
+    };
+  }
+
   async updatePropertyDetails(
     propertyId: string,
     dto: AdminUpdatePropertyDto,

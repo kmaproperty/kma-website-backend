@@ -2329,14 +2329,16 @@ export class PropertyService {
         fileKey: p.fileKey,
         view: p.view,
         isCoverImage: p.isCoverImage || false,
+        approvalStatus: 'pending' as const,
       })),
     };
 
     if (dto.videos !== undefined) {
-      updateData.videos = dto.videos && dto.videos.length > 0 
+      updateData.videos = dto.videos && dto.videos.length > 0
         ? dto.videos.map(v => ({
           fileKey: v.fileKey,
           format: v.format,
+          approvalStatus: 'pending' as const,
         }))
         : null;
     }

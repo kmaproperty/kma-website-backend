@@ -126,6 +126,10 @@ import {
   AdminUpdateRoomDto,
   AdminDashboardStatsResponseDto,
   AdminDashboardChartsResponseDto,
+  AdminApproveMediaDto,
+  AdminRejectMediaDto,
+  AdminBulkMediaApprovalDto,
+  AdminMediaApprovalResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../user/auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
@@ -365,6 +369,69 @@ export class AdminController {
       throw new UnauthorizedException('Admin context missing');
     }
     return this.adminService.deleteProperty(propertyId, req.admin.id);
+  }
+
+  // Media approval management
+  @Post('properties/:id/media/approve')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Approve a single property media item (photo/video)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Media approved successfully',
+    type: AdminMediaApprovalResponseDto,
+  })
+  async approveMedia(
+    @Param('id') propertyId: string,
+    @Body() dto: AdminApproveMediaDto,
+    @Req() req: Request,
+  ) {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.approveMedia(propertyId, dto.fileKey, req.admin.id);
+  }
+
+  @Post('properties/:id/media/reject')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Reject a single property media item (photo/video) with reason' })
+  @ApiResponse({
+    status: 200,
+    description: 'Media rejected successfully',
+    type: AdminMediaApprovalResponseDto,
+  })
+  async rejectMedia(
+    @Param('id') propertyId: string,
+    @Body() dto: AdminRejectMediaDto,
+    @Req() req: Request,
+  ) {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.rejectMedia(propertyId, dto.fileKey, dto.reason, req.admin.id);
+  }
+
+  @Post('properties/:id/media/bulk-approve')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.PROPERTY_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Approve multiple media items at once' })
+  @ApiResponse({
+    status: 200,
+    description: 'Media items approved successfully',
+  })
+  async bulkApproveMedia(
+    @Param('id') propertyId: string,
+    @Body() dto: AdminBulkMediaApprovalDto,
+    @Req() req: Request,
+  ) {
+    if (!req.admin) {
+      throw new UnauthorizedException('Admin context missing');
+    }
+    return this.adminService.bulkApproveMedia(propertyId, dto.fileKeys, req.admin.id);
   }
 
   // City management

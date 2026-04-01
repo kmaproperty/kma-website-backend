@@ -723,11 +723,11 @@ export class Property extends BaseEntity {
   // Step 4 fields - Photos and Videos
   // Property photos with metadata (stored as JSONB)
   @Column({ type: 'jsonb', nullable: true })
-  photos: { fileKey: string; view: string; isCoverImage?: boolean }[] | null;
+  photos: { fileKey: string; view: string; isCoverImage?: boolean; approvalStatus?: 'pending' | 'approved' | 'rejected'; rejectionReason?: string }[] | null;
 
   // Property videos with metadata (stored as JSONB)
   @Column({ type: 'jsonb', nullable: true })
-  videos: { fileKey: string; format: string }[] | null;
+  videos: { fileKey: string; format: string; approvalStatus?: 'pending' | 'approved' | 'rejected'; rejectionReason?: string }[] | null;
 
   @Column({ type: 'text', nullable: true })
   adminReviewComment: string | null;
