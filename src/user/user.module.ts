@@ -59,6 +59,7 @@ import { TeamMemberRepository } from '../admin/repositories/team-member.reposito
 import { RegionalOfficeRepository } from '../admin/repositories/regional-office.repository';
 import { HelpCenterFaqRepository } from '../admin/repositories/help-center-faq.repository';
 import { MetaWhatsappService } from '../common/whatsapp/meta-whatsapp.service';
+import { TwilioSmsService } from '../common/sms/twilio-sms.service';
 import { S3Service } from '../common/aws/s3.service';
 
 const entities = [
@@ -143,6 +144,7 @@ const repositories = [
     AuthMiddleware,
     TokenVerificationMiddleware,
     MetaWhatsappService,
+    TwilioSmsService,
     S3Service,
     ...repositories,
   ],

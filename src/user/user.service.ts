@@ -185,6 +185,7 @@ import { RegionalOfficeRepository } from '../admin/repositories/regional-office.
 import { HelpCenterFaqRepository } from '../admin/repositories/help-center-faq.repository';
 import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
 import { MetaWhatsappService } from '../common/whatsapp/meta-whatsapp.service';
+import { TwilioSmsService } from '../common/sms/twilio-sms.service';
 
 @Injectable()
 export class UserService {
@@ -224,6 +225,7 @@ export class UserService {
     private readonly seenPropertyRepository: SeenPropertyRepository,
     private readonly contactedPropertyRepository: ContactedPropertyRepository,
     private readonly metaWhatsappService: MetaWhatsappService,
+    private readonly twilioSmsService: TwilioSmsService,
     private readonly s3Service: S3Service,
     private readonly teamMemberRepository: TeamMemberRepository,
     private readonly regionalOfficeRepository: RegionalOfficeRepository,
@@ -456,8 +458,11 @@ export class UserService {
       attempts: 0,
     });
 
-    // Send OTP via WhatsApp (Meta Cloud API)
-    await this.metaWhatsappService.sendOtp(phone, otpCode, 10);
+    // Send OTP via WhatsApp (Meta Cloud API) and SMS (Twilio) as fallback
+    await Promise.all([
+      this.metaWhatsappService.sendOtp(phone, otpCode, 10),
+      this.twilioSmsService.sendOtp(phone, otpCode, 10),
+    ]);
 
     // In non-production environments, also log the OTP for easier debugging
     if (process.env.NODE_ENV !== 'production') {
