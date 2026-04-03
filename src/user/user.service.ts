@@ -735,7 +735,7 @@ export class UserService {
         message: isNewUser
           ? USER_MESSAGES.OTP.VALIDATED_NEW_USER(user.role)
           : USER_MESSAGES.OTP.VALIDATED,
-        requiredOtherDetails: isNewUser,
+        requiredOtherDetails: isNewUser || !user.name,
         userId: user.id,
         accessToken,
         refreshToken,
