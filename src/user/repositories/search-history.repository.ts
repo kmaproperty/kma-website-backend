@@ -16,38 +16,24 @@ export class SearchHistoryRepository {
   }
 
   /**
-   * Deduplicated insert — uses raw SQL with a subquery to atomically check
-   * for duplicates within the last 5 minutes before inserting.
-   * This prevents race conditions from parallel requests.
+   * Check if a similar search was recorded recently (within 5 minutes).
+   * Uses a SELECT FOR UPDATE SKIP LOCKED to handle race conditions.
    */
-  private async insertIfNotDuplicate(
-    data: Partial<SearchHistory>,
-  ): Promise<SearchHistory> {
-    const ownerCol = data.userId ? 'user_id' : 'session_id';
-    const ownerVal = data.userId || data.sessionId;
-
+  private async hasDuplicateRecent(
+    ownerCol: 'user_id' | 'session_id',
+    ownerVal: string,
+    searchQuery: string,
+  ): Promise<boolean> {
     const result = await this.repository.query(
-      `INSERT INTO search_history (search_query, city, location, price_range, filters, ${ownerCol}, ${data.userId ? 'session_id' : 'user_id'})
-       SELECT $1, $2, $3, $4, $5::jsonb, $6, NULL
-       WHERE NOT EXISTS (
-         SELECT 1 FROM search_history
-         WHERE ${ownerCol} = $6
-           AND search_query = $1
-           AND deleted_at IS NULL
-           AND created_at > NOW() - INTERVAL '5 minutes'
-       )
-       RETURNING *`,
-      [
-        data.searchQuery || '',
-        data.city || null,
-        data.location || null,
-        data.priceRange || null,
-        data.filters ? JSON.stringify(data.filters) : null,
-        ownerVal,
-      ],
+      `SELECT 1 FROM search_history
+       WHERE ${ownerCol} = $1
+         AND search_query = $2
+         AND deleted_at IS NULL
+         AND created_at > NOW() - INTERVAL '5 minutes'
+       LIMIT 1`,
+      [ownerVal, searchQuery],
     );
-
-    return result[0]?.[0] ?? ({} as SearchHistory);
+    return result.length > 0;
   }
 
   /**
@@ -61,7 +47,9 @@ export class SearchHistoryRepository {
     priceRange?: string,
     filters?: Record<string, any>,
   ): Promise<SearchHistory> {
-    return await this.insertIfNotDuplicate({
+    const isDupe = await this.hasDuplicateRecent('session_id', sessionId, searchQuery);
+    if (isDupe) return {} as SearchHistory;
+    return await this.create({
       sessionId,
       userId: null,
       searchQuery,
@@ -83,7 +71,9 @@ export class SearchHistoryRepository {
     priceRange?: string,
     filters?: Record<string, any>,
   ): Promise<SearchHistory> {
-    return await this.insertIfNotDuplicate({
+    const isDupe = await this.hasDuplicateRecent('user_id', userId, searchQuery);
+    if (isDupe) return {} as SearchHistory;
+    return await this.create({
       userId,
       sessionId: null,
       searchQuery,
