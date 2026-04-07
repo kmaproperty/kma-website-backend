@@ -16,33 +16,38 @@ export class SearchHistoryRepository {
   }
 
   /**
-   * Check if a similar search was recorded recently (within 5 minutes)
-   * to avoid duplicate entries from page refreshes, pagination, filter changes etc.
+   * Deduplicated insert — uses raw SQL with a subquery to atomically check
+   * for duplicates within the last 5 minutes before inserting.
+   * This prevents race conditions from parallel requests.
    */
-  private async hasDuplicateRecent(
-    where: Record<string, any>,
-    searchQuery: string,
-    city?: string,
-  ): Promise<boolean> {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const qb = this.repository
-      .createQueryBuilder('sh')
-      .where('sh.deleted_at IS NULL')
-      .andWhere('sh.created_at > :since', { since: fiveMinutesAgo })
-      .andWhere('sh.search_query = :searchQuery', { searchQuery });
+  private async insertIfNotDuplicate(
+    data: Partial<SearchHistory>,
+  ): Promise<SearchHistory> {
+    const ownerCol = data.userId ? 'user_id' : 'session_id';
+    const ownerVal = data.userId || data.sessionId;
 
-    if (where.sessionId) {
-      qb.andWhere('sh.session_id = :sessionId', { sessionId: where.sessionId });
-    }
-    if (where.userId) {
-      qb.andWhere('sh.user_id = :userId', { userId: where.userId });
-    }
-    if (city) {
-      qb.andWhere('sh.city = :city', { city });
-    }
+    const result = await this.repository.query(
+      `INSERT INTO search_history (search_query, city, location, price_range, filters, ${ownerCol}, ${data.userId ? 'session_id' : 'user_id'})
+       SELECT $1, $2, $3, $4, $5::jsonb, $6, NULL
+       WHERE NOT EXISTS (
+         SELECT 1 FROM search_history
+         WHERE ${ownerCol} = $6
+           AND search_query = $1
+           AND deleted_at IS NULL
+           AND created_at > NOW() - INTERVAL '5 minutes'
+       )
+       RETURNING *`,
+      [
+        data.searchQuery || '',
+        data.city || null,
+        data.location || null,
+        data.priceRange || null,
+        data.filters ? JSON.stringify(data.filters) : null,
+        ownerVal,
+      ],
+    );
 
-    const count = await qb.getCount();
-    return count > 0;
+    return result[0]?.[0] ?? ({} as SearchHistory);
   }
 
   /**
@@ -56,12 +61,7 @@ export class SearchHistoryRepository {
     priceRange?: string,
     filters?: Record<string, any>,
   ): Promise<SearchHistory> {
-    // Skip if same search was recorded within last 5 minutes
-    const isDupe = await this.hasDuplicateRecent({ sessionId }, searchQuery, city);
-    if (isDupe) {
-      return {} as SearchHistory;
-    }
-    return await this.create({
+    return await this.insertIfNotDuplicate({
       sessionId,
       userId: null,
       searchQuery,
@@ -83,12 +83,7 @@ export class SearchHistoryRepository {
     priceRange?: string,
     filters?: Record<string, any>,
   ): Promise<SearchHistory> {
-    // Skip if same search was recorded within last 5 minutes
-    const isDupe = await this.hasDuplicateRecent({ userId }, searchQuery, city);
-    if (isDupe) {
-      return {} as SearchHistory;
-    }
-    return await this.create({
+    return await this.insertIfNotDuplicate({
       userId,
       sessionId: null,
       searchQuery,
