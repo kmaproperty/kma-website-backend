@@ -16,6 +16,36 @@ export class SearchHistoryRepository {
   }
 
   /**
+   * Check if a similar search was recorded recently (within 5 minutes)
+   * to avoid duplicate entries from page refreshes, pagination, filter changes etc.
+   */
+  private async hasDuplicateRecent(
+    where: Record<string, any>,
+    searchQuery: string,
+    city?: string,
+  ): Promise<boolean> {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const qb = this.repository
+      .createQueryBuilder('sh')
+      .where('sh.deleted_at IS NULL')
+      .andWhere('sh.created_at > :since', { since: fiveMinutesAgo })
+      .andWhere('sh.search_query = :searchQuery', { searchQuery });
+
+    if (where.sessionId) {
+      qb.andWhere('sh.session_id = :sessionId', { sessionId: where.sessionId });
+    }
+    if (where.userId) {
+      qb.andWhere('sh.user_id = :userId', { userId: where.userId });
+    }
+    if (city) {
+      qb.andWhere('sh.city = :city', { city });
+    }
+
+    const count = await qb.getCount();
+    return count > 0;
+  }
+
+  /**
    * Record a search for anonymous user (by sessionId)
    */
   async recordForSession(
@@ -26,6 +56,11 @@ export class SearchHistoryRepository {
     priceRange?: string,
     filters?: Record<string, any>,
   ): Promise<SearchHistory> {
+    // Skip if same search was recorded within last 5 minutes
+    const isDupe = await this.hasDuplicateRecent({ sessionId }, searchQuery, city);
+    if (isDupe) {
+      return {} as SearchHistory;
+    }
     return await this.create({
       sessionId,
       userId: null,
@@ -48,6 +83,11 @@ export class SearchHistoryRepository {
     priceRange?: string,
     filters?: Record<string, any>,
   ): Promise<SearchHistory> {
+    // Skip if same search was recorded within last 5 minutes
+    const isDupe = await this.hasDuplicateRecent({ userId }, searchQuery, city);
+    if (isDupe) {
+      return {} as SearchHistory;
+    }
     return await this.create({
       userId,
       sessionId: null,
