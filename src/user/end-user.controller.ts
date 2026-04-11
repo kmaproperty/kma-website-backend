@@ -145,6 +145,20 @@ export class EndUserController {
     return await this.userService.verifyEndUserOtp(verifyOtpDto, sessionId);
   }
 
+  @Post('cross-app-login')
+  @Public()
+  @ApiOperation({
+    summary: 'Cross-App Login',
+    description: 'Owner/CP navigating from seller to buyer app. Finds or creates an END_USER account for the same phone and returns END_USER tokens.',
+  })
+  @ApiResponse({ status: 200, description: 'END_USER tokens returned' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired seller token' })
+  async crossAppLogin(
+    @Body() body: { accessToken: string },
+  ) {
+    return await this.userService.crossAppLogin(body.accessToken);
+  }
+
   @Post('login')
   @Public()
   @ApiOperation({

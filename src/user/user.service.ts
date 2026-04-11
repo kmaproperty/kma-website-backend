@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { S3Service } from '../common/aws/s3.service';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource } from 'typeorm';
@@ -5862,6 +5862,74 @@ export class UserService {
         rating: Number(review.rating),
         review: review.review ?? null,
         createdAt: review.createdAt,
+      },
+    };
+  }
+
+  /**
+   * Cross-App Login: Owner/CP → auto find/create END_USER account and return END_USER tokens.
+   * Used when an Owner/CP navigates from seller app to buyer app.
+   */
+  async crossAppLogin(sellerAccessToken: string): Promise<{
+    success: boolean;
+    accessToken: string;
+    refreshToken: string;
+    user: { id: string; name: string; phone: string; role: string };
+  }> {
+    // Verify the seller token
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(sellerAccessToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    if (!payload?.phone || !['OWNER', 'CHANNEL_PARTNER'].includes(payload.role)) {
+      throw new BadRequestException('Token must belong to an Owner or Channel Partner');
+    }
+
+    // Find existing END_USER for this phone
+    let endUser = await this.userRepository.findByPhoneAndRole(
+      payload.phone,
+      UserRole.END_USER,
+    );
+
+    if (!endUser) {
+      // Get seller user to copy name
+      const sellerUser = await this.userRepository.findByPhoneAndRole(
+        payload.phone,
+        payload.role as UserRole,
+      );
+
+      // Auto-create END_USER account
+      const userData: Partial<User> = {
+        phone: payload.phone,
+        role: UserRole.END_USER,
+        name: sellerUser?.name || 'User',
+        email: null,
+        isActive: true,
+        phoneVerified: true,
+        isBlocked: false,
+        intent: null,
+      };
+
+      endUser = await this.userRepository.create(userData);
+      this.logger.log(`Auto-created END_USER account for phone ${payload.phone} (cross-app from ${payload.role})`);
+    }
+
+    // Generate END_USER tokens
+    const { accessToken, refreshToken } = this.generateTokens(endUser);
+    await this.updateUserTokens(endUser.id, accessToken, refreshToken);
+
+    return {
+      success: true,
+      accessToken,
+      refreshToken,
+      user: {
+        id: endUser.id,
+        name: endUser.name || '',
+        phone: endUser.phone,
+        role: endUser.role,
       },
     };
   }
