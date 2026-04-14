@@ -6038,12 +6038,17 @@ export class UserService {
     const prefixLike = `${q}%`;
     const perTypeLimit = Math.min(20, Math.max(3, limit));
 
+    // Only return entries that have at least one active (non-deleted) property
     // Cities
     const cityRows = await this.dataSource.query(
-      `SELECT id, name, state
-       FROM master_cities
-       WHERE deleted_at IS NULL AND name ILIKE $1
-       ORDER BY (name ILIKE $2) DESC, name ASC
+      `SELECT c.id, c.name, c.state
+       FROM master_cities c
+       WHERE c.deleted_at IS NULL AND c.name ILIKE $1
+         AND EXISTS (
+           SELECT 1 FROM properties p
+           WHERE p."cityId" = c.id AND p."isDeleted" = false AND p.status = 'active'
+         )
+       ORDER BY (c.name ILIKE $2) DESC, c.name ASC
        LIMIT $3`,
       [like, prefixLike, perTypeLimit],
     );
@@ -6054,6 +6059,10 @@ export class UserService {
        FROM master_localities l
        LEFT JOIN master_cities c ON c.id = l."cityId" AND c.deleted_at IS NULL
        WHERE l.deleted_at IS NULL AND l.name ILIKE $1
+         AND EXISTS (
+           SELECT 1 FROM properties p
+           WHERE p."localityId" = l.id AND p."isDeleted" = false AND p.status = 'active'
+         )
        ORDER BY (l.name ILIKE $2) DESC, l.name ASC
        LIMIT $3`,
       [like, prefixLike, perTypeLimit],
@@ -6065,6 +6074,10 @@ export class UserService {
        FROM master_societies s
        LEFT JOIN master_cities c ON c.id = s."cityId" AND c.deleted_at IS NULL
        WHERE s.deleted_at IS NULL AND s.name ILIKE $1
+         AND EXISTS (
+           SELECT 1 FROM properties p
+           WHERE p."societyId" = s.id AND p."isDeleted" = false AND p.status = 'active'
+         )
        ORDER BY (s.name ILIKE $2) DESC, s.name ASC
        LIMIT $3`,
       [like, prefixLike, perTypeLimit],
