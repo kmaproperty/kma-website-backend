@@ -154,9 +154,16 @@ export class EndUserController {
   async searchSuggest(
     @Query('q') q: string,
     @Query('limit') limit?: string,
+    @Query('listingTypeId') listingTypeId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('propertyTypeIds') propertyTypeIds?: string,
   ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 8;
-    return await this.userService.searchSuggest(q || '', parsedLimit);
+    return await this.userService.searchSuggest(q || '', parsedLimit, {
+      listingTypeId,
+      categoryId,
+      propertyTypeIds,
+    });
   }
 
   @Post('cross-app-login')

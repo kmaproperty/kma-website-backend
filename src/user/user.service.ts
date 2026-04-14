@@ -6024,6 +6024,11 @@ export class UserService {
   async searchSuggest(
     query: string,
     limit: number = 8,
+    filters: {
+      listingTypeId?: string;
+      categoryId?: string;
+      propertyTypeIds?: string;
+    } = {},
   ): Promise<{
     success: boolean;
     cities: Array<{ id: string; name: string; state: string | null }>;
@@ -6038,7 +6043,28 @@ export class UserService {
     const prefixLike = `${q}%`;
     const perTypeLimit = Math.min(20, Math.max(3, limit));
 
-    // Only return entries that have at least one active (non-deleted) property
+    // Build optional property-side filter clause
+    const propFilters: string[] = [];
+    const extraParams: any[] = [];
+    let pIdx = 4; // base params are $1, $2, $3
+    if (filters.listingTypeId) {
+      propFilters.push(`p."listingTypeId" = $${pIdx++}`);
+      extraParams.push(filters.listingTypeId);
+    }
+    if (filters.categoryId) {
+      propFilters.push(`p."categoryId" = $${pIdx++}`);
+      extraParams.push(filters.categoryId);
+    }
+    if (filters.propertyTypeIds) {
+      const ids = filters.propertyTypeIds.split(',').map((s) => s.trim()).filter(Boolean);
+      if (ids.length > 0) {
+        propFilters.push(`p."propertyTypeId" = ANY($${pIdx++}::uuid[])`);
+        extraParams.push(ids);
+      }
+    }
+    const propFilterClause = propFilters.length ? ` AND ${propFilters.join(' AND ')}` : '';
+
+    // Only return entries that have at least one active (non-deleted) property matching filters
     // Cities
     const cityRows = await this.dataSource.query(
       `SELECT c.id, c.name, c.state
@@ -6046,11 +6072,11 @@ export class UserService {
        WHERE c.deleted_at IS NULL AND c.name ILIKE $1
          AND EXISTS (
            SELECT 1 FROM properties p
-           WHERE p."cityId" = c.id AND p.is_deleted = false AND p.status = 'active'
+           WHERE p."cityId" = c.id AND p.is_deleted = false AND p.status = 'active'${propFilterClause}
          )
        ORDER BY (c.name ILIKE $2) DESC, c.name ASC
        LIMIT $3`,
-      [like, prefixLike, perTypeLimit],
+      [like, prefixLike, perTypeLimit, ...extraParams],
     );
 
     // Localities with city name
@@ -6061,11 +6087,11 @@ export class UserService {
        WHERE l.deleted_at IS NULL AND l.name ILIKE $1
          AND EXISTS (
            SELECT 1 FROM properties p
-           WHERE p."localityId" = l.id AND p.is_deleted = false AND p.status = 'active'
+           WHERE p."localityId" = l.id AND p.is_deleted = false AND p.status = 'active'${propFilterClause}
          )
        ORDER BY (l.name ILIKE $2) DESC, l.name ASC
        LIMIT $3`,
-      [like, prefixLike, perTypeLimit],
+      [like, prefixLike, perTypeLimit, ...extraParams],
     );
 
     // Societies with city (society table has localityName as string, not localityId)
@@ -6076,11 +6102,11 @@ export class UserService {
        WHERE s.deleted_at IS NULL AND s.name ILIKE $1
          AND EXISTS (
            SELECT 1 FROM properties p
-           WHERE p."societyId" = s.id AND p.is_deleted = false AND p.status = 'active'
+           WHERE p."societyId" = s.id AND p.is_deleted = false AND p.status = 'active'${propFilterClause}
          )
        ORDER BY (s.name ILIKE $2) DESC, s.name ASC
        LIMIT $3`,
-      [like, prefixLike, perTypeLimit],
+      [like, prefixLike, perTypeLimit, ...extraParams],
     );
 
     return {
