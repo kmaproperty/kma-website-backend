@@ -2754,9 +2754,12 @@ export class UserService {
       status: PropertyStatus.ACTIVE,
     });
 
+    const ratingsMap = await this.getRatingsMapForProperties(result.items.map((p) => p.id));
+
     // Map properties to response DTO (reuse the same mapping logic as top properties)
     const properties: EndUserPropertyListItemDto[] = result.items.map(
       (property) => {
+        const rating = ratingsMap.get(property.id);
         // Filter to only approved media, then get primary image and all images
         const approvedPhotos = this.filterApprovedPhotos(property.photos);
         const approvedVideos = this.filterApprovedVideos(property.videos);
@@ -2862,7 +2865,9 @@ export class UserService {
                 role: property.user.role,
               }
             : undefined,
-        };
+          averageRating: rating?.averageRating && rating.averageRating > 0 ? rating.averageRating : null,
+          totalReviews: rating?.totalReviews ?? 0,
+        } as EndUserPropertyListItemDto;
       },
     );
 
@@ -5125,7 +5130,10 @@ export class UserService {
   /**
    * Map a property entity to the standard list item DTO
    */
-  private mapPropertyToListItem(property: any): EndUserPropertyListItemDto {
+  private mapPropertyToListItem(
+    property: any,
+    rating?: { averageRating: number | null; totalReviews: number },
+  ): EndUserPropertyListItemDto {
     // Filter to only approved media, then get primary image and all images
     const approvedPhotos = this.filterApprovedPhotos(property.photos);
     const approvedVideos = this.filterApprovedVideos(property.videos);
@@ -5224,11 +5232,32 @@ export class UserService {
       owner: property.user
         ? {
             name: property.user.name,
-            profileImage: property.user.profileImage,
+            profileImage: property.user.profileImage
+              ? this.s3Service.generateFileUrl(property.user.profileImage)
+              : null,
             role: property.user.role,
           }
         : null,
-    };
+      averageRating: rating?.averageRating && rating.averageRating > 0 ? rating.averageRating : null,
+      totalReviews: rating?.totalReviews ?? 0,
+    } as EndUserPropertyListItemDto;
+  }
+
+  /**
+   * Get ratings map for a list of property IDs
+   */
+  private async getRatingsMapForProperties(
+    propertyIds: string[],
+  ): Promise<Map<string, { averageRating: number | null; totalReviews: number }>> {
+    const map = new Map<string, { averageRating: number | null; totalReviews: number }>();
+    for (const id of propertyIds) {
+      const stats = await this.propertyRatingReviewRepository.getRatingStatistics(id);
+      map.set(id, {
+        averageRating: stats.averageOverallRating,
+        totalReviews: stats.totalReviews,
+      });
+    }
+    return map;
   }
 
   /**
@@ -5251,9 +5280,12 @@ export class UserService {
       result = { items: [], total: 0 };
     }
 
-    const properties = result.items
-      .filter((item) => item.property)
-      .map((item) => this.mapPropertyToListItem(item.property));
+    const validItems = result.items.filter((item) => item.property);
+    const propertyIds = validItems.map((item) => item.property.id);
+    const ratingsMap = await this.getRatingsMapForProperties(propertyIds);
+    const properties = validItems.map((item) =>
+      this.mapPropertyToListItem(item.property, ratingsMap.get(item.property.id)),
+    );
 
     return {
       success: true,
@@ -5326,9 +5358,12 @@ export class UserService {
       result = { items: [], total: 0 };
     }
 
-    const properties = result.items
-      .filter((item) => item.property)
-      .map((item) => this.mapPropertyToListItem(item.property));
+    const validItems = result.items.filter((item) => item.property);
+    const propertyIds = validItems.map((item) => item.property.id);
+    const ratingsMap = await this.getRatingsMapForProperties(propertyIds);
+    const properties = validItems.map((item) =>
+      this.mapPropertyToListItem(item.property, ratingsMap.get(item.property.id)),
+    );
 
     return {
       success: true,
