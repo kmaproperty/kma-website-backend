@@ -2853,6 +2853,15 @@ export class UserService {
           society: property.society?.name || null,
           locality: property.locality?.name || null,
           units: units.length > 0 ? units : undefined,
+          owner: property.user
+            ? {
+                name: property.user.name || null,
+                profileImage: property.user.profileImage
+                  ? this.s3Service.generateFileUrl(property.user.profileImage)
+                  : null,
+                role: property.user.role,
+              }
+            : undefined,
         };
       },
     );
