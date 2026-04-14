@@ -3971,11 +3971,14 @@ export class UserService {
       propertyCountMax,
     });
 
-    // Calculate property counts and experience for each user (for response)
+    // Calculate property counts, experience, and ratings for each user (for response)
     const channelPartnersWithDetails = await Promise.all(
       users.map(async (user) => {
-        const propertyCount = await this.propertyRepository.countByUserId(user.id);
-        
+        const [propertyCount, ratingStats] = await Promise.all([
+          this.propertyRepository.countByUserId(user.id),
+          this.channelPartnerReviewRepository.getAverageRating(user.id),
+        ]);
+
         // Calculate experience years from businessSince
         let experienceYears: number | null = null;
         if (user.businessSince) {
@@ -3991,6 +3994,7 @@ export class UserService {
           user,
           propertyCount,
           experienceYears,
+          ratingStats,
         };
       })
     );
@@ -4000,11 +4004,15 @@ export class UserService {
       id: item.user.id,
       name: item.user.name,
       firm_name: item.user.firmName,
-      profile_image: item.user.profileImage,
+      profile_image: item.user.profileImage
+        ? this.s3Service.generateFileUrl(item.user.profileImage)
+        : null,
       cities: item.user.cities,
       experience_years: item.experienceYears,
       property_count: item.propertyCount,
-    }));
+      average_rating: item.ratingStats.averageRating > 0 ? item.ratingStats.averageRating : null,
+      total_reviews: item.ratingStats.totalReviews,
+    } as ChannelPartnerListItemDto));
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -4175,13 +4183,18 @@ export class UserService {
       areas_of_operation: areasOfOperationCount,
     };
 
+    // Fetch channel partner rating
+    const ratingStats = await this.channelPartnerReviewRepository.getAverageRating(user.id);
+
     return {
       success: true,
       id: user.id,
       name: user.name,
       firm_name: user.firmName,
       channel_partner_code: user.channelPartnerCode,
-      profile_image: user.profileImage,
+      profile_image: user.profileImage
+        ? this.s3Service.generateFileUrl(user.profileImage)
+        : null,
       created_at: user.createdAt,
       phone: user.phone,
       email: user.email,
@@ -4191,7 +4204,9 @@ export class UserService {
       statistics,
       areas_of_operation_list: areasOfOperationList,
       active_properties: mappedActiveProperties,
-    };
+      average_rating: ratingStats.averageRating > 0 ? ratingStats.averageRating : null,
+      total_reviews: ratingStats.totalReviews,
+    } as EndUserChannelPartnerDetailsResponseDto;
   }
 
   /**
