@@ -5950,7 +5950,7 @@ export class UserService {
     const cityRows = await this.dataSource.query(
       `SELECT id, name, state
        FROM master_cities
-       WHERE "deletedAt" IS NULL AND name ILIKE $1
+       WHERE deleted_at IS NULL AND name ILIKE $1
        ORDER BY (name ILIKE $2) DESC, name ASC
        LIMIT $3`,
       [like, prefixLike, perTypeLimit],
@@ -5960,8 +5960,8 @@ export class UserService {
     const localityRows = await this.dataSource.query(
       `SELECT l.id, l.name, l."cityId", c.name AS "cityName"
        FROM master_localities l
-       LEFT JOIN master_cities c ON c.id = l."cityId" AND c."deletedAt" IS NULL
-       WHERE l."deletedAt" IS NULL AND l.name ILIKE $1
+       LEFT JOIN master_cities c ON c.id = l."cityId" AND c.deleted_at IS NULL
+       WHERE l.deleted_at IS NULL AND l.name ILIKE $1
        ORDER BY (l.name ILIKE $2) DESC, l.name ASC
        LIMIT $3`,
       [like, prefixLike, perTypeLimit],
@@ -5971,9 +5971,9 @@ export class UserService {
     const societyRows = await this.dataSource.query(
       `SELECT s.id, s.name, s."cityId", c.name AS "cityName", s."localityId", l.name AS "localityName"
        FROM master_societies s
-       LEFT JOIN master_cities c ON c.id = s."cityId" AND c."deletedAt" IS NULL
-       LEFT JOIN master_localities l ON l.id = s."localityId" AND l."deletedAt" IS NULL
-       WHERE s."deletedAt" IS NULL AND s.name ILIKE $1
+       LEFT JOIN master_cities c ON c.id = s."cityId" AND c.deleted_at IS NULL
+       LEFT JOIN master_localities l ON l.id = s."localityId" AND l.deleted_at IS NULL
+       WHERE s.deleted_at IS NULL AND s.name ILIKE $1
        ORDER BY (s.name ILIKE $2) DESC, s.name ASC
        LIMIT $3`,
       [like, prefixLike, perTypeLimit],
