@@ -6046,7 +6046,7 @@ export class UserService {
        WHERE c.deleted_at IS NULL AND c.name ILIKE $1
          AND EXISTS (
            SELECT 1 FROM properties p
-           WHERE p."cityId" = c.id AND p."isDeleted" = false AND p.status = 'active'
+           WHERE p."cityId" = c.id AND p.is_deleted = false AND p.status = 'active'
          )
        ORDER BY (c.name ILIKE $2) DESC, c.name ASC
        LIMIT $3`,
@@ -6061,7 +6061,7 @@ export class UserService {
        WHERE l.deleted_at IS NULL AND l.name ILIKE $1
          AND EXISTS (
            SELECT 1 FROM properties p
-           WHERE p."localityId" = l.id AND p."isDeleted" = false AND p.status = 'active'
+           WHERE p."localityId" = l.id AND p.is_deleted = false AND p.status = 'active'
          )
        ORDER BY (l.name ILIKE $2) DESC, l.name ASC
        LIMIT $3`,
@@ -6076,7 +6076,7 @@ export class UserService {
        WHERE s.deleted_at IS NULL AND s.name ILIKE $1
          AND EXISTS (
            SELECT 1 FROM properties p
-           WHERE p."societyId" = s.id AND p."isDeleted" = false AND p.status = 'active'
+           WHERE p."societyId" = s.id AND p.is_deleted = false AND p.status = 'active'
          )
        ORDER BY (s.name ILIKE $2) DESC, s.name ASC
        LIMIT $3`,
