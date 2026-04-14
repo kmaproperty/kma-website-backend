@@ -145,6 +145,20 @@ export class EndUserController {
     return await this.userService.verifyEndUserOtp(verifyOtpDto, sessionId);
   }
 
+  @Get('search-suggest')
+  @Public()
+  @ApiOperation({
+    summary: 'Unified search suggestions',
+    description: 'Search across cities, localities, and societies for the main search bar. Returns grouped results.',
+  })
+  async searchSuggest(
+    @Query('q') q: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 8;
+    return await this.userService.searchSuggest(q || '', parsedLimit);
+  }
+
   @Post('cross-app-login')
   @Public()
   @ApiOperation({

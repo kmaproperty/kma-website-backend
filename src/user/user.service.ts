@@ -5926,6 +5926,74 @@ export class UserService {
   }
 
   /**
+   * Unified search suggest — matches across cities, localities, societies.
+   * Returns grouped results for main search bar autocomplete.
+   */
+  async searchSuggest(
+    query: string,
+    limit: number = 8,
+  ): Promise<{
+    success: boolean;
+    cities: Array<{ id: string; name: string; state: string | null }>;
+    localities: Array<{ id: string; name: string; cityId: string; cityName: string | null }>;
+    societies: Array<{ id: string; name: string; cityId: string | null; cityName: string | null; localityId: string | null; localityName: string | null }>;
+  }> {
+    const q = (query || '').trim();
+    if (q.length < 1) {
+      return { success: true, cities: [], localities: [], societies: [] };
+    }
+    const like = `%${q}%`;
+    const prefixLike = `${q}%`;
+    const perTypeLimit = Math.min(20, Math.max(3, limit));
+
+    // Cities
+    const cityRows = await this.dataSource.query(
+      `SELECT id, name, state
+       FROM master_cities
+       WHERE "deletedAt" IS NULL AND name ILIKE $1
+       ORDER BY (name ILIKE $2) DESC, name ASC
+       LIMIT $3`,
+      [like, prefixLike, perTypeLimit],
+    );
+
+    // Localities with city name
+    const localityRows = await this.dataSource.query(
+      `SELECT l.id, l.name, l."cityId", c.name AS "cityName"
+       FROM master_localities l
+       LEFT JOIN master_cities c ON c.id = l."cityId" AND c."deletedAt" IS NULL
+       WHERE l."deletedAt" IS NULL AND l.name ILIKE $1
+       ORDER BY (l.name ILIKE $2) DESC, l.name ASC
+       LIMIT $3`,
+      [like, prefixLike, perTypeLimit],
+    );
+
+    // Societies with city + locality
+    const societyRows = await this.dataSource.query(
+      `SELECT s.id, s.name, s."cityId", c.name AS "cityName", s."localityId", l.name AS "localityName"
+       FROM master_societies s
+       LEFT JOIN master_cities c ON c.id = s."cityId" AND c."deletedAt" IS NULL
+       LEFT JOIN master_localities l ON l.id = s."localityId" AND l."deletedAt" IS NULL
+       WHERE s."deletedAt" IS NULL AND s.name ILIKE $1
+       ORDER BY (s.name ILIKE $2) DESC, s.name ASC
+       LIMIT $3`,
+      [like, prefixLike, perTypeLimit],
+    );
+
+    return {
+      success: true,
+      cities: cityRows.map((r: any) => ({ id: r.id, name: r.name, state: r.state ?? null })),
+      localities: localityRows.map((r: any) => ({
+        id: r.id, name: r.name, cityId: r.cityId, cityName: r.cityName ?? null,
+      })),
+      societies: societyRows.map((r: any) => ({
+        id: r.id, name: r.name,
+        cityId: r.cityId ?? null, cityName: r.cityName ?? null,
+        localityId: r.localityId ?? null, localityName: r.localityName ?? null,
+      })),
+    };
+  }
+
+  /**
    * Cross-App Login: Owner/CP → auto find/create END_USER account and return END_USER tokens.
    * Used when an Owner/CP navigates from seller app to buyer app.
    */
