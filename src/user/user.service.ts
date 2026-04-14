@@ -5967,12 +5967,11 @@ export class UserService {
       [like, prefixLike, perTypeLimit],
     );
 
-    // Societies with city + locality
+    // Societies with city (society table has localityName as string, not localityId)
     const societyRows = await this.dataSource.query(
-      `SELECT s.id, s.name, s."cityId", c.name AS "cityName", s."localityId", l.name AS "localityName"
+      `SELECT s.id, s.name, s."cityId", c.name AS "cityName", s."localityName" AS "localityName"
        FROM master_societies s
        LEFT JOIN master_cities c ON c.id = s."cityId" AND c.deleted_at IS NULL
-       LEFT JOIN master_localities l ON l.id = s."localityId" AND l.deleted_at IS NULL
        WHERE s.deleted_at IS NULL AND s.name ILIKE $1
        ORDER BY (s.name ILIKE $2) DESC, s.name ASC
        LIMIT $3`,
@@ -5988,7 +5987,7 @@ export class UserService {
       societies: societyRows.map((r: any) => ({
         id: r.id, name: r.name,
         cityId: r.cityId ?? null, cityName: r.cityName ?? null,
-        localityId: r.localityId ?? null, localityName: r.localityName ?? null,
+        localityId: null, localityName: r.localityName ?? null,
       })),
     };
   }
