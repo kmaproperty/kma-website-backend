@@ -70,6 +70,25 @@ export class FilterFurnishingItemDto {
   code: string;
 }
 
+export class FilterRangeOptionDto {
+  @ApiProperty({ description: 'Display label', example: '₹ 1 Cr' })
+  label: string;
+
+  @ApiProperty({ description: 'Numeric value to send in filter', example: 10000000 })
+  value: number;
+}
+
+export class FilterRangeDto {
+  @ApiProperty({ description: 'Unit label', example: '₹ Crore' })
+  unit: string;
+
+  @ApiProperty({ type: [FilterRangeOptionDto] })
+  min: FilterRangeOptionDto[];
+
+  @ApiProperty({ type: [FilterRangeOptionDto] })
+  max: FilterRangeOptionDto[];
+}
+
 export class ListFiltersQueryDto {
   @ApiPropertyOptional({
     description: 'Optional listing type ID to filter property types (only property types for this listing type are returned)',
@@ -140,4 +159,28 @@ export class ListFiltersResponseDto {
     type: [FilterFurnishingItemDto],
   })
   furnishing: FilterFurnishingItemDto[];
+
+  @ApiProperty({
+    description: 'Budget range options (min/max) for sale listings. Values are in rupees.',
+    type: FilterRangeDto,
+  })
+  budgetSale: FilterRangeDto;
+
+  @ApiProperty({
+    description: 'Budget range options (min/max) for rent listings (monthly rent). Values are in rupees.',
+    type: FilterRangeDto,
+  })
+  budgetRent: FilterRangeDto;
+
+  @ApiProperty({
+    description: 'Size range options for plot/land in Sq.Yd.',
+    type: FilterRangeDto,
+  })
+  sizePlot: FilterRangeDto;
+
+  @ApiProperty({
+    description: 'Size range options for built-up area in Sq.Ft.',
+    type: FilterRangeDto,
+  })
+  sizeBuiltUp: FilterRangeDto;
 }
