@@ -91,28 +91,111 @@ export class PropertyService {
     private readonly zohoService: ZohoService,
   ) {}
 
-  async syncPropertyToCrm(payload: ZohoCrmPayload): Promise<{ success: boolean; syncedAt?: Date; error?: string }> {
-    const websitePropertyId = payload?.property?.website_property_id;
-    if (!websitePropertyId) {
-      throw new BadRequestException('property.website_property_id is required');
+  async syncPropertyToCrm(
+    propertyId: string,
+  ): Promise<{ success: boolean; syncedAt?: Date; error?: string }> {
+    if (!propertyId) {
+      throw new BadRequestException('propertyId is required');
     }
 
-    const property = await this.propertyRepository.findById(websitePropertyId);
+    const property = await this.propertyRepository.findByIdWithRelations(propertyId);
     if (!property) {
-      throw new BadRequestException(`Property ${websitePropertyId} not found`);
+      throw new BadRequestException(`Property ${propertyId} not found`);
     }
 
+    const user = property.user ?? (await this.userRepository.findById(property.userId));
+    if (!user) {
+      throw new BadRequestException(`Owner user for property ${propertyId} not found`);
+    }
+
+    const payload = this.buildZohoPayload(property, user);
     const result = await this.zohoService.forwardToFlow(payload);
     if (!result.success) {
       return { success: false, error: result.error || `Zoho returned status ${result.status}` };
     }
 
     const syncedAt = new Date();
-    await this.propertyRepository.updateProperty(websitePropertyId, {
+    await this.propertyRepository.updateProperty(propertyId, {
       syncWithCrm: true,
       syncedAt,
     });
     return { success: true, syncedAt };
+  }
+
+  private buildZohoPayload(property: any, user: any): ZohoCrmPayload {
+    const NA = 'NA';
+    const asInt = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const asStr = (v: unknown): string => (typeof v === 'string' && v.length > 0 ? v : NA);
+
+    const availableFor = (property.category?.name || '').toUpperCase() || NA;
+    const amount = asInt(property.price ?? property.plotPrice ?? property.monthlyRent);
+    const propertyName =
+      property.society?.name ||
+      property.propertyType?.name ||
+      `Property ${property.id.slice(0, 8)}`;
+    const sector = property.locality?.sector || property.locality?.name || NA;
+
+    return {
+      customer: {
+        name: asStr(user.name),
+        email: asStr(user.email),
+        phone: asStr(user.phone),
+        website_user_id: user.id,
+      },
+      property: {
+        available_for: availableFor,
+        property_type: asStr(property.propertyType?.name),
+        property_name: propertyName,
+        property_sub_type: NA,
+        zone: NA,
+        sector,
+        bhk: asStr(property.bhkType?.name),
+        bhk_type: asStr(property.bhkType?.name),
+        property_area_in: 'sq_ft',
+        property_area: asInt(property.builtUpAreaMetadata?.sqFt),
+        carpet_area_in: 'sq_ft',
+        carpet_area: asInt(property.builtUpAreaMetadata?.carpetSqFt),
+        build_up_area_in: 'sq_ft',
+        buildup_area: asInt(property.builtUpAreaMetadata?.sqFt),
+        availability_by: property.rentAvailability || NA,
+        maintenance_cost: asInt(property.maintenanceChargeAmount),
+        security: asInt(property.securityDepositAmount),
+        amount,
+        brokerage: asInt(property.brokerageAmount),
+        owner_name: NA,
+        owner_mobile_no: NA,
+        no_of_bedroom: asInt(property.bhkType?.noOfBedrooms),
+        no_of_washroom: asInt(property.bhkType?.noOfBathrooms),
+        no_of_kitchen: 0,
+        no_of_drawing_room: 0,
+        no_of_balcony: asInt(property.bhkType?.balconies),
+        no_of_utility: 0,
+        no_of_parking: 0,
+        total_floor: asInt(property.totalFloors),
+        floor_no: asInt(property.floorNumber),
+        furnish_status: NA,
+        facing: NA,
+        quality_rating: NA,
+        basic_amenities: NA,
+        featured_amenities: NA,
+        nearby_location: property.locality?.name || NA,
+        website_property_id: property.id,
+      },
+    };
+  }
+
+  async triggerZohoSyncSafe(propertyId: string): Promise<void> {
+    try {
+      const result = await this.syncPropertyToCrm(propertyId);
+      if (!result.success) {
+        console.warn(`[ZohoSync] property=${propertyId} failed: ${result.error}`);
+      } else {
+        console.log(`[ZohoSync] property=${propertyId} synced at ${result.syncedAt?.toISOString()}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[ZohoSync] property=${propertyId} threw: ${message}`);
+    }
   }
 
   private readonly DEFAULT_TOTAL_STEPS = 4;
@@ -2382,6 +2465,10 @@ export class PropertyService {
       updated.id,
       completionStep,
     );
+
+    // Fire-and-forget Zoho CRM sync — must not block or fail the user response.
+    void this.triggerZohoSyncSafe(updated.id);
+
     return {
       id: updated.id,
       status: updated.status,
