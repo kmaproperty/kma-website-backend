@@ -670,8 +670,15 @@ export class PropertyController {
   })
   @ApiResponse({ status: 200, description: 'Sync result' })
   @ApiResponse({ status: 400, description: 'Missing propertyId or property not found' })
-  async syncPropertyToCrm(@Body() body: { propertyId: string }) {
-    return this.propertyService.syncPropertyToCrm(body?.propertyId);
+  async syncPropertyToCrm(
+    @Body()
+    body: {
+      propertyId?: string;
+      customer?: Record<string, unknown>;
+      property?: Record<string, unknown> & { website_property_id?: string };
+    },
+  ) {
+    return this.propertyService.syncPropertyToCrm(body);
   }
 
   @Post('/step-4')

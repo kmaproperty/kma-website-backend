@@ -92,10 +92,22 @@ export class PropertyService {
   ) {}
 
   async syncPropertyToCrm(
-    propertyId: string,
+    body: { propertyId?: string; customer?: any; property?: any },
   ): Promise<{ success: boolean; syncedAt?: Date; error?: string }> {
+    // Resolve which propertyId to mark as synced + which payload to forward.
+    // Two accepted shapes:
+    //   (a) { propertyId }                        -> backend builds payload from DB
+    //   (b) { customer, property: { ..., website_property_id } } -> forward body as-is
+    let propertyId =
+      body?.propertyId ||
+      (typeof body?.property?.website_property_id === 'string'
+        ? body.property.website_property_id
+        : undefined);
+
     if (!propertyId) {
-      throw new BadRequestException('propertyId is required');
+      throw new BadRequestException(
+        'Either propertyId or property.website_property_id is required',
+      );
     }
 
     const property = await this.propertyRepository.findByIdWithRelations(propertyId);
@@ -103,12 +115,20 @@ export class PropertyService {
       throw new BadRequestException(`Property ${propertyId} not found`);
     }
 
-    const user = property.user ?? (await this.userRepository.findById(property.userId));
-    if (!user) {
-      throw new BadRequestException(`Owner user for property ${propertyId} not found`);
+    let payload: ZohoCrmPayload;
+    if (body?.customer && body?.property) {
+      payload = {
+        customer: body.customer,
+        property: { ...body.property, website_property_id: propertyId },
+      };
+    } else {
+      const user = property.user ?? (await this.userRepository.findById(property.userId));
+      if (!user) {
+        throw new BadRequestException(`Owner user for property ${propertyId} not found`);
+      }
+      payload = this.buildZohoPayload(property, user);
     }
 
-    const payload = this.buildZohoPayload(property, user);
     const result = await this.zohoService.forwardToFlow(payload);
     if (!result.success) {
       return { success: false, error: result.error || `Zoho returned status ${result.status}` };
@@ -186,7 +206,7 @@ export class PropertyService {
 
   async triggerZohoSyncSafe(propertyId: string): Promise<void> {
     try {
-      const result = await this.syncPropertyToCrm(propertyId);
+      const result = await this.syncPropertyToCrm({ propertyId });
       if (!result.success) {
         console.warn(`[ZohoSync] property=${propertyId} failed: ${result.error}`);
       } else {
