@@ -747,4 +747,10 @@ export class Property extends BaseEntity {
     nullable: true,
   })
   expiresAt: Date | null;
+
+  @Column({ type: 'boolean', default: false })
+  syncWithCrm: boolean;
+
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  syncedAt: Date | null;
 }

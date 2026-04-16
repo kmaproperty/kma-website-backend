@@ -41,6 +41,7 @@ import { Admin } from '../admin/entities/admin.entity';
 import { UserModule } from '../user/user.module';
 import { PropertyRejectionHistoryRepository } from './repositories/property-rejection-history.repository';
 import { PropertyVerificationRequestRepository } from './repositories/property-verification-request.repository';
+import { ZohoModule } from '../zoho/zoho.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { PropertyVerificationRequestRepository } from './repositories/property-v
     ]),
     forwardRef(() => AdminModule),
     forwardRef(() => UserModule),
+    ZohoModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

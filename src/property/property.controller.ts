@@ -662,6 +662,20 @@ export class PropertyController {
     return await this.propertyService.getPropertyStep3Details(propertyId, req.user.id);
   }
 
+  @Post('/sync-crm')
+  @ApiOperation({
+    summary: 'Forward property payload to Zoho Flow CRM and mark property as synced',
+    description:
+      'Accepts the full Zoho-shape body ({ customer, property }). On Zoho 2xx, sets properties.syncWithCrm = true and syncedAt = now. Property is looked up by body.property.website_property_id.',
+  })
+  @ApiResponse({ status: 200, description: 'Sync result' })
+  @ApiResponse({ status: 400, description: 'Missing website_property_id or property not found' })
+  async syncPropertyToCrm(
+    @Body() body: { customer: Record<string, unknown>; property: Record<string, unknown> & { website_property_id?: string } },
+  ) {
+    return this.propertyService.syncPropertyToCrm(body);
+  }
+
   @Post('/step-4')
   @ApiOperation({
     summary: 'Step 4: Update property with photos and videos',

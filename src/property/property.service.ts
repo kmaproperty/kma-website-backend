@@ -46,6 +46,7 @@ import {
 } from './dto/generate-property-description.dto';
 import { Property } from './entities/property.entity';
 import { PropertyVerificationRequest, PropertyVerificationStatus } from './entities/property-verification-request.entity';
+import { ZohoService, ZohoCrmPayload } from '../zoho/zoho.service';
 import { PropertyStatus, DeactivationReason, VerificationStatus } from './enum/property-status.enum';
 import { MAX_LISTINGS_PER_OWNER } from './constants/property.constants';
 import {
@@ -87,7 +88,32 @@ export class PropertyService {
     private readonly userRepository: UserRepository,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    private readonly zohoService: ZohoService,
   ) {}
+
+  async syncPropertyToCrm(payload: ZohoCrmPayload): Promise<{ success: boolean; syncedAt?: Date; error?: string }> {
+    const websitePropertyId = payload?.property?.website_property_id;
+    if (!websitePropertyId) {
+      throw new BadRequestException('property.website_property_id is required');
+    }
+
+    const property = await this.propertyRepository.findById(websitePropertyId);
+    if (!property) {
+      throw new BadRequestException(`Property ${websitePropertyId} not found`);
+    }
+
+    const result = await this.zohoService.forwardToFlow(payload);
+    if (!result.success) {
+      return { success: false, error: result.error || `Zoho returned status ${result.status}` };
+    }
+
+    const syncedAt = new Date();
+    await this.propertyRepository.updateProperty(websitePropertyId, {
+      syncWithCrm: true,
+      syncedAt,
+    });
+    return { success: true, syncedAt };
+  }
 
   private readonly DEFAULT_TOTAL_STEPS = 4;
 
