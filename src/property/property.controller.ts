@@ -101,11 +101,12 @@ export class PropertyController {
   async getLeadsForUser(
     @Query() query: UserLeadListQueryDto,
     @Req() req: Request,
-  ): Promise<UserLeadListResponseDto> {
+  ) {
     if (!req.user?.id) {
       throw new BadRequestException('User not authenticated');
     }
-    return await this.leadService.listLeadsForUser(req.user.id, query);
+    const result = await this.leadService.listLeadsForUser(req.user.id, query);
+    return { ...result, role: (req as any).user?.role ?? null };
   }
 
   @Get('leads/export')
