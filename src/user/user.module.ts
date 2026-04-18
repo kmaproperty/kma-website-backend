@@ -194,6 +194,7 @@ export class UserModule implements NestModule {
         'users/docusign/agreements',
         'users/docusign/update-status',
         'users/docusign/channel-partner-agreement',
+        'users/docusign/sync-status',
         'users/verification/live-photo',
         'users/verification/aadhaar',
         'users/verification/bank-details',
