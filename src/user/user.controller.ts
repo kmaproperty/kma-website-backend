@@ -879,6 +879,25 @@ export class UserController {
   //   };
   // }
 
+  @Post('docusign/sync-status')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Sync agreement status from DocuSign after signing' })
+  async syncDocuSignStatus(@Req() req: Request) {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    const agreement = await this.agreementRepository.findLatestByUserId(req.user.id);
+    if (!agreement) {
+      throw new BadRequestException('No agreement found');
+    }
+    const updated = await this.docuSignService.updateAgreementStatus(agreement.envelopeId);
+    return {
+      success: true,
+      status: updated?.status || 'unknown',
+      completedAt: updated?.completedAt || null,
+    };
+  }
+
   @Post('docusign/webhook')
   @Public()
   @HttpCode(HttpStatus.OK)
