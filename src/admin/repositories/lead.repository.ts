@@ -77,6 +77,7 @@ export class LeadRepository {
         { propertyIds },
       )
       .leftJoinAndSelect('pc.property', 'prop')
+      .leftJoinAndSelect('prop.user', 'propertyOwner')
       .distinct(true);
 
     // Filter by specific property if provided

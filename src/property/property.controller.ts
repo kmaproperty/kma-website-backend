@@ -105,8 +105,7 @@ export class PropertyController {
     if (!req.user?.id) {
       throw new BadRequestException('User not authenticated');
     }
-    const result = await this.leadService.listLeadsForUser(req.user.id, query);
-    return { ...result, role: (req as any).user?.role ?? null };
+    return await this.leadService.listLeadsForUser(req.user.id, query);
   }
 
   @Get('leads/export')

@@ -495,6 +495,7 @@ export class LeadService {
             bhkTypeName: property.bhkType?.name || null,
             societyName: property.society?.name || null,
             localityName: property.locality?.name || null,
+            ownerRole: property.user?.role || null,
           }
         : null,
       contactedAt: contact.contactedAt,
