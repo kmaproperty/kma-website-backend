@@ -2867,6 +2867,8 @@ export class AdminService {
       bankRejectionReason: approved ? null : (comment || null),
     });
 
+    await this.userService.checkAndUpdateKycStatus(userId);
+
     return {
       success: true,
       message: approved
@@ -2898,6 +2900,8 @@ export class AdminService {
       aadhaarAdminApproved: approved,
       aadhaarRejectionReason: approved ? null : (comment || null),
     });
+
+    await this.userService.checkAndUpdateKycStatus(userId);
 
     return {
       success: true,
