@@ -1618,10 +1618,6 @@ export class UserService {
       throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
     }
 
-    if (user.role !== UserRole.END_USER) {
-      throw new BadRequestException('User is not an end user');
-    }
-
     return {
       success: true,
       user: {
@@ -1633,6 +1629,7 @@ export class UserService {
         isActive: user.isActive,
         phoneVerified: user.phoneVerified,
         profileImage: user.profileImage,
+        city: (user as any).cities || null,
       },
     };
   }
@@ -1647,10 +1644,6 @@ export class UserService {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
-    }
-
-    if (user.role !== UserRole.END_USER) {
-      throw new BadRequestException('User is not an end user');
     }
 
     const updateData: Partial<User> = {};
