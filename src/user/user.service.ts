@@ -1629,7 +1629,6 @@ export class UserService {
         isActive: user.isActive,
         phoneVerified: user.phoneVerified,
         profileImage: user.profileImage,
-        city: (user as any).cities || null,
       },
     };
   }
