@@ -129,7 +129,8 @@ export class PropertyService {
       payload = this.buildZohoPayload(property, user);
     }
 
-    const result = await this.zohoService.forwardToFlow(payload);
+    const ownerRole = property.user?.role || (await this.userRepository.findById(property.userId))?.role;
+    const result = await this.zohoService.forwardToFlow(payload, ownerRole);
     if (!result.success) {
       return { success: false, error: result.error || `Zoho returned status ${result.status}` };
     }

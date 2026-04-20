@@ -18,16 +18,26 @@ export class ZohoService {
 
   constructor(private readonly configService: ConfigService) {}
 
-  async forwardToFlow(payload: ZohoCrmPayload): Promise<ZohoSyncResult> {
-    const baseUrl = this.configService.get<string>('ZOHO_FLOW_WEBHOOK_URL');
-    const apiKey = this.configService.get<string>('ZOHO_FLOW_API_KEY');
+  async forwardToFlow(payload: ZohoCrmPayload, ownerRole?: string): Promise<ZohoSyncResult> {
+    // Route to different Zoho webhooks based on property owner's role
+    let baseUrl: string | undefined;
+    let apiKey: string | undefined;
+
+    if (ownerRole === 'OWNER') {
+      baseUrl = this.configService.get<string>('ZOHO_FLOW_OWNER_WEBHOOK_URL') || this.configService.get<string>('ZOHO_FLOW_WEBHOOK_URL');
+      apiKey = this.configService.get<string>('ZOHO_FLOW_OWNER_API_KEY') || this.configService.get<string>('ZOHO_FLOW_API_KEY');
+    } else {
+      baseUrl = this.configService.get<string>('ZOHO_FLOW_WEBHOOK_URL');
+      apiKey = this.configService.get<string>('ZOHO_FLOW_API_KEY');
+    }
 
     if (!baseUrl || !apiKey) {
-      this.logger.error('ZOHO_FLOW_WEBHOOK_URL or ZOHO_FLOW_API_KEY missing in env');
+      this.logger.error('Zoho webhook URL or API key missing in env');
       return { success: false, status: 0, error: 'Zoho credentials not configured' };
     }
 
     const url = `${baseUrl}?zapikey=${apiKey}&isdebug=false`;
+    this.logger.log(`Zoho sync: role=${ownerRole || 'CP'}, url=${baseUrl.slice(-20)}`);
 
     try {
       const response = await fetch(url, {

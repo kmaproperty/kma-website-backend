@@ -496,6 +496,8 @@ export class LeadService {
             societyName: property.society?.name || null,
             localityName: property.locality?.name || null,
             ownerRole: property.user?.role || null,
+            syncWithCrm: property.syncWithCrm ?? false,
+            syncedAt: property.syncedAt || null,
           }
         : null,
       contactedAt: contact.contactedAt,
