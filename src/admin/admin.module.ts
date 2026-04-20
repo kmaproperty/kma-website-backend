@@ -40,12 +40,14 @@ import { HelpCenterFaq } from './entities/help-center-faq.entity';
 import { HelpCenterFaqRepository } from './repositories/help-center-faq.repository';
 import { Room } from '../property/entities/room.entity';
 import { RoomRepository } from '../property/repositories/room.repository';
+import { FaqModule } from '../faq/faq.module';
 
 @Module({
   imports: [
     ConfigModule,
     forwardRef(() => PropertyModule),
     forwardRef(() => UserModule),
+    FaqModule,
     TypeOrmModule.forFeature([
       Admin,
       Property,

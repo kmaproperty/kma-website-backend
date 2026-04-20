@@ -137,6 +137,9 @@ import { AdminPermissionsGuard } from './guards/admin-permissions.guard';
 import { RequireAdminPermissions } from './decorators/admin-permissions.decorator';
 import { AdminPermission } from './enum/admin-permission.enum';
 import { CreateAdminUserDto, AdminUserResponseDto, UpdateAdminPermissionsDto, AdminPermissionsResponseDto } from './dto/admin-users.dto';
+import { FaqService } from '../faq/faq.service';
+import { CreateFaqDto } from '../faq/dto/create-faq.dto';
+import { UpdateFaqDto } from '../faq/dto/update-faq.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -144,6 +147,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly leadService: LeadService,
+    private readonly faqService: FaqService,
   ) {}
 
   @Post('bootstrap')
@@ -1960,6 +1964,56 @@ export class AdminController {
     }
 
     res.send(pdfBuffer);
+  }
+
+  // ─── FAQ MANAGEMENT ─────────────────────────────────────────────
+
+  @Get('faqs')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List all FAQs including inactive' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all FAQs',
+  })
+  async listFaqs() {
+    return this.faqService.getAllFaqs();
+  }
+
+  @Post('faqs')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Create a new FAQ' })
+  @ApiResponse({
+    status: 201,
+    description: 'FAQ created successfully',
+  })
+  async createFaq(@Body() dto: CreateFaqDto) {
+    return this.faqService.createFaq(dto);
+  }
+
+  @Patch('faqs/:id')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update an existing FAQ' })
+  @ApiResponse({
+    status: 200,
+    description: 'FAQ updated successfully',
+  })
+  async updateFaq(@Param('id') id: string, @Body() dto: UpdateFaqDto) {
+    return this.faqService.updateFaq(id, dto);
+  }
+
+  @Delete('faqs/:id')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Soft delete a FAQ' })
+  @ApiResponse({
+    status: 200,
+    description: 'FAQ deleted successfully',
+  })
+  async deleteFaq(@Param('id') id: string) {
+    return this.faqService.deleteFaq(id);
   }
 
 }

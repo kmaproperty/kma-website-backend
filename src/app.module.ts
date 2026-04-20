@@ -11,6 +11,7 @@ import { ConfigModule } from './common/config/config.module';
 import { ConfigService } from './common/config/config.service';
 import { AdminModule } from './admin/admin.module';
 import { BlogModule } from './blog/blog.module';
+import { FaqModule } from './faq/faq.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { BlogModule } from './blog/blog.module';
     UploadsModule,
     AdminModule,
     BlogModule,
+    FaqModule,
   ],
   controllers: [AppController],
   providers: [AppService],
