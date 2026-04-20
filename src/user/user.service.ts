@@ -3824,18 +3824,27 @@ export class UserService {
       user.bankDetailsFilled && // Step 3: Bank details filled (user action)
       agreementStatus.docusign_agreement_signed; // Step 4: DocuSign signed (user action)
 
+    // Check if all admin approvals are done
+    const allAdminApproved =
+      user.livePhotoApproved &&
+      user.aadhaarAdminApproved &&
+      user.bankDetailsApproved &&
+      agreementStatus.docusign_agreement_signed;
+
     // Determine KYC status based on current state
-    // Only auto-update status if it's not already APPROVED or REJECTED (to preserve admin decisions)
     let newKycStatus: KycStatus | null = null;
-    
-    if (user.kycStatus === KycStatus.APPROVED || user.kycStatus === KycStatus.REJECTED) {
-      // Don't override admin decisions (APPROVED or REJECTED) - preserve the status
+
+    if (user.kycStatus === KycStatus.REJECTED) {
+      // Don't override admin rejection
       newKycStatus = user.kycStatus;
+    } else if (allUserStepsCompleted && allAdminApproved) {
+      // All user steps done + all admin approvals done → APPROVED
+      newKycStatus = KycStatus.APPROVED;
     } else if (allUserStepsCompleted) {
-      // All 4 user steps completed → set to IN_REVIEW (waiting for admin approval)
+      // All user steps done but admin hasn't approved all → IN_REVIEW
       newKycStatus = KycStatus.IN_REVIEW;
     } else {
-      // Some or no steps completed → set to PENDING
+      // Some or no steps completed → PENDING
       newKycStatus = KycStatus.PENDING;
     }
 
