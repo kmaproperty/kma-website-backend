@@ -700,6 +700,11 @@ export class UserController {
         user.email,
         user.name,
         returnUrl,
+        {
+          phone: user.phone,
+          city: (user as any).cities || '',
+          firmName: (user as any).firmName || '',
+        },
       );
 
     return {

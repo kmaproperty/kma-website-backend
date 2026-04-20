@@ -418,6 +418,7 @@ export class DocuSignService {
     recipientEmail: string,
     recipientName: string,
     returnUrl: string,
+    extraDetails?: { phone?: string; city?: string; firmName?: string },
   ): Promise<{ envelopeId: string; url: string }> {
     // Check if template ID is configured
     const templateId = this.getTemplateId();
@@ -445,6 +446,7 @@ export class DocuSignService {
         documentBase64,
         documentName,
         returnUrl,
+        extraDetails,
       );
     }
   }
@@ -456,6 +458,7 @@ export class DocuSignService {
     documentBase64: string,
     documentName: string,
     returnUrl: string,
+    extraDetails?: { phone?: string; city?: string; firmName?: string },
   ): Promise<{ envelopeId: string; url: string }> {
     try {
       if (!this.apiClient) {
@@ -492,20 +495,55 @@ export class DocuSignService {
         // Required for embedded signing (Recipient View)
         clientUserId: userId,
       });
-      console.log('document', document);
-
-      // Create sign here tab
+      // Create sign here tab on page 2 (Partner Signature line)
       const signHere = docusign.SignHere.constructFromObject({
         documentId: '1',
-        pageNumber: '1',
+        pageNumber: '2',
         recipientId: '1',
         tabLabel: 'SignHereTab',
-        xPosition: '195',
-        yPosition: '147',
+        anchorString: 'Partner Signature:',
+        anchorXOffset: '150',
+        anchorYOffset: '-5',
       });
+
+      // Pre-fill text tabs with user details
+      const today = new Date();
+      const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+
+      const textTabs = [
+        docusign.Text.constructFromObject({
+          documentId: '1', pageNumber: '1', recipientId: '1',
+          tabLabel: 'PartnerName',
+          anchorString: 'Mr./Ms.',
+          anchorXOffset: '55', anchorYOffset: '-5',
+          value: recipientName, locked: 'true', fontSize: 'Size10',
+        }),
+        docusign.Text.constructFromObject({
+          documentId: '1', pageNumber: '1', recipientId: '1',
+          tabLabel: 'PartnerAddress',
+          anchorString: 'Address:',
+          anchorXOffset: '70', anchorYOffset: '-5',
+          value: extraDetails?.city || '', locked: 'true', fontSize: 'Size10',
+        }),
+        docusign.Text.constructFromObject({
+          documentId: '1', pageNumber: '1', recipientId: '1',
+          tabLabel: 'PartnerPhone',
+          anchorString: 'Contact Number:',
+          anchorXOffset: '130', anchorYOffset: '-5',
+          value: extraDetails?.phone || '', locked: 'true', fontSize: 'Size10',
+        }),
+        docusign.Text.constructFromObject({
+          documentId: '1', pageNumber: '2', recipientId: '1',
+          tabLabel: 'SignPlace',
+          anchorString: 'Place:',
+          anchorXOffset: '50', anchorYOffset: '-5',
+          value: extraDetails?.city || '', locked: 'true', fontSize: 'Size10',
+        }),
+      ];
 
       const tabs = docusign.Tabs.constructFromObject({
         signHereTabs: [signHere],
+        textTabs: textTabs,
       });
 
       signer.tabs = tabs;
