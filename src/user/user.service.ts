@@ -3816,20 +3816,23 @@ export class UserService {
     // Check DocuSign agreement status (might be updated in agreement table)
     const agreementStatus = await this.getDocuSignAgreementStatus(userId);
 
-    // Check if all 4 user steps are completed (not including admin approval)
+    // OWNER only needs DocuSign agreement; CP needs all 4 steps
+    const isOwner = user.role === UserRole.OWNER;
     const step1Completed = !!(user.livePhotoUrl && user.livePhotoUrl.trim().length > 0);
-    const allUserStepsCompleted =
-      step1Completed && // Step 1: Live photo uploaded (user action)
-      user.aadhaarVerified && // Step 2: Aadhaar verified (user action)
-      user.bankDetailsFilled && // Step 3: Bank details filled (user action)
-      agreementStatus.docusign_agreement_signed; // Step 4: DocuSign signed (user action)
+    const allUserStepsCompleted = isOwner
+      ? agreementStatus.docusign_agreement_signed
+      : step1Completed && // Step 1: Live photo uploaded (user action)
+        user.aadhaarVerified && // Step 2: Aadhaar verified (user action)
+        user.bankDetailsFilled && // Step 3: Bank details filled (user action)
+        agreementStatus.docusign_agreement_signed; // Step 4: DocuSign signed (user action)
 
     // Check if all admin approvals are done
-    const allAdminApproved =
-      user.livePhotoApproved &&
-      user.aadhaarAdminApproved &&
-      user.bankDetailsApproved &&
-      agreementStatus.docusign_agreement_signed;
+    const allAdminApproved = isOwner
+      ? agreementStatus.docusign_agreement_signed
+      : user.livePhotoApproved &&
+        user.aadhaarAdminApproved &&
+        user.bankDetailsApproved &&
+        agreementStatus.docusign_agreement_signed;
 
     // Determine KYC status based on current state
     let newKycStatus: KycStatus | null = null;
@@ -3886,16 +3889,19 @@ export class UserService {
     const agreementStatus = await this.getDocuSignAgreementStatus(userId);
 
     // Calculate progress
-    // Step 1 is completed if live photo is uploaded (filled), not just approved
+    // OWNER only has DocuSign step; CP has all 4 steps
+    const isOwner = user.role === UserRole.OWNER;
     const step1Completed = !!(user.livePhotoUrl && user.livePhotoUrl.trim().length > 0);
-    const steps = [
-      step1Completed, // Step 1: Live photo uploaded (filled)
-      user.aadhaarVerified, // Step 2
-      user.bankDetailsFilled, // Step 3
-      agreementStatus.docusign_agreement_signed, // Step 4
-    ];
+    const steps = isOwner
+      ? [agreementStatus.docusign_agreement_signed]
+      : [
+          step1Completed, // Step 1: Live photo uploaded (filled)
+          user.aadhaarVerified, // Step 2
+          user.bankDetailsFilled, // Step 3
+          agreementStatus.docusign_agreement_signed, // Step 4
+        ];
     const stepsCompleted = steps.filter(Boolean).length;
-    const totalSteps = 4;
+    const totalSteps = steps.length;
     const progress = Math.round((stepsCompleted / totalSteps) * 100);
 
     // Use the stored kycStatus from database, or determine it if not set
