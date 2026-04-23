@@ -932,6 +932,7 @@ export class UserService {
         phone: updatedUser.phone,
         role: updatedUser.role,
         isActive: updatedUser.isActive,
+        channelPartnerCode: updatedUser.channelPartnerCode || null,
       },
     };
   }

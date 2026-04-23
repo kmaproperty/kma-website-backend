@@ -139,5 +139,6 @@ export class CreateChannelPartnerResponseDto {
     phone: string;
     role: string;
     isActive: boolean;
+    channelPartnerCode: string | null;
   };
 }
