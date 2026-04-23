@@ -4478,6 +4478,8 @@ export class UserService {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    let issuedTokens: { accessToken: string; refreshToken: string } | null = null;
+    let issuedUser: User | null = null;
     try {
       await queryRunner.manager.update(
         'otps',
@@ -4493,6 +4495,50 @@ export class UserService {
         phone,
         countryCode: countryCode ?? null,
       });
+
+      // OTP is verified — treat the caller as authenticated going forward.
+      // Find or create an END_USER for this phone, then issue JWT tokens so
+      // the frontend can drop the caller into a logged-in session.
+      let endUser = await queryRunner.manager.findOne(User, {
+        where: { phone, role: UserRole.END_USER },
+      });
+
+      if (!endUser) {
+        const created = queryRunner.manager.create(User, {
+          phone,
+          role: UserRole.END_USER,
+          name: name || 'User',
+          email: email || null,
+          isActive: true,
+          phoneVerified: true,
+          isBlocked: false,
+          intent: null,
+        });
+        endUser = await queryRunner.manager.save(created);
+      } else if (!endUser.phoneVerified) {
+        await queryRunner.manager.update(
+          User,
+          { id: endUser.id },
+          { phoneVerified: true },
+        );
+        endUser.phoneVerified = true;
+      }
+
+      if (endUser.isBlocked || !endUser.isActive) {
+        // Account exists but cannot log in — skip token issue but keep the
+        // contact record so the lead still reaches the agent.
+        endUser = null;
+      } else {
+        const { accessToken, refreshToken } = this.generateTokens(endUser);
+        await queryRunner.manager.update(
+          User,
+          { id: endUser.id },
+          { token: accessToken, refreshToken },
+        );
+        issuedTokens = { accessToken, refreshToken };
+        issuedUser = endUser;
+      }
+
       await queryRunner.commitTransaction();
 
       // Auto-create lead for the property owner/channel partner
@@ -4508,10 +4554,36 @@ export class UserService {
         this.logger.warn(`Failed to create lead for property ${propertyId}: ${err.message}`);
       }
 
+      if (sessionId && issuedUser) {
+        try {
+          await this.propertyViewTracker.mergeSessionWithUser(
+            sessionId,
+            issuedUser.id,
+          );
+        } catch (err) {
+          this.logger.warn(
+            `Failed to merge session ${sessionId} with user ${issuedUser.id}: ${err.message}`,
+          );
+        }
+      }
+
       return {
         success: true,
         message: 'Contact request submitted successfully',
         contactedPropertyId: contacted.id,
+        ...(issuedTokens && issuedUser
+          ? {
+              accessToken: issuedTokens.accessToken,
+              refreshToken: issuedTokens.refreshToken,
+              user: {
+                id: issuedUser.id,
+                name: issuedUser.name,
+                email: issuedUser.email,
+                phone: issuedUser.phone,
+                role: issuedUser.role,
+              },
+            }
+          : {}),
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();

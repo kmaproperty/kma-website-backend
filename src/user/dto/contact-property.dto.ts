@@ -88,4 +88,24 @@ export class SubmitContactPropertyResponseDto {
     example: 'uuid-string',
   })
   contactedPropertyId: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Access token issued when a non-logged-in user verifies OTP. Present only when the caller was anonymous and the phone now maps to an END_USER account (created on the fly if needed).',
+  })
+  accessToken?: string;
+
+  @ApiPropertyOptional({ description: 'Refresh token paired with accessToken.' })
+  refreshToken?: string;
+
+  @ApiPropertyOptional({
+    description: 'User object issued with the tokens (same shape as login).',
+  })
+  user?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string;
+    role: string;
+  };
 }
