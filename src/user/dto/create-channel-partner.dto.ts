@@ -39,12 +39,14 @@ export class CreateChannelPartnerDto {
   phone: string;
 
   @ApiProperty({
-    description: 'Channel partner code',
-    example: 'CP123456',
+    description:
+      'Channel partner code (optional; auto-generated on registration if omitted)',
+    example: 'KMA-JIT-0042',
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  channelPartnerCode: string;
+  channelPartnerCode?: string;
 
   @ApiProperty({
     description: 'Firm name',

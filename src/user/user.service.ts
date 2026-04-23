@@ -285,14 +285,11 @@ export class UserService {
       throw new BadRequestException('Only OWNERs can be upgraded');
     }
 
-    // Validate channel partner code if provided
-    if (channelPartnerCode) {
-      const validCode =
-        await this.channelPartnerCodeRepository.findByCode(channelPartnerCode);
-      if (!validCode) {
-        throw new BadRequestException('Invalid channel partner code');
-      }
-    }
+    // Auto-generate a unique Channel Partner code on role upgrade. Client
+    // wants system-generated codes; any incoming value is ignored.
+    const generatedCode = await this.generateUniqueChannelPartnerCode(
+      name || user.name || '',
+    );
 
     // Use provided phone or existing user phone
     const phoneToUse = phone || user.phone;
@@ -327,7 +324,7 @@ export class UserService {
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email || null;
     if (phone !== undefined) updateData.phone = phone;
-    if (channelPartnerCode !== undefined) updateData.channelPartnerCode = channelPartnerCode || null;
+    updateData.channelPartnerCode = generatedCode;
     if (firmName !== undefined) updateData.firmName = firmName || null;
     if (businessSince !== undefined) updateData.businessSince = businessSince || null;
     if (cities !== undefined) updateData.cities = cities || null;
@@ -345,14 +342,12 @@ export class UserService {
         { id: user.id },
         updateData,
       );
-      if (channelPartnerCode) {
-        await this.userRoleHistoryRepository.create({
-          userId: user.id,
-          fromRole: UserRole.OWNER,
-          toRole: UserRole.CHANNEL_PARTNER,
-          channelPartnerCode: channelPartnerCode,
-        });
-      }
+      await this.userRoleHistoryRepository.create({
+        userId: user.id,
+        fromRole: UserRole.OWNER,
+        toRole: UserRole.CHANNEL_PARTNER,
+        channelPartnerCode: generatedCode,
+      });
       await queryRunner.commitTransaction();
     } catch (e) {
       await queryRunner.rollbackTransaction();
@@ -894,13 +889,6 @@ export class UserService {
       throw new BadRequestException(USER_MESSAGES.USER.PHONE_NOT_VERIFIED);
     }
 
-    // Validate channel partner code
-    const validCode =
-      await this.channelPartnerCodeRepository.findByCode(channelPartnerCode);
-    if (!validCode) {
-      throw new BadRequestException(USER_MESSAGES.CHANNEL_PARTNER.INVALID_CODE);
-    }
-
     // Check if email is already used by another user
     if (email) {
       const existingUserByEmail = await this.userRepository.findByEmail(email);
@@ -911,12 +899,16 @@ export class UserService {
       }
     }
 
+    // Auto-generate a unique Channel Partner code. Any code sent by the
+    // client is ignored — the client wants fully system-generated codes.
+    const generatedCode = await this.generateUniqueChannelPartnerCode(name);
+
     // Update user with CHANNEL_PARTNER details
     const updatedUser = await this.userRepository.update(existingUser.id, {
       name,
       email: email || null,
       role: UserRole.CHANNEL_PARTNER,
-      channelPartnerCode,
+      channelPartnerCode: generatedCode,
       firmName: firmName || null,
       businessSince: businessSince || null,
       cities: cities || null,
@@ -942,6 +934,54 @@ export class UserService {
         isActive: updatedUser.isActive,
       },
     };
+  }
+
+  /**
+   * Build a professional, unique Channel Partner code.
+   *
+   * Format: KMA-<NAME3>-<4DIGITS>
+   *   - NAME3:  first 3 alpha chars of the user's name, uppercased.
+   *             Falls back to 'CPR' if the name has fewer than 3 letters.
+   *   - 4DIGITS: zero-padded integer in [0001, 9999].
+   *
+   * The method retries on collision (up to 20 attempts), then widens the
+   * suffix to 5 digits, and finally appends a timestamp tail as a last resort
+   * so registration is never blocked by a clash. The chosen code is persisted
+   * into the `channel_partner_codes` master table so existing validation
+   * endpoints (ValidateChannelPartnerCode, admin list) keep working.
+   */
+  private async generateUniqueChannelPartnerCode(name: string): Promise<string> {
+    const letters = (name || '').toUpperCase().replace(/[^A-Z]/g, '');
+    const prefix = (letters.slice(0, 3) || 'CPR').padEnd(3, 'X');
+
+    const assemble = (suffix: string) => `KMA-${prefix}-${suffix}`;
+    const rand = (digits: number) => {
+      const min = 10 ** (digits - 1);
+      const max = 10 ** digits - 1;
+      return String(Math.floor(min + Math.random() * (max - min + 1)));
+    };
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const candidate = assemble(rand(4));
+      const existing =
+        await this.channelPartnerCodeRepository.findByCode(candidate);
+      if (!existing) {
+        await this.channelPartnerCodeRepository.create({ code: candidate });
+        return candidate;
+      }
+    }
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = assemble(rand(5));
+      const existing =
+        await this.channelPartnerCodeRepository.findByCode(candidate);
+      if (!existing) {
+        await this.channelPartnerCodeRepository.create({ code: candidate });
+        return candidate;
+      }
+    }
+    const fallback = assemble(`${rand(4)}${Date.now().toString().slice(-4)}`);
+    await this.channelPartnerCodeRepository.create({ code: fallback });
+    return fallback;
   }
 
   /**
