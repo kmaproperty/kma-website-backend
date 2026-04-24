@@ -1186,30 +1186,26 @@ export class UserService {
   ): Promise<EndUserLoginResponseDto> {
     const { phone } = loginDto;
 
-    // Check if user exists with END_USER role
-    const existingUser = await this.userRepository.findByPhoneAndRole(
-      phone,
-      UserRole.END_USER,
-    );
+    // Buyer login works for any active user — END_USER, OWNER, or CHANNEL_PARTNER.
+    // A seller (Owner/CP) browsing the buyer site should just get a session with
+    // their existing role.
+    const existingUser = await this.userRepository.findByPhone(phone);
 
     if (!existingUser) {
       throw new BadRequestException('User not found. Please signup first.');
     }
 
-    // Check if user is blocked
     if (existingUser.isBlocked) {
       throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
     }
 
-    // Check if user is inactive
     if (!existingUser.isActive) {
       throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
     }
 
-    // Send OTP for login
     const otpResponse = await this.sendOtp({
       phone,
-      role: UserRole.END_USER,
+      role: existingUser.role as UserRole,
     });
 
     return {
@@ -1272,9 +1268,10 @@ export class UserService {
         { isUsed: true },
       );
 
-      // Find user
+      // Find user by phone (role-agnostic). Buyer verify-login works for any
+      // active user; their stored role is what the session will carry.
       const user = await queryRunner.manager.findOne(User, {
-        where: { phone, role: UserRole.END_USER },
+        where: { phone, deletedAt: IsNull() },
       });
 
       if (!user) {
