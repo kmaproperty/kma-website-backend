@@ -6230,12 +6230,38 @@ export class UserService {
   }
 
   /**
-   * Upgrade the caller from END_USER to OWNER. Same row — just flips the role
-   * and issues fresh tokens so downstream services see the new role. Used when
-   * an end-user on the buyer site clicks "Post Property" and is handed off to
-   * the seller domain.
+   * Send a fresh OTP to the authenticated user's registered phone as part of the
+   * Post Property handoff. The caller must verify the OTP via upgradeToOwner
+   * before the role flip happens.
    */
-  async upgradeToOwner(userId: string): Promise<{
+  async sendUpgradeOtp(userId: string): Promise<SendOtpResponseDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (user.isBlocked) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
+    }
+    if (!user.isActive) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
+    }
+    if (user.role === UserRole.OWNER || user.role === UserRole.CHANNEL_PARTNER) {
+      // Already at owner-or-above; skip the OTP and let the client move on.
+      return {
+        success: true,
+        message: 'User is already an Owner/Channel Partner',
+      };
+    }
+    return this.sendOtp({ phone: user.phone });
+  }
+
+  /**
+   * Upgrade the caller from END_USER to OWNER after OTP verification. Same
+   * row — just flips the role and issues fresh tokens so the seller app
+   * picks up the new session. No-ops (with fresh tokens) if the user is
+   * already OWNER or CHANNEL_PARTNER.
+   */
+  async upgradeToOwner(userId: string, otp?: string | null): Promise<{
     success: boolean;
     message: string;
     accessToken: string;
@@ -6271,6 +6297,30 @@ export class UserService {
         },
       };
     }
+
+    // Verify OTP before the role flip.
+    const code = otp?.trim();
+    if (!code) {
+      throw new BadRequestException('OTP is required to upgrade to Owner');
+    }
+    const otpRecord = await this.otpRepository.findActiveByPhone(user.phone);
+    if (!otpRecord) {
+      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
+    }
+    if (new Date() > otpRecord.expiresAt) {
+      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
+    }
+    if (otpRecord.isUsed) {
+      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
+    }
+    if (otpRecord.attempts >= 3) {
+      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
+    }
+    if (otpRecord.otpCode !== code) {
+      await this.otpRepository.incrementAttempts(otpRecord.id);
+      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
+    }
+    await this.otpRepository.markAsUsed(otpRecord.id);
 
     // END_USER or USER → promote to OWNER
     const updated = await this.userRepository.update(user.id, { role: UserRole.OWNER });

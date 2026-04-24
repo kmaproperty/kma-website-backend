@@ -168,16 +168,36 @@ export class UserController {
     return await this.userService.validateOtp(validateOtpDto, sessionId);
   }
 
+  @Post('upgrade/send-otp')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Send OTP to the authenticated user for the END_USER → OWNER upgrade flow',
+    description:
+      'Sends a fresh 4-digit OTP to the registered phone of the caller. The OTP must then be verified via POST /users/upgrade-to-owner. No-ops for callers that are already OWNER/CHANNEL_PARTNER.',
+  })
+  @ApiResponse({ status: 200, description: 'OTP sent (or no-op for Owner/CP)' })
+  async sendUpgradeOtp(@Req() req: Request): Promise<SendOtpResponseDto> {
+    const userId = (req.user as { id?: string } | undefined)?.id;
+    if (!userId) {
+      throw new BadRequestException('Authenticated user required');
+    }
+    return await this.userService.sendUpgradeOtp(userId);
+  }
+
   @Post('upgrade-to-owner')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary: 'Upgrade the current user from END_USER to OWNER',
+    summary: 'Upgrade the current user from END_USER to OWNER (OTP-verified)',
     description:
-      'Used when an end-user on the buyer site clicks "Post Property" and is handed off to the seller domain. Takes the current access token, flips the user\'s role on the same row, and returns fresh tokens so the seller app can pick up the new session. Users already at OWNER/CHANNEL_PARTNER level just get a fresh token pair.',
+      'Used when an end-user on the buyer site clicks "Post Property" and is handed off to the seller domain. Requires the OTP sent via POST /users/upgrade/send-otp. Flips the user\'s role on the same row and returns fresh tokens so the seller app can pick up the new session. No-ops (with fresh tokens) if the user is already OWNER/CHANNEL_PARTNER.',
   })
   @ApiResponse({ status: 200, description: 'Role upgraded (or no-op if already Owner/CP)' })
-  async upgradeToOwner(@Req() req: Request): Promise<{
+  async upgradeToOwner(
+    @Req() req: Request,
+    @Body() body: { otp?: string } = {},
+  ): Promise<{
     success: boolean;
     message: string;
     accessToken: string;
@@ -188,7 +208,7 @@ export class UserController {
     if (!userId) {
       throw new BadRequestException('Authenticated user required');
     }
-    return await this.userService.upgradeToOwner(userId);
+    return await this.userService.upgradeToOwner(userId, body.otp ?? null);
   }
 
   @Post('create-owner')
