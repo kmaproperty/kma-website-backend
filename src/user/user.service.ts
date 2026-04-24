@@ -1677,10 +1677,9 @@ export class UserService {
       throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
     }
 
-    if (user.role !== UserRole.OWNER && user.role !== UserRole.CHANNEL_PARTNER) {
-      throw new BadRequestException('User must be an owner or channel partner');
-    }
-
+    // Works for any role now. Fields only meaningful for one role are blanked
+    // out for the others so the shared buyer/seller Edit Profile UI can bind
+    // to the same payload regardless of who is logged in.
     return {
       success: true,
       user: {
@@ -1691,7 +1690,10 @@ export class UserService {
         role: user.role,
         isActive: user.isActive,
         phoneVerified: user.phoneVerified,
-        city: user.role === UserRole.OWNER ? user.cities : null,
+        city:
+          user.role === UserRole.OWNER || user.role === UserRole.END_USER
+            ? user.cities
+            : null,
         channelPartnerCode: user.role === UserRole.CHANNEL_PARTNER ? user.channelPartnerCode : null,
         firmName: user.role === UserRole.CHANNEL_PARTNER ? user.firmName : null,
         businessSince: user.role === UserRole.CHANNEL_PARTNER ? user.businessSince : null,
@@ -1851,10 +1853,6 @@ export class UserService {
       throw new BadRequestException(USER_MESSAGES.USER.NOT_FOUND);
     }
 
-    if (user.role !== UserRole.OWNER && user.role !== UserRole.CHANNEL_PARTNER) {
-      throw new BadRequestException('User must be an owner or channel partner');
-    }
-
     const updateData: Partial<User> = {};
 
     if (editProfileDto.name !== undefined) {
@@ -1880,8 +1878,8 @@ export class UserService {
       updateData.profileImage = editProfileDto.profileImage || null;
     }
 
-    // Owner-specific fields
-    if (user.role === UserRole.OWNER) {
+    // End-user and Owner both use `cities` for their single-city field.
+    if (user.role === UserRole.OWNER || user.role === UserRole.END_USER) {
       if (editProfileDto.city !== undefined) {
         updateData.cities = editProfileDto.city || null;
       }
