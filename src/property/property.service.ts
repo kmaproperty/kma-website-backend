@@ -1210,6 +1210,28 @@ export class PropertyService {
       constructionTypeOptions,
     } = createPropertyDto;
 
+    // Ensure the chosen propertyType actually belongs to the submitted
+    // listingType + category. The frontend is supposed to filter these,
+    // but a stale hierarchy cache once let us save Rent property types on
+    // Sale listings, which corrupted the Buy dropdown.
+    if (propertyTypeId && listingTypeId && categoryId) {
+      const propertyType =
+        await this.propertyTypeRepository.findById(propertyTypeId);
+      if (!propertyType) {
+        throw new BadRequestException(
+          `Property type with ID ${propertyTypeId} not found`,
+        );
+      }
+      if (
+        propertyType.listingTypeId !== listingTypeId ||
+        propertyType.categoryId !== categoryId
+      ) {
+        throw new BadRequestException(
+          'Selected property type does not belong to the chosen listing type and category',
+        );
+      }
+    }
+
     // Helper function to get or create city
     const getOrCreateCity = async (cityInfo: any) => {
       if (!cityInfo) {
