@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { S3Service } from '../common/aws/s3.service';
 import { JwtService } from '@nestjs/jwt';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
@@ -475,82 +475,41 @@ export class UserService {
   }
 
   /**
-   * Send OTP for signup - phone+role combination must not exist
+   * Send OTP for signup. ONE phone = ONE active user — if the phone is already
+   * taken by any role, tell the caller to log in instead.
    */
   async sendOtpForSignup(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
     const { phone, role } = sendOtpDto;
-    const userRole = role || UserRole.END_USER; // Default to END_USER for signup
+    const userRole = role || UserRole.END_USER;
 
-    const existingUser = await this.userRepository.findByPhoneAndRole(phone, userRole);
+    const existingUser = await this.userRepository.findByPhone(phone);
     if (existingUser) {
       throw new BadRequestException('User already exists. Please login.');
     }
 
-    // Check if same phone number has conflicting user types (CHANNEL_PARTNER and OWNER cannot coexist)
-    if (userRole === UserRole.OWNER) {
-      const existingChannelPartner = await this.userRepository.findByPhoneAndRole(
-        phone,
-        UserRole.CHANNEL_PARTNER,
-      );
-      if (existingChannelPartner) {
-        throw new BadRequestException('User already exists. Please login.');
-      }
-    } else if (userRole === UserRole.CHANNEL_PARTNER) {
-      const existingOwner = await this.userRepository.findByPhoneAndRole(
-        phone,
-        UserRole.OWNER,
-      );
-      if (existingOwner) {
-        throw new BadRequestException('User already exists. Please login.');
-      }
-    }
-
-    return this.sendOtp(sendOtpDto);
+    return this.sendOtp({ ...sendOtpDto, role: userRole });
   }
 
   /**
-   * Send OTP for login - phone+role combination must already exist
+   * Send OTP for login. Phone must belong to any active user; their own role drives the session.
    */
   async sendOtpForLogin(sendOtpDto: SendOtpDto): Promise<SendOtpResponseDto> {
-    const { phone, role } = sendOtpDto;
+    const { phone } = sendOtpDto;
 
-    let userRole: UserRole | undefined;
-    let existingUser: User | null = null;
-
-    if (role) {
-      // If role is explicitly provided, use it
-      userRole = role;
-      existingUser = await this.userRepository.findByPhoneAndRole(phone, userRole);
-    } else {
-      // If role is not provided, check for OWNER first, then CHANNEL_PARTNER
-      // OWNER and CHANNEL_PARTNER share the same login
-      existingUser = await this.userRepository.findByPhoneAndRole(phone, UserRole.OWNER);
-      if (existingUser) {
-        userRole = UserRole.OWNER;
-      } else {
-        existingUser = await this.userRepository.findByPhoneAndRole(phone, UserRole.CHANNEL_PARTNER);
-        if (existingUser) {
-          userRole = UserRole.CHANNEL_PARTNER;
-        }
-      }
-    }
-
-    if (!existingUser || !userRole) {
+    const existingUser = await this.userRepository.findByPhone(phone);
+    if (!existingUser) {
       throw new BadRequestException('User not found. Please signup first.');
     }
 
-    // Check if user is blocked
     if (existingUser.isBlocked) {
       throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
     }
 
-    // Check if user is inactive
     if (!existingUser.isActive) {
       throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
     }
 
-    // Use the determined role for sending OTP
-    return this.sendOtp({ ...sendOtpDto, role: userRole });
+    return this.sendOtp({ ...sendOtpDto, role: existingUser.role as UserRole });
   }
 
   /**
@@ -604,36 +563,14 @@ export class UserService {
         { isUsed: true },
       );
 
-      // Determine the role to use and find existing user within transaction
-      let userRole: UserRole | undefined;
-      let existingUser: User | null = null;
-
-      if (role) {
-        // If role is explicitly provided, use it
-        userRole = role;
-        existingUser = await queryRunner.manager.findOne(User, {
-          where: { phone, role: userRole },
-        });
-      } else {
-        // If role is not provided, check for OWNER first, then CHANNEL_PARTNER
-        // OWNER and CHANNEL_PARTNER share the same login
-        existingUser = await queryRunner.manager.findOne(User, {
-          where: { phone, role: UserRole.OWNER },
-        });
-        if (existingUser) {
-          userRole = UserRole.OWNER;
-        } else {
-          existingUser = await queryRunner.manager.findOne(User, {
-            where: { phone, role: UserRole.CHANNEL_PARTNER },
-          });
-          if (existingUser) {
-            userRole = UserRole.CHANNEL_PARTNER;
-          } else {
-            // If user doesn't exist and role not provided, default to OWNER for new user creation
-            userRole = UserRole.OWNER;
-          }
-        }
-      }
+      // ONE phone = ONE active user. Find by phone only; the caller-supplied role is
+      // only used when we have to create a brand-new row.
+      const existingUser: User | null = await queryRunner.manager.findOne(User, {
+        where: { phone, deletedAt: IsNull() },
+      });
+      const userRole: UserRole = existingUser
+        ? (existingUser.role as UserRole)
+        : (role ?? UserRole.OWNER);
 
       let user: User;
       let isNewUser = false;
@@ -6244,8 +6181,11 @@ export class UserService {
   }
 
   /**
-   * Cross-App Login: Owner/CP → auto find/create END_USER account and return END_USER tokens.
-   * Used when an Owner/CP navigates from seller app to buyer app.
+   * Cross-App Login: Owner/CP navigates to buyer app with their seller token.
+   *
+   * One-phone-one-user model: the user is the SAME person; we just hand back
+   * a fresh token pair bound to their existing row so the buyer app has a
+   * valid session too. We do NOT create a separate END_USER record.
    */
   async crossAppLogin(sellerAccessToken: string): Promise<{
     success: boolean;
@@ -6253,7 +6193,6 @@ export class UserService {
     refreshToken: string;
     user: { id: string; name: string; phone: string; role: string };
   }> {
-    // Verify the seller token
     let payload: any;
     try {
       payload = this.jwtService.verify(sellerAccessToken);
@@ -6265,48 +6204,99 @@ export class UserService {
       throw new BadRequestException('Token must belong to an Owner or Channel Partner');
     }
 
-    // Find existing END_USER for this phone
-    let endUser = await this.userRepository.findByPhoneAndRole(
-      payload.phone,
-      UserRole.END_USER,
-    );
-
-    if (!endUser) {
-      // Get seller user to copy name
-      const sellerUser = await this.userRepository.findByPhoneAndRole(
-        payload.phone,
-        payload.role as UserRole,
-      );
-
-      // Auto-create END_USER account
-      const userData: Partial<User> = {
-        phone: payload.phone,
-        role: UserRole.END_USER,
-        name: sellerUser?.name || 'User',
-        email: null,
-        isActive: true,
-        phoneVerified: true,
-        isBlocked: false,
-        intent: null,
-      };
-
-      endUser = await this.userRepository.create(userData);
-      this.logger.log(`Auto-created END_USER account for phone ${payload.phone} (cross-app from ${payload.role})`);
+    const user = await this.userRepository.findByPhone(payload.phone);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (user.isBlocked) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
+    }
+    if (!user.isActive) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
     }
 
-    // Generate END_USER tokens
-    const { accessToken, refreshToken } = this.generateTokens(endUser);
-    await this.updateUserTokens(endUser.id, accessToken, refreshToken);
+    const { accessToken, refreshToken } = this.generateTokens(user);
+    await this.updateUserTokens(user.id, accessToken, refreshToken);
 
     return {
       success: true,
       accessToken,
       refreshToken,
       user: {
-        id: endUser.id,
-        name: endUser.name || '',
-        phone: endUser.phone,
-        role: endUser.role,
+        id: user.id,
+        name: user.name || '',
+        phone: user.phone,
+        role: user.role,
+      },
+    };
+  }
+
+  /**
+   * Upgrade the caller from END_USER to OWNER. Same row — just flips the role
+   * and issues fresh tokens so downstream services see the new role. Used when
+   * an end-user on the buyer site clicks "Post Property" and is handed off to
+   * the seller domain.
+   */
+  async upgradeToOwner(userId: string): Promise<{
+    success: boolean;
+    message: string;
+    accessToken: string;
+    refreshToken: string;
+    user: { id: string; name: string | null; email: string | null; phone: string; role: string };
+  }> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (user.isBlocked) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_BLOCKED);
+    }
+    if (!user.isActive) {
+      throw new BadRequestException(USER_MESSAGES.USER.ACCOUNT_INACTIVE);
+    }
+
+    if (user.role === UserRole.OWNER || user.role === UserRole.CHANNEL_PARTNER) {
+      // Already at owner-or-above; just mint fresh tokens so the seller app gets a clean session.
+      const { accessToken, refreshToken } = this.generateTokens(user);
+      await this.updateUserTokens(user.id, accessToken, refreshToken);
+      return {
+        success: true,
+        message: 'User is already an Owner/Channel Partner',
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+        },
+      };
+    }
+
+    // END_USER or USER → promote to OWNER
+    const updated = await this.userRepository.update(user.id, { role: UserRole.OWNER });
+    if (!updated) {
+      throw new BadRequestException('Failed to upgrade user role');
+    }
+    user.role = UserRole.OWNER;
+
+    const { accessToken, refreshToken } = this.generateTokens(user);
+    await this.updateUserTokens(user.id, accessToken, refreshToken);
+
+    this.logger.log(`Upgraded user ${user.id} (${user.phone}) to OWNER`);
+
+    return {
+      success: true,
+      message: 'Upgraded to Owner successfully',
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
       },
     };
   }

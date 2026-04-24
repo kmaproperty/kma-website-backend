@@ -168,6 +168,29 @@ export class UserController {
     return await this.userService.validateOtp(validateOtpDto, sessionId);
   }
 
+  @Post('upgrade-to-owner')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Upgrade the current user from END_USER to OWNER',
+    description:
+      'Used when an end-user on the buyer site clicks "Post Property" and is handed off to the seller domain. Takes the current access token, flips the user\'s role on the same row, and returns fresh tokens so the seller app can pick up the new session. Users already at OWNER/CHANNEL_PARTNER level just get a fresh token pair.',
+  })
+  @ApiResponse({ status: 200, description: 'Role upgraded (or no-op if already Owner/CP)' })
+  async upgradeToOwner(@Req() req: Request): Promise<{
+    success: boolean;
+    message: string;
+    accessToken: string;
+    refreshToken: string;
+    user: { id: string; name: string | null; email: string | null; phone: string; role: string };
+  }> {
+    const userId = (req.user as { id?: string } | undefined)?.id;
+    if (!userId) {
+      throw new BadRequestException('Authenticated user required');
+    }
+    return await this.userService.upgradeToOwner(userId);
+  }
+
   @Post('create-owner')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create OWNER account' })
