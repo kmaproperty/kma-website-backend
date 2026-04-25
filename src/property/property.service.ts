@@ -2,7 +2,6 @@ import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/com
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { IsNull } from 'typeorm';
-import { CacheService } from '../common/cache/cache.service';
 import { PropertyCompletionStep } from './enum/property-completion-step.enum';
 import { PropertyListingTypeRepository } from './repositories/property-listing-type.repository';
 import { PropertyCategoryNewRepository } from './repositories/property-category-new.repository';
@@ -90,13 +89,7 @@ export class PropertyService {
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
     private readonly zohoService: ZohoService,
-    private readonly cache: CacheService,
   ) {}
-
-  /** Clear every cached read that could now be stale after a property write. */
-  private invalidatePropertyCaches() {
-    this.cache.invalidatePrefix('properties:');
-  }
 
   async syncPropertyToCrm(
     body: { propertyId?: string; customer?: any; property?: any },
@@ -1810,7 +1803,6 @@ export class PropertyService {
         completionStep,
       );
 
-      this.invalidatePropertyCaches();
       return {
         id: property.id,
         status: property.status,
@@ -2113,7 +2105,6 @@ export class PropertyService {
       updated.id,
       completionStep,
     );
-    this.invalidatePropertyCaches();
     return {
       id: updated.id,
       status: updated.status,
@@ -2368,7 +2359,6 @@ export class PropertyService {
       updated.id,
       completionStep,
     );
-    this.invalidatePropertyCaches();
     return {
       id: updated.id,
       status: updated.status,
@@ -2521,7 +2511,6 @@ export class PropertyService {
 
     // Fire-and-forget Zoho CRM sync — must not block or fail the user response.
     void this.triggerZohoSyncSafe(updated.id);
-    this.invalidatePropertyCaches();
 
     return {
       id: updated.id,

@@ -2,7 +2,6 @@ import { Injectable, BadRequestException, UnauthorizedException, Logger } from '
 import { S3Service } from '../common/aws/s3.service';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource, IsNull } from 'typeorm';
-import { CacheService } from '../common/cache/cache.service';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
@@ -233,7 +232,6 @@ export class UserService {
     private readonly helpCenterFaqRepository: HelpCenterFaqRepository,
     private readonly channelPartnerReviewRepository: ChannelPartnerReviewRepository,
     private readonly leadService: LeadService,
-    private readonly cache: CacheService,
   ) {}
 
   /**
@@ -2330,33 +2328,6 @@ export class UserService {
     query: EndUserPropertiesSearchQueryDto,
     userId?: string,
   ): Promise<EndUserPropertiesSearchResponseDto> {
-    // Anonymous (no userId) hits a 60s cache. Logged-in callers always go to
-    // DB so per-user `isFavorite` flags stay accurate.
-    if (!userId) {
-      const cacheKey = `properties:list:${this.stableQueryHash(query)}`;
-      return this.cache.getOrSet(cacheKey, 60_000, () =>
-        this.runEndUserPropertiesSearch(query, undefined),
-      );
-    }
-    return this.runEndUserPropertiesSearch(query, userId);
-  }
-
-  private stableQueryHash(query: EndUserPropertiesSearchQueryDto): string {
-    const source = query as unknown as Record<string, unknown>;
-    const ordered: Record<string, unknown> = {};
-    Object.keys(source)
-      .sort()
-      .forEach((k) => {
-        const v = source[k];
-        if (v !== undefined && v !== null && v !== '') ordered[k] = v;
-      });
-    return JSON.stringify(ordered);
-  }
-
-  private async runEndUserPropertiesSearch(
-    query: EndUserPropertiesSearchQueryDto,
-    userId?: string,
-  ): Promise<EndUserPropertiesSearchResponseDto> {
     const {
       page,
       limit,
@@ -2552,13 +2523,6 @@ export class UserService {
   async getEndUserPropertiesCount(
     query: EndUserPropertiesCountQueryDto,
   ): Promise<EndUserPropertiesCountResponseDto> {
-    const cacheKey = `properties:count:${this.stableQueryHash(query as unknown as EndUserPropertiesSearchQueryDto)}`;
-    return this.cache.getOrSet(cacheKey, 60_000, () => this.runEndUserPropertiesCount(query));
-  }
-
-  private async runEndUserPropertiesCount(
-    query: EndUserPropertiesCountQueryDto,
-  ): Promise<EndUserPropertiesCountResponseDto> {
     const {
       cityId,
       search,
@@ -2616,16 +2580,6 @@ export class UserService {
    * Returns top 5 properties filtered by city
    */
   async getTopProperties(
-    query: EndUserTopPropertiesQueryDto,
-  ): Promise<EndUserTopPropertiesResponseDto> {
-    return this.cache.getOrSet(
-      `properties:top:${query.cityId ?? 'all'}`,
-      120_000,
-      () => this.computeTopProperties(query),
-    );
-  }
-
-  private async computeTopProperties(
     query: EndUserTopPropertiesQueryDto,
   ): Promise<EndUserTopPropertiesResponseDto> {
     const { cityId } = query;
@@ -2753,16 +2707,6 @@ export class UserService {
    * Returns featured properties filtered by city
    */
   async getFeaturedProperties(
-    query: EndUserFeaturedPropertiesQueryDto,
-  ): Promise<EndUserFeaturedPropertiesResponseDto> {
-    return this.cache.getOrSet(
-      `properties:featured:${query.cityId ?? 'all'}`,
-      120_000,
-      () => this.computeFeaturedProperties(query),
-    );
-  }
-
-  private async computeFeaturedProperties(
     query: EndUserFeaturedPropertiesQueryDto,
   ): Promise<EndUserFeaturedPropertiesResponseDto> {
     const { cityId } = query;
@@ -4809,14 +4753,6 @@ export class UserService {
    * Structure: Listing Types -> Categories -> Property Types; plus flat list of amenities
    */
   async getPropertyMasterData(): Promise<PropertyMasterDataResponseDto> {
-    return this.cache.getOrSet(
-      'master:property-master-data',
-      10 * 60_000,
-      () => this.computePropertyMasterData(),
-    );
-  }
-
-  private async computePropertyMasterData(): Promise<PropertyMasterDataResponseDto> {
     // Fetch all listing types, categories, property types, and amenities in parallel
     const [listingTypes, categories, propertyTypes, amenities] = await Promise.all([
       this.propertyListingTypeRepository.findAll(),
@@ -4902,11 +4838,6 @@ export class UserService {
    * When propertyTypeId is provided, bhkTypes are returned for that property type; bhkTypes are empty for Plot and Commercial category.
    */
   async getListFilters(query: ListFiltersQueryDto): Promise<ListFiltersResponseDto> {
-    const cacheKey = `master:list-filters:${query.listingTypeId ?? ''}:${query.categoryId ?? ''}:${query.propertyTypeId ?? ''}`;
-    return this.cache.getOrSet(cacheKey, 5 * 60_000, () => this.computeListFilters(query));
-  }
-
-  private async computeListFilters(query: ListFiltersQueryDto): Promise<ListFiltersResponseDto> {
     const [listingTypes, categories, propertyTypes, amenities] = await Promise.all([
       this.propertyListingTypeRepository.findAll(),
       this.propertyCategoryRepository.findAll(),
