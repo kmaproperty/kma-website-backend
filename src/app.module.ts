@@ -12,10 +12,12 @@ import { ConfigService } from './common/config/config.service';
 import { AdminModule } from './admin/admin.module';
 import { BlogModule } from './blog/blog.module';
 import { FaqModule } from './faq/faq.module';
+import { CacheModule } from './common/cache/cache.module';
 
 @Module({
   imports: [
     ConfigModule,
+    CacheModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) =>
