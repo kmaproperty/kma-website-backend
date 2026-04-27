@@ -52,6 +52,7 @@ import { ErrorHandlerService } from '../common/errorHandler/error-handler.servic
 import { AuthMiddleware, TokenVerificationMiddleware } from './middleware';
 import { AdminModule } from '../admin/admin.module';
 import { PropertyModule } from '../property/property.module';
+import { ZohoModule } from '../zoho/zoho.module';
 import { TeamMember } from '../admin/entities/team-member.entity';
 import { RegionalOffice } from '../admin/entities/regional-office.entity';
 import { HelpCenterFaq } from '../admin/entities/help-center-faq.entity';
@@ -114,6 +115,7 @@ const repositories = [
     TypeOrmModule.forFeature(entities),
     AdminModule,
     PropertyModule,
+    ZohoModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {

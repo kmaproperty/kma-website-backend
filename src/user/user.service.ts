@@ -3,6 +3,7 @@ import { S3Service } from '../common/aws/s3.service';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource, IsNull } from 'typeorm';
 import { CacheService } from '../common/cache/cache.service';
+import { ZohoService } from '../zoho/zoho.service';
 import { UserRepository } from './repositories/user.repository';
 import { OtpRepository } from './repositories/otp.repository';
 import { ChannelPartnerCodeRepository } from './repositories/channel-partner-code.repository';
@@ -234,7 +235,36 @@ export class UserService {
     private readonly channelPartnerReviewRepository: ChannelPartnerReviewRepository,
     private readonly leadService: LeadService,
     private readonly cache: CacheService,
+    private readonly zohoService: ZohoService,
   ) {}
+
+  /** Fire-and-forget Zoho Flow account-sync. Logs failures, never throws. */
+  private syncAccountToZohoSafe(
+    user: User,
+    role: 'CHANNEL_PARTNER' | 'OWNER',
+    extras: Record<string, unknown> = {},
+  ): void {
+    void this.zohoService
+      .forwardAccountToFlow(
+        {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role,
+            createdAt: user.createdAt,
+            ...extras,
+          },
+        },
+        role,
+      )
+      .catch((err) => {
+        this.logger.error(
+          `Zoho account sync failed (${role}, user=${user.id}): ${err instanceof Error ? err.message : String(err)}`,
+        );
+      });
+  }
 
   /**
    * Create JWT payload for a user
@@ -367,9 +397,24 @@ export class UserService {
       await queryRunner.release();
     }
 
+    // Fire-and-forget: notify Zoho Flow that an Owner upgraded to Channel Partner.
+    const refreshed = await this.userRepository.findById(user.id);
+    if (refreshed) {
+      this.syncAccountToZohoSafe(refreshed, 'CHANNEL_PARTNER', {
+        channelPartnerCode: refreshed.channelPartnerCode,
+        firmName: refreshed.firmName,
+        businessSince: refreshed.businessSince,
+        cities: refreshed.cities,
+        aboutYourSelf: refreshed.aboutYourSelf,
+        intent: refreshed.intent,
+        upgradedFromOwner: true,
+      });
+    }
+
     return {
       success: true,
       message: 'Upgraded to CHANNEL_PARTNER successfully',
+      channelPartnerCode: refreshed?.channelPartnerCode ?? generatedCode,
     };
   }
 
@@ -765,6 +810,12 @@ export class UserService {
       throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
     }
 
+    // Fire-and-forget: notify Zoho Flow that a Property Owner account was created.
+    this.syncAccountToZohoSafe(updatedUser, 'OWNER', {
+      city: updatedUser.cities,
+      intent: updatedUser.intent,
+    });
+
     return {
       success: true,
       message: USER_MESSAGES.OWNER.CREATED,
@@ -859,6 +910,16 @@ export class UserService {
     if (!updatedUser) {
       throw new BadRequestException(USER_MESSAGES.USER.FAILED_TO_UPDATE);
     }
+
+    // Fire-and-forget: notify Zoho Flow that a Channel Partner account was created.
+    this.syncAccountToZohoSafe(updatedUser, 'CHANNEL_PARTNER', {
+      channelPartnerCode: updatedUser.channelPartnerCode,
+      firmName: updatedUser.firmName,
+      businessSince: updatedUser.businessSince,
+      cities: updatedUser.cities,
+      aboutYourSelf: updatedUser.aboutYourSelf,
+      intent: updatedUser.intent,
+    });
 
     return {
       success: true,

@@ -114,6 +114,9 @@ export class UpgradeToChannelPartnerResponseDto {
 
   @ApiProperty({ example: 'Upgraded to CHANNEL_PARTNER successfully' })
   message: string;
+
+  @ApiProperty({ example: 'CP-ABC1234', required: false })
+  channelPartnerCode?: string;
 }
 
 
