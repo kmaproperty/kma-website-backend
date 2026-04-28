@@ -7,6 +7,8 @@ import {
   CreateContactUsResponseDto,
   CreateJoinUsDto,
   CreateJoinUsResponseDto,
+  CreateReferralEnquiryDto,
+  CreateReferralEnquiryResponseDto,
   CreateSalesEnquiryDto,
   CreateSalesEnquiryResponseDto,
 } from './dto';
@@ -73,5 +75,18 @@ export class ContactUsController {
     @Body() dto: CreateSalesEnquiryDto,
   ): Promise<CreateSalesEnquiryResponseDto> {
     return await this.contactUsService.createSalesEnquiry(dto);
+  }
+
+  @Post('referral-enquiry')
+  @ApiOperation({ summary: 'Submit Refer and Earn referral' })
+  @ApiResponse({
+    status: 201,
+    description: 'Referral submitted successfully',
+    type: CreateReferralEnquiryResponseDto,
+  })
+  async createReferralEnquiry(
+    @Body() dto: CreateReferralEnquiryDto,
+  ): Promise<CreateReferralEnquiryResponseDto> {
+    return await this.contactUsService.createReferralEnquiry(dto);
   }
 }

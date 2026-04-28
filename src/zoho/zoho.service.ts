@@ -10,6 +10,10 @@ export interface ZohoAccountPayload {
   user: Record<string, unknown>;
 }
 
+export interface ZohoReferralPayload {
+  referral: Record<string, unknown>;
+}
+
 export interface ZohoSyncResult {
   success: boolean;
   status: number;
@@ -59,6 +63,17 @@ export class ZohoService {
     );
 
     return this.post(baseUrl, apiKey, payload, `account/${role}`);
+  }
+
+  async forwardReferralToFlow(payload: ZohoReferralPayload): Promise<ZohoSyncResult> {
+    const baseUrl =
+      this.configService.get<string>('ZOHO_FLOW_REFERRAL_WEBHOOK_URL') ||
+      'https://flow.zoho.in/60051516575/flow/webhook/incoming';
+    const apiKey =
+      this.configService.get<string>('ZOHO_FLOW_REFERRAL_API_KEY') ||
+      '1001.aecf2e57569f8a587ed7f11ed97ce7c5.68c6d33c8324bcf45e2751863970c6f5';
+
+    return this.post(baseUrl, apiKey, payload, 'referral');
   }
 
   private async post(

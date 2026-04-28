@@ -11,10 +11,13 @@ import {
   CreateContactUsResponseDto,
   CreateJoinUsDto,
   CreateJoinUsResponseDto,
+  CreateReferralEnquiryDto,
+  CreateReferralEnquiryResponseDto,
   CreateSalesEnquiryDto,
   CreateSalesEnquiryResponseDto,
 } from './dto';
 import { ContactUs } from './entities/contact-us.entity';
+import { ZohoService } from '../zoho/zoho.service';
 
 @Injectable()
 export class ContactUsService {
@@ -24,6 +27,7 @@ export class ContactUsService {
     private readonly contactUsRepository: ContactUsRepository,
     private readonly joinUsEnquiryRepository: JoinUsEnquiryRepository,
     private readonly salesEnquiryRepository: SalesEnquiryRepository,
+    private readonly zohoService: ZohoService,
   ) {}
 
   /**
@@ -128,6 +132,56 @@ export class ContactUsService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to create sales enquiry: ${errorMessage}`, error instanceof Error ? error.stack : '');
       throw new InternalServerErrorException('Failed to submit enquiry. Please try again later.');
+    }
+  }
+
+  /**
+   * Submit a refer-and-earn enquiry and forward it to Zoho Flow webhook.
+   */
+  async createReferralEnquiry(
+    dto: CreateReferralEnquiryDto,
+  ): Promise<CreateReferralEnquiryResponseDto> {
+    try {
+      const payload = {
+        referral: {
+          referrer_name: dto.referrerName,
+          referrer_phone: dto.referrerPhone,
+          client_name: dto.clientName,
+          client_mobile: dto.clientMobile,
+          property_type: dto.propertyType,
+          location: dto.location?.trim() || 'NA',
+          channel_partner_id: dto.channelPartnerId?.trim() || 'NA',
+          via_partner: Boolean(dto.channelPartnerId?.trim()),
+          source: 'buyer_refer_and_earn',
+        },
+      };
+
+      const result = await this.zohoService.forwardReferralToFlow(payload);
+      if (!result.success) {
+        this.logger.warn(
+          `Referral Zoho sync failed: status=${result.status} error=${result.error || 'unknown'}`,
+        );
+        throw new InternalServerErrorException(
+          'Failed to submit referral right now. Please try again later.',
+        );
+      }
+
+      return {
+        success: true,
+        message: 'Referral submitted successfully',
+      };
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to submit referral enquiry: ${errorMessage}`,
+        error instanceof Error ? error.stack : '',
+      );
+      throw new InternalServerErrorException(
+        'Failed to submit referral right now. Please try again later.',
+      );
     }
   }
 }

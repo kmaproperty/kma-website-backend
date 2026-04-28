@@ -8,9 +8,10 @@ import { SalesEnquiryRepository } from './repositories/sales-enquiry.repository'
 import { ContactUs } from './entities/contact-us.entity';
 import { JoinUsEnquiry } from './entities/join-us-enquiry.entity';
 import { SalesEnquiry } from './entities/sales-enquiry.entity';
+import { ZohoModule } from '../zoho/zoho.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ContactUs, JoinUsEnquiry, SalesEnquiry])],
+  imports: [TypeOrmModule.forFeature([ContactUs, JoinUsEnquiry, SalesEnquiry]), ZohoModule],
   controllers: [ContactUsController],
   providers: [
     ContactUsService,
