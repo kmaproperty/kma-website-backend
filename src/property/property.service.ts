@@ -2479,28 +2479,44 @@ export class PropertyService {
     const previouslyCompletedStep = property.completionStep ?? 0;
     const targetCompletionStep = PropertyCompletionStep.STEP_4;
 
-    // Build update object
+    // KMA-internal CP bypasses the manual review workflow: properties they
+    // post go straight to ACTIVE+VERIFIED with all media pre-approved so they
+    // appear on the public listing immediately. Identified by env var.
+    const internalCpId = process.env.KMA_INTERNAL_CP_USER_ID;
+    const isInternalKma = !!internalCpId && userId === internalCpId;
+
     const newCompletionStep = Math.max(previouslyCompletedStep, targetCompletionStep);
-    const listingScore = this.calculateListingScore(newCompletionStep, property.isVerified);
-    
+    const listingScore = this.calculateListingScore(
+      newCompletionStep,
+      isInternalKma ? VerificationStatus.VERIFIED : property.isVerified,
+    );
+
+    const mediaApprovalStatus = (isInternalKma ? 'approved' : 'pending') as
+      | 'approved'
+      | 'pending';
+
     const updateData: any = {
       completionStep: newCompletionStep,
       listingScore,
-      status: 'pending_review',
+      status: isInternalKma ? PropertyStatus.ACTIVE : 'pending_review',
       photos: dto.photos.map(p => ({
         fileKey: p.fileKey,
         view: p.view,
         isCoverImage: p.isCoverImage || false,
-        approvalStatus: 'pending' as const,
+        approvalStatus: mediaApprovalStatus,
       })),
     };
+
+    if (isInternalKma) {
+      updateData.isVerified = VerificationStatus.VERIFIED;
+    }
 
     if (dto.videos !== undefined) {
       updateData.videos = dto.videos && dto.videos.length > 0
         ? dto.videos.map(v => ({
           fileKey: v.fileKey,
           format: v.format,
-          approvalStatus: 'pending' as const,
+          approvalStatus: mediaApprovalStatus,
         }))
         : null;
     }
