@@ -4666,7 +4666,9 @@ export class UserService {
       name: user.name || 'User',
       phoneNumber: user.phone,
       email: user.email || null,
-      endUserId, // Map to logged in end user
+      endUserId,
+      isApproved: true,
+      approvedAt: new Date(),
     });
 
     return {
@@ -5133,7 +5135,7 @@ export class UserService {
    */
   async getHomePageReviews(): Promise<HomePageReviewsResponseDto> {
     const [reviews, statistics, totalEndUsers] = await Promise.all([
-      this.kmaRatingReviewRepository.findTopApprovedReviews(5),
+      this.kmaRatingReviewRepository.findTopApprovedReviews(50),
       this.kmaRatingReviewRepository.getApprovedReviewsStatistics(),
       // Count total end users (active, non-blocked)
       this.dataSource
