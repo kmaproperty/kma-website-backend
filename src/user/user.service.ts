@@ -188,6 +188,7 @@ import { HelpCenterFaqRepository } from '../admin/repositories/help-center-faq.r
 import { FavoritePropertyRepository } from './repositories/favorite-property.repository';
 import { MetaWhatsappService } from '../common/whatsapp/meta-whatsapp.service';
 import { TwilioSmsService } from '../common/sms/twilio-sms.service';
+import { SmartpingSmsService } from '../common/sms/smartping-sms.service';
 
 @Injectable()
 export class UserService {
@@ -228,6 +229,7 @@ export class UserService {
     private readonly contactedPropertyRepository: ContactedPropertyRepository,
     private readonly metaWhatsappService: MetaWhatsappService,
     private readonly twilioSmsService: TwilioSmsService,
+    private readonly smartpingSmsService: SmartpingSmsService,
     private readonly s3Service: S3Service,
     private readonly teamMemberRepository: TeamMemberRepository,
     private readonly regionalOfficeRepository: RegionalOfficeRepository,
@@ -500,9 +502,12 @@ export class UserService {
       attempts: 0,
     });
 
-    // Send OTP via WhatsApp (Meta Cloud API) and SMS (Twilio) as fallback
-    await Promise.all([
+    // Fan out OTP delivery: WhatsApp (Meta Cloud API), SmartPing DLT SMS,
+    // and Twilio SMS/WhatsApp. allSettled so a single channel failure
+    // doesn't break OTP for the user — others still deliver.
+    await Promise.allSettled([
       this.metaWhatsappService.sendOtp(phone, otpCode, 10),
+      this.smartpingSmsService.sendOtp(phone, otpCode, 10),
       this.twilioSmsService.sendOtp(phone, otpCode, 10),
     ]);
 
