@@ -174,6 +174,18 @@ export class AdminController {
     return this.adminService.login(dto);
   }
 
+  @Post('auth/kma-internal-login')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Issue user tokens for the KMA Internal CP account',
+    description:
+      'Admin-only handoff. Returns access/refresh tokens for the KMA Internal CP user (KMA_INTERNAL_CP_USER_ID env var) so the admin panel can drop the operator into the seller post-property flow without an OTP.',
+  })
+  async kmaInternalLogin() {
+    return this.adminService.issueKmaInternalCpTokens();
+  }
+
   @Get('dashboard/stats')
   @UseGuards(AdminAuthGuard)
   @ApiBearerAuth('access-token')
