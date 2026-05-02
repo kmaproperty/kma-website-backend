@@ -332,6 +332,66 @@ export class AdminService {
     );
   }
 
+  /**
+   * Issue user-shape access/refresh tokens for the KMA Internal CP user so
+   * the admin panel can hand the operator into the seller post-property flow
+   * without an OTP. The KMA Internal CP id is identified by the
+   * KMA_INTERNAL_CP_USER_ID env var (the same one that auto-approves
+   * properties posted by this user).
+   */
+  async issueKmaInternalCpTokens(): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: { id: string; phone: string; role: string; name: string | null };
+  }> {
+    const internalCpId = process.env.KMA_INTERNAL_CP_USER_ID;
+    if (!internalCpId) {
+      throw new BadRequestException(
+        'KMA_INTERNAL_CP_USER_ID env var is not configured',
+      );
+    }
+    const user = await this.userRepository.findById(internalCpId);
+    if (!user) {
+      throw new BadRequestException(
+        'KMA Internal CP user not found in database',
+      );
+    }
+
+    const payload = {
+      sub: user.id,
+      phone: user.phone,
+      role: user.role,
+      type: 'access_token',
+    };
+    const refreshPayload = { ...payload, type: 'refresh_token' };
+
+    const secret = this.getJwtSecret();
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret,
+      expiresIn: this.ACCESS_TOKEN_EXPIRY,
+    });
+    const refreshToken = await this.jwtService.signAsync(refreshPayload, {
+      secret,
+      expiresIn: this.REFRESH_TOKEN_EXPIRY,
+    });
+
+    await this.userRepository.update(user.id, {
+      token: accessToken,
+      refreshToken,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        phone: user.phone,
+        role: user.role,
+        name: user.name,
+      },
+    };
+  }
+
   private async generateTokens(admin: { id: string; username: string; role: AdminRole }) {
     const payload = {
       sub: admin.id,
