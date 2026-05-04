@@ -77,12 +77,12 @@ export class JobsService {
     const qb = this.jobRepository
       .createQueryBuilder('job')
       .leftJoinAndSelect('job.categories', 'category')
-      .orderBy('job.created_at', 'DESC')
+      .orderBy('job.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
     if (query.search?.trim()) {
-      qb.andWhere('(job.title ILIKE :search OR job.company_name ILIKE :search)', {
+      qb.andWhere('(job.title ILIKE :search OR job.companyName ILIKE :search)', {
         search: `%${query.search.trim()}%`,
       });
     }
