@@ -13,6 +13,7 @@ import { AdminModule } from './admin/admin.module';
 import { BlogModule } from './blog/blog.module';
 import { FaqModule } from './faq/faq.module';
 import { CacheModule } from './common/cache/cache.module';
+import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CacheModule } from './common/cache/cache.module';
     AdminModule,
     BlogModule,
     FaqModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

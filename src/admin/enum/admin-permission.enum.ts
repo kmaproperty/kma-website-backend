@@ -19,6 +19,9 @@ export enum AdminPermission {
   
   // Blog Management
   BLOG_MANAGEMENT = 'BLOG_MANAGEMENT',
+
+  // Jobs and Career Management
+  JOB_MANAGEMENT = 'JOB_MANAGEMENT',
 }
 
 

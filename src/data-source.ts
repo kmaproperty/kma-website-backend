@@ -19,9 +19,13 @@ import { ContactUs } from './contact-us/entities/contact-us.entity';
 import { Lead } from './admin/entities/lead.entity';
 import { LeadNote } from './admin/entities/lead-note.entity';
 import { LeadPropertyContact } from './admin/entities/lead-property-contact.entity';
+import { Admin } from './admin/entities/admin.entity';
 import { BankDetails } from './user/entities/bank-details.entity';
 import { ContactUsKmaQuery } from './user/entities/contact-us-kma-query.entity';
 import { Faq } from './faq/entities/faq.entity';
+import { JobCategory } from './jobs/entities/job-category.entity';
+import { Job } from './jobs/entities/job.entity';
+import { JobApplication } from './jobs/entities/job-application.entity';
 
 // Load environment variables
 config();
@@ -54,12 +58,16 @@ export const AppDataSource = new DataSource({
     UnitConfiguration,
     Property,
     ContactUs,
+    Admin,
     Lead,
     LeadNote,
     LeadPropertyContact,
     BankDetails,
     ContactUsKmaQuery,
     Faq,
+    JobCategory,
+    Job,
+    JobApplication,
   ],
   migrations: ['src/migration/*.ts'],
   subscribers: [],
