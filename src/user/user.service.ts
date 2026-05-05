@@ -319,6 +319,16 @@ export class UserService {
       throw new BadRequestException('Only OWNERs can be upgraded');
     }
 
+    const agreements = await this.agreementRepository.findByUserId(user.id);
+    const hasCompletedAgreement = agreements.some(
+      (agreement) => agreement.status === AgreementStatus.COMPLETED,
+    );
+    if (!hasCompletedAgreement) {
+      throw new BadRequestException(
+        'Please sign the channel partner agreement before upgrading',
+      );
+    }
+
     // Auto-generate a unique Channel Partner code on role upgrade. Client
     // wants system-generated codes; any incoming value is ignored.
     const generatedCode = await this.generateUniqueChannelPartnerCode(
@@ -1098,7 +1108,6 @@ export class UserService {
       success: true,
       message: 'OTP sent successfully to your mobile number',
       phone,
-      otp: otpResponse.otp, // Only in development
     };
   }
 
@@ -1280,7 +1289,6 @@ export class UserService {
       success: true,
       message: 'OTP sent successfully to your mobile number',
       phone,
-      otp: otpResponse.otp, // Only in development
     };
   }
 
@@ -2162,7 +2170,6 @@ export class UserService {
       success: true,
       message: 'OTP sent successfully to your new mobile number',
       phone: newPhone,
-      otp: otpResponse.otp, // Only in development
     };
   }
 
@@ -4439,7 +4446,6 @@ export class UserService {
     return {
       success: result.success,
       message: result.message,
-      otp: result.otp,
     };
   }
 
