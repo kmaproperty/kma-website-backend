@@ -526,11 +526,12 @@ export class UserService {
       this.logger.debug(`OTP generated for ${phone}: ${otpCode}`);
     }
 
-    // Only return OTP in development/staging environments
+    // Never echo the OTP back to the client. Defence-in-depth — even if
+    // NODE_ENV is misconfigured on a server, the value stays out of the
+    // response. Devs can read it from server logs above.
     const response: SendOtpResponseDto = {
       success: true,
       message: USER_MESSAGES.OTP.SENT,
-      otp: process.env.NODE_ENV === 'production' ? undefined : otpCode,
     };
 
     return response;
@@ -1467,11 +1468,10 @@ export class UserService {
       this.logger.debug(`OTP resent for ${phone}: ${otpCode}`);
     }
 
-    // Only return OTP in development/staging environments
+    // Never return the OTP in the response — see sendOtp for the reasoning.
     const response: ResendOtpResponseDto = {
       success: true,
       message: USER_MESSAGES.OTP.RESENT,
-      otp: process.env.NODE_ENV === 'production' ? undefined : otpCode,
     };
 
     return response;
