@@ -135,5 +135,41 @@ export class KmaRatingReviewRepository {
       averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
     };
   }
+
+  /**
+   * Find a rating review by end user (used for upsert + prefill).
+   * One review per logged-in end user; phone-only submissions are ignored here.
+   */
+  async findOneByEndUserId(
+    endUserId: string,
+  ): Promise<KmaRatingReview | null> {
+    return await this.kmaRatingReviewRepository.findOne({
+      where: { endUserId },
+      relations: ['endUser'],
+    });
+  }
+
+  /**
+   * Approved-review counts bucketed by floor(rating) so the home page
+   * can render a real distribution bar chart for stars 1–5.
+   */
+  async getApprovedRatingDistribution(): Promise<Record<number, number>> {
+    const rows = await this.kmaRatingReviewRepository
+      .createQueryBuilder('ratingReview')
+      .select('FLOOR(ratingReview.rating)', 'bucket')
+      .addSelect('COUNT(*)', 'count')
+      .where('ratingReview.isApproved = :isApproved', { isApproved: true })
+      .groupBy('FLOOR(ratingReview.rating)')
+      .getRawMany<{ bucket: string; count: string }>();
+
+    const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const row of rows) {
+      const bucket = Number(row.bucket);
+      if (bucket >= 1 && bucket <= 5) {
+        distribution[bucket] = Number(row.count);
+      }
+    }
+    return distribution;
+  }
 }
 
