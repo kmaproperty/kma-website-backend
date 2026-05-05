@@ -13,7 +13,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { JobStatus } from '../entities/job.entity';
+import { ApplyType, ApprovalStatus, JobStatus } from '../entities/job.entity';
 
 export class CreateJobDto {
   @ApiProperty()
@@ -37,6 +37,34 @@ export class CreateJobDto {
   @MaxLength(80)
   jobType?: string;
 
+
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  openingsCount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  workMode?: string;
+
   @ApiProperty()
   @IsString()
   description: string;
@@ -51,6 +79,15 @@ export class CreateJobDto {
   @IsString()
   benefits?: string;
 
+
+
+
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  responsibilities?: string;
+
   @ApiProperty({ type: [String], description: 'Multiple job category IDs' })
   @IsArray()
   @ArrayMinSize(1)
@@ -61,6 +98,25 @@ export class CreateJobDto {
   @IsOptional()
   @IsEnum(JobStatus)
   status?: JobStatus;
+
+
+
+
+
+  @ApiPropertyOptional({ enum: ApprovalStatus })
+  @IsOptional()
+  @IsEnum(ApprovalStatus)
+  approvalStatus?: ApprovalStatus;
+
+  @ApiPropertyOptional({ enum: ApplyType })
+  @IsOptional()
+  @IsEnum(ApplyType)
+  applyType?: ApplyType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  applyLink?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -77,12 +133,37 @@ export class CreateJobDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  experienceLabel?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  minimumQualification?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  skills?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   salaryMin?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   salaryMax?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  salaryType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  salaryVisibility?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -93,6 +174,41 @@ export class CreateJobDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  urgentHiring?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  hrName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  hrMobileNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactEmail?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  companyWebsite?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  companyLogo?: string;
 }
 
 export class UpdateJobDto {
@@ -122,6 +238,32 @@ export class UpdateJobDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsInt()
+  @Min(1)
+  openingsCount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  workMode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   description?: string;
 
@@ -135,6 +277,11 @@ export class UpdateJobDto {
   @IsString()
   benefits?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  responsibilities?: string;
+
   @ApiPropertyOptional({ type: [String], description: 'Multiple job category IDs' })
   @IsOptional()
   @IsArray()
@@ -146,6 +293,21 @@ export class UpdateJobDto {
   @IsOptional()
   @IsEnum(JobStatus)
   status?: JobStatus;
+
+  @ApiPropertyOptional({ enum: ApprovalStatus })
+  @IsOptional()
+  @IsEnum(ApprovalStatus)
+  approvalStatus?: ApprovalStatus;
+
+  @ApiPropertyOptional({ enum: ApplyType })
+  @IsOptional()
+  @IsEnum(ApplyType)
+  applyType?: ApplyType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  applyLink?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -162,12 +324,37 @@ export class UpdateJobDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  experienceLabel?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  minimumQualification?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  skills?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   salaryMin?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   salaryMax?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  salaryType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  salaryVisibility?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -178,4 +365,39 @@ export class UpdateJobDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  urgentHiring?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  hrName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  hrMobileNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactEmail?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  companyWebsite?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  companyLogo?: string;
 }

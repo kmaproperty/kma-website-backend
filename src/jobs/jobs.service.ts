@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { JobCategory } from './entities/job-category.entity';
-import { Job, JobStatus } from './entities/job.entity';
+import { ApplyType, Job, JobStatus } from './entities/job.entity';
 import { CreateJobCategoryDto, UpdateJobCategoryDto } from './dto/job-category.dto';
 import { CreateJobDto, UpdateJobDto } from './dto/job.dto';
 import { JobApplication } from './entities/job-application.entity';
@@ -115,17 +115,38 @@ export class JobsService {
       companyName: dto.companyName.trim(),
       location: dto.location.trim(),
       jobType: dto.jobType?.trim() ?? null,
+      openingsCount: dto.openingsCount ?? null,
+      country: dto.country?.trim() || 'India',
+      state: dto.state?.trim() ?? null,
+      city: dto.city?.trim() ?? null,
+      workMode: dto.workMode?.trim() ?? null,
       description: dto.description.trim(),
       requirements: dto.requirements?.trim() ?? null,
       benefits: dto.benefits?.trim() ?? null,
+      responsibilities: dto.responsibilities?.trim() ?? null,
       status,
+      approvalStatus: dto.approvalStatus,
+      applyType: dto.applyType ?? ApplyType.IN_APP,
+      applyLink: dto.applyLink?.trim() ?? null,
       minExperienceYears: dto.minExperienceYears ?? null,
       maxExperienceYears: dto.maxExperienceYears ?? null,
+      experienceLabel: dto.experienceLabel?.trim() ?? null,
+      minimumQualification: dto.minimumQualification?.trim() ?? null,
+      skills: this.normalizeSkills(dto.skills),
       salaryMin: dto.salaryMin ?? null,
       salaryMax: dto.salaryMax ?? null,
+      salaryType: dto.salaryType?.trim() ?? null,
+      salaryVisibility: dto.salaryVisibility ?? true,
       applicationDeadline: dto.applicationDeadline ? new Date(dto.applicationDeadline) : null,
       publishedAt: status === JobStatus.PUBLISHED ? new Date() : null,
       isActive: dto.isActive ?? true,
+      featured: dto.featured ?? false,
+      urgentHiring: dto.urgentHiring ?? false,
+      hrName: dto.hrName?.trim() ?? null,
+      hrMobileNumber: dto.hrMobileNumber?.trim() ?? null,
+      contactEmail: dto.contactEmail?.trim() ?? null,
+      companyWebsite: dto.companyWebsite?.trim() ?? null,
+      companyLogo: dto.companyLogo?.trim() ?? null,
       postedByAdminId: adminId ?? null,
       categories,
     });
@@ -157,14 +178,37 @@ export class JobsService {
       companyName: dto.companyName?.trim() ?? job.companyName,
       location: dto.location?.trim() ?? job.location,
       jobType: dto.jobType?.trim() ?? job.jobType,
+      openingsCount: dto.openingsCount ?? job.openingsCount,
+      country: dto.country?.trim() ?? job.country,
+      state: dto.state !== undefined ? (dto.state?.trim() || null) : job.state,
+      city: dto.city !== undefined ? (dto.city?.trim() || null) : job.city,
+      workMode: dto.workMode !== undefined ? (dto.workMode?.trim() || null) : job.workMode,
       description: dto.description?.trim() ?? job.description,
       requirements: dto.requirements !== undefined ? (dto.requirements?.trim() || null) : job.requirements,
       benefits: dto.benefits !== undefined ? (dto.benefits?.trim() || null) : job.benefits,
+      responsibilities:
+        dto.responsibilities !== undefined
+          ? (dto.responsibilities?.trim() || null)
+          : job.responsibilities,
       status: dto.status ?? job.status,
+      approvalStatus: dto.approvalStatus ?? job.approvalStatus,
+      applyType: dto.applyType ?? job.applyType,
+      applyLink: dto.applyLink !== undefined ? (dto.applyLink?.trim() || null) : job.applyLink,
       minExperienceYears: dto.minExperienceYears ?? job.minExperienceYears,
       maxExperienceYears: dto.maxExperienceYears ?? job.maxExperienceYears,
+      experienceLabel:
+        dto.experienceLabel !== undefined
+          ? (dto.experienceLabel?.trim() || null)
+          : job.experienceLabel,
+      minimumQualification:
+        dto.minimumQualification !== undefined
+          ? (dto.minimumQualification?.trim() || null)
+          : job.minimumQualification,
+      skills: dto.skills !== undefined ? this.normalizeSkills(dto.skills) : job.skills,
       salaryMin: dto.salaryMin ?? job.salaryMin,
       salaryMax: dto.salaryMax ?? job.salaryMax,
+      salaryType: dto.salaryType !== undefined ? (dto.salaryType?.trim() || null) : job.salaryType,
+      salaryVisibility: dto.salaryVisibility ?? job.salaryVisibility,
       applicationDeadline:
         dto.applicationDeadline !== undefined
           ? dto.applicationDeadline
@@ -172,6 +216,21 @@ export class JobsService {
             : null
           : job.applicationDeadline,
       isActive: dto.isActive ?? job.isActive,
+      featured: dto.featured ?? job.featured,
+      urgentHiring: dto.urgentHiring ?? job.urgentHiring,
+      hrName: dto.hrName !== undefined ? (dto.hrName?.trim() || null) : job.hrName,
+      hrMobileNumber:
+        dto.hrMobileNumber !== undefined
+          ? (dto.hrMobileNumber?.trim() || null)
+          : job.hrMobileNumber,
+      contactEmail:
+        dto.contactEmail !== undefined ? (dto.contactEmail?.trim() || null) : job.contactEmail,
+      companyWebsite:
+        dto.companyWebsite !== undefined
+          ? (dto.companyWebsite?.trim() || null)
+          : job.companyWebsite,
+      companyLogo:
+        dto.companyLogo !== undefined ? (dto.companyLogo?.trim() || null) : job.companyLogo,
     });
 
     await this.jobRepository.save(job);
@@ -257,5 +316,12 @@ export class JobsService {
       .trim()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
+  }
+
+  private normalizeSkills(skills?: string[]) {
+    if (!skills?.length) {
+      return null;
+    }
+    return skills.map((s) => s.trim()).filter(Boolean).join(',');
   }
 }
