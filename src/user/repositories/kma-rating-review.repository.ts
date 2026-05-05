@@ -110,29 +110,43 @@ export class KmaRatingReviewRepository {
   }
 
   /**
-   * Get statistics for approved reviews
+   * Get statistics for approved reviews. One-review-per-end-user is enforced
+   * for new submissions, but historical rows may still hold accidental
+   * duplicates — so we collapse to the latest row per endUserId at SQL level
+   * to keep totalCount / averageRating honest. Phone-only rows
+   * (end_user_id IS NULL) are treated as independent entries.
    */
   async getApprovedReviewsStatistics(): Promise<{
     totalCount: number;
     averageRating: number;
   }> {
-    const queryBuilder = this.kmaRatingReviewRepository
-      .createQueryBuilder('ratingReview')
-      .where('ratingReview.isApproved = :isApproved', { isApproved: true });
+    const result = await this.kmaRatingReviewRepository.query(
+      `
+      WITH ranked AS (
+        SELECT
+          rating,
+          ROW_NUMBER() OVER (
+            PARTITION BY COALESCE(end_user_id::text, id::text)
+            ORDER BY created_at DESC
+          ) AS rn
+        FROM kma_rating_reviews
+        WHERE is_approved = true AND deleted_at IS NULL
+      )
+      SELECT
+        COUNT(*)::int AS total_count,
+        AVG(rating)::float AS average_rating
+      FROM ranked
+      WHERE rn = 1
+      `,
+    );
 
-    const totalCount = await queryBuilder.getCount();
-
-    const result = await queryBuilder
-      .select('AVG(ratingReview.rating)', 'averageRating')
-      .getRawOne();
-
-    const averageRating = result?.averageRating
-      ? parseFloat(result.averageRating)
-      : 0;
+    const row = Array.isArray(result) && result.length > 0 ? result[0] : null;
+    const totalCount = row ? Number(row.total_count) || 0 : 0;
+    const averageRatingRaw = row?.average_rating ? Number(row.average_rating) : 0;
 
     return {
       totalCount,
-      averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
+      averageRating: Math.round(averageRatingRaw * 10) / 10,
     };
   }
 
@@ -146,24 +160,60 @@ export class KmaRatingReviewRepository {
     return await this.kmaRatingReviewRepository.findOne({
       where: { endUserId },
       relations: ['endUser'],
+      order: { createdAt: 'DESC' },
     });
   }
 
   /**
+   * Find every rating review for an end user — used to self-heal accidental
+   * duplicates (e.g. from a race when the unique constraint isn't installed).
+   */
+  async findAllByEndUserId(
+    endUserId: string,
+  ): Promise<KmaRatingReview[]> {
+    return await this.kmaRatingReviewRepository.find({
+      where: { endUserId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Hard-delete a set of rating reviews by id. Used after picking the winner
+   * row to drop leftover duplicates for the same end user.
+   */
+  async deleteByIds(ids: string[]): Promise<void> {
+    if (!ids.length) return;
+    await this.kmaRatingReviewRepository.delete(ids);
+  }
+
+  /**
    * Approved-review counts bucketed by floor(rating) so the home page
-   * can render a real distribution bar chart for stars 1–5.
+   * can render a real distribution bar chart for stars 1–5. Like the
+   * statistics method above, we dedupe to one row per end user so that
+   * duplicates from the pre-upsert era don't double-count.
    */
   async getApprovedRatingDistribution(): Promise<Record<number, number>> {
-    const rows = await this.kmaRatingReviewRepository
-      .createQueryBuilder('ratingReview')
-      .select('FLOOR(ratingReview.rating)', 'bucket')
-      .addSelect('COUNT(*)', 'count')
-      .where('ratingReview.isApproved = :isApproved', { isApproved: true })
-      .groupBy('FLOOR(ratingReview.rating)')
-      .getRawMany<{ bucket: string; count: string }>();
+    const rows = await this.kmaRatingReviewRepository.query(
+      `
+      WITH ranked AS (
+        SELECT
+          rating,
+          ROW_NUMBER() OVER (
+            PARTITION BY COALESCE(end_user_id::text, id::text)
+            ORDER BY created_at DESC
+          ) AS rn
+        FROM kma_rating_reviews
+        WHERE is_approved = true AND deleted_at IS NULL
+      )
+      SELECT FLOOR(rating)::int AS bucket, COUNT(*)::int AS count
+      FROM ranked
+      WHERE rn = 1
+      GROUP BY FLOOR(rating)
+      `,
+    );
 
     const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    for (const row of rows) {
+    for (const row of rows ?? []) {
       const bucket = Number(row.bucket);
       if (bucket >= 1 && bucket <= 5) {
         distribution[bucket] = Number(row.count);
