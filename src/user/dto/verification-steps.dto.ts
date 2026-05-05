@@ -243,6 +243,12 @@ export class VerificationStepsStatusResponseDto {
   success: boolean;
 
   @ApiProperty({
+    description: 'User role at the time of the check (drives which steps are required)',
+    example: 'CHANNEL_PARTNER',
+  })
+  role: string;
+
+  @ApiProperty({
     description: 'Step 1: Live photo status',
     example: {
       live_photo_url: 'https://example.com/live-photo.jpg',

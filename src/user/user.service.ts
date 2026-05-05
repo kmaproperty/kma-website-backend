@@ -4012,6 +4012,7 @@ export class UserService {
 
     return {
       success: true,
+      role: user.role,
       step1_live_photo: {
         live_photo_url: user.livePhotoUrl ?? null,
         live_photo_approved: user.livePhotoApproved,
