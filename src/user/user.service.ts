@@ -4669,20 +4669,32 @@ export class UserService {
       throw new BadRequestException('User not found');
     }
 
-    const existing =
-      await this.kmaRatingReviewRepository.findOneByEndUserId(endUserId);
-    if (existing) {
-      await this.kmaRatingReviewRepository.update(existing.id, {
+    // Pull every row tied to this end user — there can be more than one if a
+    // pre-upsert release allowed duplicates or if two concurrent submits
+    // raced past the existing-row check before either committed.
+    const allExisting =
+      await this.kmaRatingReviewRepository.findAllByEndUserId(endUserId);
+    if (allExisting.length > 0) {
+      const [winner, ...losers] = allExisting; // findAll is ordered createdAt DESC
+      if (losers.length > 0) {
+        await this.kmaRatingReviewRepository.deleteByIds(
+          losers.map((row) => row.id),
+        );
+      }
+      await this.kmaRatingReviewRepository.update(winner.id, {
         rating,
         review: review || null,
-        name: user.name || existing.name || 'User',
-        phoneNumber: user.phone || existing.phoneNumber,
-        email: user.email ?? existing.email,
+        name: user.name || winner.name || 'User',
+        phoneNumber: user.phone || winner.phoneNumber,
+        email: user.email ?? winner.email,
       });
       return {
         success: true,
-        message: 'Rating and review updated successfully',
-        ratingReviewId: existing.id,
+        message:
+          losers.length > 0
+            ? 'Rating and review updated (duplicates cleaned up)'
+            : 'Rating and review updated successfully',
+        ratingReviewId: winner.id,
       };
     }
 
@@ -5202,7 +5214,19 @@ export class UserService {
       this.kmaRatingReviewRepository.getApprovedRatingDistribution(),
     ]);
 
-    const reviewItems: HomePageReviewItemDto[] = reviews.map((r) => {
+    // Defensive dedupe: if the table has stray duplicate rows for the same
+    // end user (one-review-per-user is enforced going forward but old data
+    // may have leftovers), keep only the most-recent row per endUserId so
+    // the public page never shows the same person twice.
+    const seenEndUsers = new Set<string>();
+    const dedupedReviews = reviews.filter((r) => {
+      if (!r.endUserId) return true; // keep phone-only / legacy rows as-is
+      if (seenEndUsers.has(r.endUserId)) return false;
+      seenEndUsers.add(r.endUserId);
+      return true;
+    });
+
+    const reviewItems: HomePageReviewItemDto[] = dedupedReviews.map((r) => {
       const profileImage = r.endUser?.profileImage ?? null;
       return {
         id: r.id,
