@@ -4655,7 +4655,8 @@ export class UserService {
   }
 
   /**
-   * Submit rating and review for KMA (for logged in end users only)
+   * Submit (or update) the KMA rating and review for a logged-in end user.
+   * One review per end user — re-submitting overwrites the previous entry.
    */
   async submitRatingReview(
     submitDto: SubmitRatingReviewDto,
@@ -4663,15 +4664,28 @@ export class UserService {
   ): Promise<SubmitRatingReviewResponseDto> {
     const { rating, review } = submitDto;
 
-    // Verify the user exists and is an end user
     const user = await this.userRepository.findById(endUserId);
     if (!user) {
       throw new BadRequestException('User not found');
     }
 
+    const existing =
+      await this.kmaRatingReviewRepository.findOneByEndUserId(endUserId);
+    if (existing) {
+      await this.kmaRatingReviewRepository.update(existing.id, {
+        rating,
+        review: review || null,
+        name: user.name || existing.name || 'User',
+        phoneNumber: user.phone || existing.phoneNumber,
+        email: user.email ?? existing.email,
+      });
+      return {
+        success: true,
+        message: 'Rating and review updated successfully',
+        ratingReviewId: existing.id,
+      };
+    }
 
-    // Create rating and review for logged in user
-    // Get user information from authenticated user profile
     const ratingReview = await this.kmaRatingReviewRepository.create({
       rating,
       review: review || null,
@@ -4687,6 +4701,32 @@ export class UserService {
       success: true,
       message: 'Rating and review submitted successfully',
       ratingReviewId: ratingReview.id,
+    };
+  }
+
+  /**
+   * Fetch the logged-in end-user's existing KMA review for prefill on the
+   * Write Review dialog. Returns null if the user hasn't reviewed yet.
+   */
+  async getMyKmaRatingReview(endUserId: string) {
+    const user = await this.userRepository.findById(endUserId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    const review =
+      await this.kmaRatingReviewRepository.findOneByEndUserId(endUserId);
+    return {
+      success: true,
+      review: review
+        ? {
+            id: review.id,
+            rating: review.rating,
+            review: review.review,
+            isApproved: review.isApproved,
+            createdAt: review.createdAt,
+            updatedAt: review.updatedAt,
+          }
+        : null,
     };
   }
 
@@ -5146,7 +5186,7 @@ export class UserService {
    * Get home page reviews (top 5 approved reviews with statistics)
    */
   async getHomePageReviews(): Promise<HomePageReviewsResponseDto> {
-    const [reviews, statistics, totalEndUsers] = await Promise.all([
+    const [reviews, statistics, totalEndUsers, ratingDistribution] = await Promise.all([
       this.kmaRatingReviewRepository.findTopApprovedReviews(50),
       this.kmaRatingReviewRepository.getApprovedReviewsStatistics(),
       // Count total end users (active, non-blocked)
@@ -5159,6 +5199,7 @@ export class UserService {
             isBlocked: false,
           },
         }),
+      this.kmaRatingReviewRepository.getApprovedRatingDistribution(),
     ]);
 
     const reviewItems: HomePageReviewItemDto[] = reviews.map((r) => {
@@ -5189,6 +5230,7 @@ export class UserService {
         totalCount: statistics.totalCount,
         averageRating: statistics.averageRating,
         totalEndUsers,
+        ratingDistribution,
       },
       trustedByText: 'Trusted By Client around the World',
     };

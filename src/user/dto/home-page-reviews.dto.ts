@@ -51,6 +51,12 @@ export class HomePageReviewsStatisticsDto {
 
   @ApiProperty({ description: 'Total number of end users', example: 5000 })
   totalEndUsers: number;
+
+  @ApiProperty({
+    description: 'Counts of approved reviews per integer rating bucket (1-5)',
+    example: { 1: 4, 2: 6, 3: 18, 4: 80, 5: 120 },
+  })
+  ratingDistribution: Record<number, number>;
 }
 
 export class HomePageReviewsResponseDto {

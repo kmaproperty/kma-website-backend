@@ -43,6 +43,7 @@ import {
   ContactUsResponseDto,
   SubmitRatingReviewDto,
   SubmitRatingReviewResponseDto,
+  GetMyKmaRatingReviewResponseDto,
   HomePageReviewsResponseDto,
   PropertyMasterDataResponseDto,
   HomePageResponseDto,
@@ -1016,8 +1017,29 @@ export class EndUserController {
     if (!req.user?.id) {
       throw new BadRequestException('User not authenticated');
     }
-    
+
     return await this.userService.submitRatingReview(submitDto, req.user.id);
+  }
+
+  @Get('my-rating-review')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: "Get the logged-in user's existing KMA rating and review",
+    description:
+      "Returns the user's existing KMA rating and review for prefill on the Write Review dialog. `review` is null when the user hasn't reviewed yet.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Existing review retrieved successfully',
+    type: GetMyKmaRatingReviewResponseDto,
+  })
+  async getMyKmaRatingReview(
+    @Req() req: Request,
+  ): Promise<GetMyKmaRatingReviewResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.userService.getMyKmaRatingReview(req.user.id);
   }
 
   @Post('properties/:propertyId/rating-review')
