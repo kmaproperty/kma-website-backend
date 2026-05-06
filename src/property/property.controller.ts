@@ -132,16 +132,15 @@ export class PropertyController {
       limit: 10000,
     });
 
-    // Build CSV
+    // Build CSV. Phone and email are intentionally omitted so owner / channel
+    // partner exports cannot be used to contact leads directly off-platform.
     const headers = [
-      'Name', 'Phone', 'Email', 'Budget Min', 'Budget Max',
+      'Name', 'Budget Min', 'Budget Max',
       'Building Type', 'Property Types', 'Locations', 'Status',
       'Properties Contacted', 'Last Contacted', 'Created At',
     ];
     const rows = result.data.map((lead) => [
       lead.name || '',
-      lead.phone || '',
-      lead.email || '',
       lead.budgetMin ?? '',
       lead.budgetMax ?? '',
       lead.buildingType || '',
