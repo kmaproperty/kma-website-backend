@@ -139,6 +139,12 @@ export class DashboardResponseDto {
   @ApiProperty({ description: 'User role', enum: UserRole })
   role: UserRole;
 
+  @ApiProperty({ description: 'Profile image URL', example: 'https://cdn.kma.com/profile.jpg', nullable: true })
+  profileImage: string | null;
+
+  @ApiProperty({ description: 'Channel Partner referral code (null for non-CP users)', example: 'KMA-12345', nullable: true })
+  channelPartnerCode: string | null;
+
   @ApiProperty({ description: 'Current plan', example: 'FREE', enum: ['FREE', 'CHANNEL_PARTNER'] })
   plan: 'FREE' | 'CHANNEL_PARTNER';
 

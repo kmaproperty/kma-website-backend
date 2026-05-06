@@ -1621,6 +1621,8 @@ export class UserService {
     return {
       name: user.name ?? null,
       role: user.role,
+      profileImage: user.profileImage ?? null,
+      channelPartnerCode: isChannelPartner ? (user.channelPartnerCode ?? null) : null,
       plan: isChannelPartner ? 'CHANNEL_PARTNER' : 'FREE',
       freeListings: {
         used,
