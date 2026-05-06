@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { JobCategory } from './entities/job-category.entity';
 import { ApplyType, Job, JobStatus } from './entities/job.entity';
 import { CreateJobCategoryDto, UpdateJobCategoryDto } from './dto/job-category.dto';
@@ -92,6 +92,95 @@ export class JobsService {
 
     const [data, total] = await qb.getManyAndCount();
     return { success: true, data, total, page, limit };
+  }
+
+  async listPublicCategories() {
+    const data = await this.categoryRepository.find({
+      where: { isActive: true },
+      order: { createdAt: 'DESC' },
+    });
+    return { success: true, data };
+  }
+
+  async listPublicJobs(query: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    categoryId?: string;
+    location?: string;
+    jobType?: string;
+    workMode?: string;
+    status?: JobStatus;
+  }) {
+    const page = Math.max(1, Number(query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(query.limit || 20)));
+    const status = query.status ?? JobStatus.PUBLISHED;
+
+    const qb = this.jobRepository
+      .createQueryBuilder('job')
+      .leftJoinAndSelect('job.categories', 'category')
+      .where('job.isActive = :isActive', { isActive: true })
+      .andWhere('job.status = :status', { status })
+      .orderBy('job.featured', 'DESC')
+      .addOrderBy('job.publishedAt', 'DESC', 'NULLS LAST')
+      .addOrderBy('job.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (query.search?.trim()) {
+      const search = `%${query.search.trim()}%`;
+      qb.andWhere(
+        new Brackets((sqb) => {
+          sqb
+            .where('job.title ILIKE :search', { search })
+            .orWhere('job.companyName ILIKE :search', { search })
+            .orWhere('job.location ILIKE :search', { search })
+            .orWhere('job.city ILIKE :search', { search })
+            .orWhere('job.state ILIKE :search', { search });
+        }),
+      );
+    }
+
+    if (query.location?.trim()) {
+      const location = `%${query.location.trim()}%`;
+      qb.andWhere(
+        new Brackets((sqb) => {
+          sqb
+            .where('job.location ILIKE :location', { location })
+            .orWhere('job.city ILIKE :location', { location })
+            .orWhere('job.state ILIKE :location', { location });
+        }),
+      );
+    }
+
+    if (query.jobType?.trim()) {
+      qb.andWhere('job.jobType ILIKE :jobType', { jobType: query.jobType.trim() });
+    }
+    if (query.workMode?.trim()) {
+      qb.andWhere('job.workMode ILIKE :workMode', { workMode: query.workMode.trim() });
+    }
+    if (query.categoryId?.trim()) {
+      qb.andWhere('category.id = :categoryId', { categoryId: query.categoryId.trim() });
+    }
+
+    const [data, total] = await qb.getManyAndCount();
+    return { success: true, data, total, page, limit };
+  }
+
+  async getPublicJob(id: string) {
+    const data = await this.jobRepository.findOne({
+      where: {
+        id,
+        isActive: true,
+        status: JobStatus.PUBLISHED,
+      },
+      relations: ['categories'],
+    });
+
+    if (!data) {
+      throw new BadRequestException(`Job with ID "${id}" not found`);
+    }
+    return { success: true, data };
   }
 
   async getJob(id: string) {

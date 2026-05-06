@@ -7,6 +7,7 @@ import { Job } from './entities/job.entity';
 import { JobApplication } from './entities/job-application.entity';
 import { JobsService } from './jobs.service';
 import { JobsAdminController } from './jobs.admin.controller';
+import { JobsPublicController } from './jobs.public.controller';
 import { Admin } from '../admin/entities/admin.entity';
 import { AdminRepository } from '../admin/repositories/admin.repository';
 import { AdminAuthGuard } from '../admin/guards/admin-auth.guard';
@@ -26,7 +27,7 @@ import { AdminPermissionsGuard } from '../admin/guards/admin-permissions.guard';
     }),
   ],
   providers: [JobsService, AdminRepository, AdminAuthGuard, AdminPermissionsGuard],
-  controllers: [JobsAdminController],
+  controllers: [JobsAdminController, JobsPublicController],
   exports: [JobsService],
 })
 export class JobsModule {}
