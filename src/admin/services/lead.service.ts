@@ -459,8 +459,11 @@ export class LeadService {
     return {
       id: lead.id,
       name: lead.name,
-      phone: lead.phone,
-      email: lead.email,
+      // phone and email are intentionally redacted on the seller (owner / channel
+      // partner) side so they cannot bypass the platform and contact leads
+      // directly. Admin endpoints continue to expose the real values.
+      phone: null,
+      email: null,
       budgetMin: lead.budgetMin,
       budgetMax: lead.budgetMax,
       sizeMin: lead.sizeMin,
