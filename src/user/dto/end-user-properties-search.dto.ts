@@ -465,6 +465,13 @@ export class EndUserPropertyListItemDto {
   monthlyRent?: number | null;
 
   @ApiProperty({
+    description: 'Property creation date',
+    example: '2025-05-25T00:00:00.000Z',
+    required: false,
+  })
+  createdAt?: Date | string | null;
+
+  @ApiProperty({
     description: 'City name',
     example: 'Chandigarh',
     required: false,

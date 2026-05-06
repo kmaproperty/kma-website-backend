@@ -2841,7 +2841,7 @@ export class UserService {
     query: EndUserFeaturedPropertiesQueryDto,
   ): Promise<EndUserFeaturedPropertiesResponseDto> {
     const { cityId } = query;
-    const limit = 5; // Featured properties limit
+    const limit = 12; // Featured properties limit
 
     const result = await this.propertyRepository.findFeaturedProperties({
       page: 1,
@@ -2963,6 +2963,7 @@ export class UserService {
             : undefined,
           averageRating: rating?.averageRating && rating.averageRating > 0 ? rating.averageRating : null,
           totalReviews: rating?.totalReviews ?? 0,
+          createdAt: property.createdAt ?? null,
         } as EndUserPropertyListItemDto;
       },
     );
