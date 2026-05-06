@@ -156,7 +156,10 @@ export class UserRepository {
 
     if (city?.trim()) {
       const cityTerm = `%${city.trim()}%`;
-      baseQb.andWhere('user.cities ILIKE :city', { city: cityTerm });
+      baseQb.andWhere(
+        "(user.cities ILIKE :city OR user.cities IS NULL OR TRIM(user.cities) = '')",
+        { city: cityTerm },
+      );
     }
 
     // Filter by experience (years from businessSince)
@@ -191,7 +194,10 @@ export class UserRepository {
 
       if (city?.trim()) {
         const cityTerm = `%${city.trim()}%`;
-        userIdsWithPropertyCount.andWhere('u.cities ILIKE :city', { city: cityTerm });
+        userIdsWithPropertyCount.andWhere(
+          "(u.cities ILIKE :city OR u.cities IS NULL OR TRIM(u.cities) = '')",
+          { city: cityTerm },
+        );
       }
 
       if (experience !== undefined) {
