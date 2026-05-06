@@ -4560,10 +4560,10 @@ export class UserService {
       });
 
       // OTP is verified — treat the caller as authenticated going forward.
-      // Find or create an END_USER for this phone, then issue JWT tokens so
-      // the frontend can drop the caller into a logged-in session.
+      // Find any existing user by phone (any role) so we don't violate the
+      // users_active_phone_unique constraint. If no user exists, create an END_USER.
       let endUser = await queryRunner.manager.findOne(User, {
-        where: { phone, role: UserRole.END_USER },
+        where: { phone },
       });
 
       if (!endUser) {
@@ -4571,7 +4571,7 @@ export class UserService {
           phone,
           role: UserRole.END_USER,
           name: name || 'User',
-          email: null, // never use contact-form email for account creation — avoids unique constraint violations
+          email: null,
           isActive: true,
           phoneVerified: true,
           isBlocked: false,
