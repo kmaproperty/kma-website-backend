@@ -8,6 +8,7 @@ import {
   Body,
   BadRequestException,
   Req,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { Request } from 'express';
 import {
@@ -493,26 +494,6 @@ export class PropertyController {
     );
   }
 
-  @Get(':id')
-  @ApiOperation({
-    summary: 'Get property detail for owner/channel partner dashboard modal',
-  })
-  @ApiParam({ name: 'id', description: 'Property ID', example: '17840748' })
-  @ApiResponse({
-    status: 200,
-    description: 'Property detail retrieved successfully',
-    type: OwnerPropertyDetailResponseDto,
-  })
-  async getPropertyDetail(
-    @Param('id') id: string,
-    @Req() req: Request,
-  ): Promise<OwnerPropertyDetailResponseDto> {
-    if (!req.user?.id) {
-      throw new BadRequestException('User not authenticated');
-    }
-    return await this.propertyService.getOwnerPropertyDetail(id, req.user.id);
-  }
-
   @Get('bhk-types-and-areas')
   @ApiOperation({
     summary: 'Get BHK types and built-up areas',
@@ -559,6 +540,26 @@ export class PropertyController {
       propertyTypeId,
       localityId,
     );
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get property detail for owner/channel partner dashboard modal',
+  })
+  @ApiParam({ name: 'id', description: 'Property ID', example: '17840748' })
+  @ApiResponse({
+    status: 200,
+    description: 'Property detail retrieved successfully',
+    type: OwnerPropertyDetailResponseDto,
+  })
+  async getPropertyDetail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request,
+  ): Promise<OwnerPropertyDetailResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException('User not authenticated');
+    }
+    return await this.propertyService.getOwnerPropertyDetail(id, req.user.id);
   }
 
   @Post('/step-1')
