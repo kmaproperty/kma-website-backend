@@ -4571,7 +4571,7 @@ export class UserService {
           phone,
           role: UserRole.END_USER,
           name: name || 'User',
-          email: email || null,
+          email: null, // never use contact-form email for account creation — avoids unique constraint violations
           isActive: true,
           phoneVerified: true,
           isBlocked: false,

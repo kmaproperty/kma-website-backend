@@ -40,9 +40,10 @@ export class SubmitContactPropertyDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ description: 'Email address', example: 'john.doe@example.com' })
+  @ApiPropertyOptional({ description: 'Email address (optional)', example: 'john.doe@example.com' })
+  @IsOptional()
   @IsEmail({}, { message: 'Please provide a valid email address' })
-  email: string;
+  email?: string;
 
   @ApiProperty({
     description: 'Phone number (10 digits)',

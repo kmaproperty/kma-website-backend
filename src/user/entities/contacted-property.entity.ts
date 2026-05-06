@@ -45,8 +45,8 @@ export class ContactedProperty extends BaseEntity {
   @Column({ type: 'varchar', length: 200 })
   name: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  email: string;
+  @Column({ type: 'varchar', length: 255, nullable: true, default: null })
+  email: string | null;
 
   @Column({ type: 'varchar', length: 20 })
   phone: string;
