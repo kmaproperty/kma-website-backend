@@ -3153,7 +3153,7 @@ export class UserService {
    * Returns top 5 cities with maximum active properties
    */
   async getTopCities(): Promise<EndUserTopCitiesResponseDto> {
-    const limit = 5; // Top 5 cities as per requirement
+    const limit = 6; // Featured + top-by-count, capped at 6 cards
     const citiesWithCounts = await this.cityRepository.findTopCitiesByPropertyCount(limit);
 
     const cities: EndUserTopCityItemDto[] = citiesWithCounts.map((city) => ({

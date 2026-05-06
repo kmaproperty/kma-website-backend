@@ -123,8 +123,12 @@ export class CityRepository {
       .leftJoin('properties', 'property', 'property.cityId = city.id AND property.status = :status AND property.isDeleted = false', { status: PropertyStatus.ACTIVE })
       .where('city.deleted_at IS NULL')
       .groupBy('city.id')
-      .having('COUNT(property.id) > 0')
-      .orderBy('COUNT(property.id)', 'DESC')
+      // Show admin-curated featured cities even if they have no active listings yet,
+      // plus any other city that has at least one active property.
+      .having('city.is_featured = true OR COUNT(property.id) > 0')
+      .orderBy('city.is_featured', 'DESC')
+      .addOrderBy('COUNT(property.id)', 'DESC')
+      .addOrderBy('city.name', 'ASC')
       .limit(limit)
       .getRawMany();
 
