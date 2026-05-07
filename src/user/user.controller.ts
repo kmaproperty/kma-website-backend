@@ -748,6 +748,7 @@ export class UserController {
           city: (user as any).cities || '',
           firmName: (user as any).firmName || '',
         },
+        user.role as any,
       );
 
     return {

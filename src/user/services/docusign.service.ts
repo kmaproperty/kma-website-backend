@@ -6,6 +6,9 @@ import * as docusign from 'docusign-esign';
 import { ChannelPartnerAgreementRepository } from '../repositories/channel-partner-agreement.repository';
 import { ChannelPartnerAgreement, AgreementStatus } from '../entities/channel-partner-agreement.entity';
 import { UserRepository } from '../repositories/user.repository';
+import { UserRole } from '../enum/user-role.enum';
+
+type AgreementRole = UserRole.OWNER | UserRole.CHANNEL_PARTNER;
 
 @Injectable()
 export class DocuSignService {
@@ -26,17 +29,25 @@ export class DocuSignService {
   }
 
   /**
-   * Load the fixed Channel Partner Agreement PDF as base64.
-   * The file path is configured via DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH.
+   * Load the agreement PDF for the given role as base64.
+   * Owner role  → DOCUSIGN_OWNER_AGREEMENT_PATH (defaults to Owner_Agreement.pdf)
+   * CP role     → DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH (defaults to Channel_Partner_Agreement.pdf)
    */
-  private getChannelPartnerAgreementDocument(): {
+  private getAgreementDocument(
+    role: AgreementRole = UserRole.CHANNEL_PARTNER,
+  ): {
     documentBase64: string;
     documentName: string;
   } {
-    const configuredPath = this.configService.get<string>(
-      'DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH',
-    );
-    this.logger.log(`Configured path: ${configuredPath || 'not set'}`);
+    const isOwner = role === UserRole.OWNER;
+    const envKey = isOwner
+      ? 'DOCUSIGN_OWNER_AGREEMENT_PATH'
+      : 'DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH';
+    const defaultFile = isOwner
+      ? 'Owner_Agreement.pdf'
+      : 'Channel_Partner_Agreement.pdf';
+    const configuredPath = this.configService.get<string>(envKey);
+    this.logger.log(`[${role}] Configured path: ${configuredPath || 'not set'}`);
 
     // Get project root
     const projectRoot = process.cwd();
@@ -63,8 +74,8 @@ export class DocuSignService {
         possiblePaths.push(path.join(projectRoot, configuredPath));
       }
     } else {
-      // Default to resume.pdf in project root
-      possiblePaths.push(path.join(projectRoot, 'resume.pdf'));
+      // Default: <role-specific filename> in project root
+      possiblePaths.push(path.join(projectRoot, defaultFile));
     }
 
     // Try to find the file
@@ -78,8 +89,8 @@ export class DocuSignService {
     }
 
     if (!absolutePath) {
-      const errorMessage = `Channel Partner Agreement file not found. Tried paths: ${possiblePaths.join(', ')}. ` +
-        `Please ensure DOCUSIGN_CHANNEL_PARTNER_AGREEMENT_PATH is set correctly or place the file at: ${path.join(projectRoot, 'resume.pdf')}`;
+      const errorMessage = `${role} Agreement file not found. Tried paths: ${possiblePaths.join(', ')}. ` +
+        `Please ensure ${envKey} is set correctly or place the file at: ${path.join(projectRoot, defaultFile)}`;
       this.logger.error(errorMessage);
       throw new BadRequestException(errorMessage);
     }
@@ -213,8 +224,20 @@ export class DocuSignService {
    * If DOCUSIGN_TEMPLATE_ID is set, use template-based signing.
    * Otherwise, fall back to document-based signing.
    */
-  private getTemplateId(): string | null {
-    return this.configService.get<string>('DOCUSIGN_TEMPLATE_ID') || null;
+  private getTemplateId(
+    role: AgreementRole = UserRole.CHANNEL_PARTNER,
+  ): string | null {
+    // Role-specific template var falls back to the legacy DOCUSIGN_TEMPLATE_ID
+    // (which historically only held the CP template).
+    const roleKey =
+      role === UserRole.OWNER
+        ? 'DOCUSIGN_OWNER_TEMPLATE_ID'
+        : 'DOCUSIGN_CHANNEL_PARTNER_TEMPLATE_ID';
+    return (
+      this.configService.get<string>(roleKey) ||
+      this.configService.get<string>('DOCUSIGN_TEMPLATE_ID') ||
+      null
+    );
   }
 
   /**
@@ -236,7 +259,7 @@ export class DocuSignService {
       await this.ensureAuthenticated();
 
       const { documentBase64, documentName } =
-        this.getChannelPartnerAgreementDocument();
+        this.getAgreementDocument(UserRole.CHANNEL_PARTNER);
 
       const templatesApi = new docusign.TemplatesApi(this.apiClient);
 
@@ -419,13 +442,14 @@ export class DocuSignService {
     recipientName: string,
     returnUrl: string,
     extraDetails?: { phone?: string; city?: string; firmName?: string },
+    role: AgreementRole = UserRole.CHANNEL_PARTNER,
   ): Promise<{ envelopeId: string; url: string }> {
-    // Check if template ID is configured
-    const templateId = this.getTemplateId();
-    
+    // Check if a role-specific template ID is configured.
+    const templateId = this.getTemplateId(role);
+
     if (templateId) {
       // Use template-based signing (more efficient)
-      this.logger.log(`Using template ${templateId} for envelope creation`);
+      this.logger.log(`[${role}] Using template ${templateId} for envelope creation`);
       return this.createEnvelopeFromTemplate(
         templateId,
         userId,
@@ -435,9 +459,9 @@ export class DocuSignService {
       );
     } else {
       // Fall back to document-based signing
-      this.logger.log('No template ID configured, using document upload');
+      this.logger.log(`[${role}] No template ID configured, using document upload`);
       const { documentBase64, documentName } =
-        this.getChannelPartnerAgreementDocument();
+        this.getAgreementDocument(role);
 
       return this.createEnvelope(
         userId,
