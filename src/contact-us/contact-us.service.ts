@@ -6,6 +6,7 @@ import {
 import { ContactUsRepository } from './repositories/contact-us.repository';
 import { JoinUsEnquiryRepository } from './repositories/join-us-enquiry.repository';
 import { SalesEnquiryRepository } from './repositories/sales-enquiry.repository';
+import { ReferralEnquiryRepository } from './repositories/referral-enquiry.repository';
 import {
   CreateContactUsDto,
   CreateContactUsResponseDto,
@@ -27,6 +28,7 @@ export class ContactUsService {
     private readonly contactUsRepository: ContactUsRepository,
     private readonly joinUsEnquiryRepository: JoinUsEnquiryRepository,
     private readonly salesEnquiryRepository: SalesEnquiryRepository,
+    private readonly referralEnquiryRepository: ReferralEnquiryRepository,
     private readonly zohoService: ZohoService,
   ) {}
 
@@ -142,6 +144,16 @@ export class ContactUsService {
     dto: CreateReferralEnquiryDto,
   ): Promise<CreateReferralEnquiryResponseDto> {
     try {
+      await this.referralEnquiryRepository.create({
+        referrerName: dto.referrerName.trim(),
+        referrerPhone: dto.referrerPhone.trim(),
+        clientName: dto.clientName.trim(),
+        clientMobile: dto.clientMobile.trim(),
+        propertyType: dto.propertyType,
+        location: dto.location?.trim() || null,
+        channelPartnerId: dto.channelPartnerId?.trim() || null,
+      });
+
       const payload = {
         referral: {
           referrer_name: dto.referrerName,

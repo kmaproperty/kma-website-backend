@@ -20,6 +20,8 @@ import { LeadPropertyContactRepository } from './repositories/lead-property-cont
 import { LeadService } from './services/lead.service';
 import { ContactUs } from '../contact-us/entities/contact-us.entity';
 import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
+import { ReferralEnquiry } from '../contact-us/entities/referral-enquiry.entity';
+import { ReferralEnquiryRepository } from '../contact-us/repositories/referral-enquiry.repository';
 import { ContactUsKmaQuery } from '../user/entities/contact-us-kma-query.entity';
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
 import { KmaRatingReview } from '../user/entities/kma-rating-review.entity';
@@ -55,6 +57,7 @@ import { FaqModule } from '../faq/faq.module';
       LeadNote,
       LeadPropertyContact,
       ContactUs,
+      ReferralEnquiry,
       ContactUsKmaQuery,
       KmaRatingReview,
       PropertyRatingReview,
@@ -86,6 +89,7 @@ import { FaqModule } from '../faq/faq.module';
     LeadPropertyContactRepository,
     LeadService,
     ContactUsRepository,
+    ReferralEnquiryRepository,
     ContactUsKmaQueryRepository,
     KmaRatingReviewRepository,
     PropertyRatingReviewRepository,

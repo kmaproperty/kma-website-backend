@@ -99,6 +99,9 @@ import {
   AdminFeaturedPropertiesListResponseDto,
   AdminContactUsListQueryDto,
   AdminContactUsListResponseDto,
+  AdminReferralListQueryDto,
+  AdminReferralListResponseDto,
+  AdminReferralUpdateDto,
   AdminContactUsKmaQueryListQueryDto,
   AdminContactUsKmaQueryListResponseDto,
   AdminKmaRatingReviewListQueryDto,
@@ -1439,6 +1442,66 @@ export class AdminController {
   }
 
   // Contact Us management endpoints
+  @Get('referrals')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List referral enquiries with filters' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of referral enquiries',
+    type: AdminReferralListResponseDto,
+  })
+  async listReferrals(
+    @Query() query: AdminReferralListQueryDto,
+  ): Promise<AdminReferralListResponseDto> {
+    return this.adminService.listReferrals(query);
+  }
+
+  @Patch('referrals/:id')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update referral status or credited coins' })
+  async updateReferral(
+    @Param('id') id: string,
+    @Body() dto: AdminReferralUpdateDto,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.adminService.updateReferral(id, dto);
+  }
+
+  @Get('referrals/redeem-requests')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  async listReferralRedeemRequests(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ): Promise<{ data: any[]; total: number; page: number; limit: number }> {
+    return {
+      data: [],
+      total: 0,
+      page: Number(page) || 1,
+      limit: Number(limit) || 10,
+    };
+  }
+
+  @Get('referrals/payout-audit')
+  @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  @ApiBearerAuth('access-token')
+  async listReferralPayoutAudit(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ): Promise<{ data: any[]; total: number; page: number; limit: number }> {
+    return {
+      data: [],
+      total: 0,
+      page: Number(page) || 1,
+      limit: Number(limit) || 10,
+    };
+  }
+
   @Get('contact-us')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
   @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)

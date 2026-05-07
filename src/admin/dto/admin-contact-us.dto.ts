@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsOptional, IsNumber, IsString, Min } from 'class-validator';
+import { IsOptional, IsNumber, IsString, Min, IsIn, IsInt } from 'class-validator';
 
 export class AdminContactUsListQueryDto {
   @ApiPropertyOptional({
@@ -172,5 +172,88 @@ export class AdminContactUsKmaQueryListResponseDto {
 
   @ApiProperty({ description: 'Items per page', example: 20 })
   limit: number;
+}
+
+export class AdminReferralListQueryDto {
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  page?: number = 1;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  limit?: number = 10;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsString()
+  channelPartnerId?: string;
+
+  @IsOptional()
+  @IsString()
+  referrerSearch?: string;
+
+  @IsOptional()
+  @IsString()
+  dateFrom?: string;
+
+  @IsOptional()
+  @IsString()
+  dateTo?: string;
+
+  @IsOptional()
+  @IsString()
+  statuses?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['Buy', 'Sell', 'Rent'])
+  propertyType?: 'Buy' | 'Sell' | 'Rent';
+}
+
+export class AdminReferralItemDto {
+  id: string;
+  referrerName: string;
+  referrerUniqueId: string;
+  clientName: string;
+  clientMobile: string;
+  channelPartnerId: string | null;
+  channelPartnerName: string;
+  propertyType: 'Buy' | 'Sell' | 'Rent';
+  location: string | null;
+  status: 'Pending' | 'In Process' | 'Deal Closed';
+  coinsCredited: number;
+  submittedAt: Date;
+}
+
+export class AdminReferralListResponseDto {
+  success: boolean;
+  data: AdminReferralItemDto[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export class AdminReferralUpdateDto {
+  @IsOptional()
+  @IsString()
+  @IsIn(['Pending', 'In Process', 'Deal Closed'])
+  status?: 'Pending' | 'In Process' | 'Deal Closed';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  coinsCredited?: number;
+
+  @IsOptional()
+  @IsString()
+  coinsOverrideReason?: string;
 }
 

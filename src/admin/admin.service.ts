@@ -85,6 +85,10 @@ import {
   AdminContactUsListQueryDto,
   AdminContactUsListResponseDto,
   ContactUsResponseDto,
+  AdminReferralListQueryDto,
+  AdminReferralListResponseDto,
+  AdminReferralItemDto,
+  AdminReferralUpdateDto,
   AdminContactUsKmaQueryListQueryDto,
   AdminContactUsKmaQueryListResponseDto,
   ContactUsKmaQueryResponseDto,
@@ -130,6 +134,7 @@ import { ChannelPartnerAgreementRepository } from '../user/repositories/channel-
 import { UserRepository } from '../user/repositories/user.repository';
 import { DocuSignService } from '../user/services/docusign.service';
 import { ContactUsRepository } from '../contact-us/repositories/contact-us.repository';
+import { ReferralEnquiryRepository } from '../contact-us/repositories/referral-enquiry.repository';
 import { ContactUsKmaQueryRepository } from '../user/repositories/contact-us-kma-query.repository';
 import { KmaRatingReviewRepository } from '../user/repositories/kma-rating-review.repository';
 import { PropertyRatingReviewRepository } from '../user/repositories/property-rating-review.repository';
@@ -313,6 +318,7 @@ export class AdminService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly contactUsRepository: ContactUsRepository,
+    private readonly referralEnquiryRepository: ReferralEnquiryRepository,
     private readonly contactUsKmaQueryRepository: ContactUsKmaQueryRepository,
     private readonly kmaRatingReviewRepository: KmaRatingReviewRepository,
     private readonly propertyRatingReviewRepository: PropertyRatingReviewRepository,
@@ -2968,6 +2974,82 @@ export class AdminService {
       message: approved
         ? 'Aadhaar details approved successfully'
         : 'Aadhaar details rejected',
+    };
+  }
+
+  /**
+   * List referral enquiries with filters for admin panel.
+   */
+  async listReferrals(
+    query: AdminReferralListQueryDto,
+  ): Promise<AdminReferralListResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const statuses = query.statuses
+      ? query.statuses
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => ['Pending', 'In Process', 'Deal Closed'].includes(s))
+      : [];
+
+    const dateFrom = query.dateFrom ? new Date(`${query.dateFrom}T00:00:00.000Z`) : undefined;
+    const dateTo = query.dateTo ? new Date(`${query.dateTo}T23:59:59.999Z`) : undefined;
+
+    const { items, total } = await this.referralEnquiryRepository.findAllWithFilters(
+      skip,
+      limit,
+      {
+        search: query.search,
+        channelPartnerId: query.channelPartnerId,
+        referrerSearch: query.referrerSearch,
+        propertyType: query.propertyType,
+        statuses: statuses as ('Pending' | 'In Process' | 'Deal Closed')[],
+        dateFrom,
+        dateTo,
+      },
+    );
+
+    const data: AdminReferralItemDto[] = items.map((item) => ({
+      id: item.id,
+      referrerName: item.referrerName,
+      referrerUniqueId: item.referrerPhone,
+      clientName: item.clientName,
+      clientMobile: item.clientMobile,
+      channelPartnerId: item.channelPartnerId,
+      channelPartnerName: item.channelPartnerId || 'Direct',
+      propertyType: item.propertyType,
+      location: item.location,
+      status: item.status,
+      coinsCredited: item.coinsCredited || 0,
+      submittedAt: item.createdAt,
+    }));
+
+    return { success: true, data, total, page, limit };
+  }
+
+  async updateReferral(
+    id: string,
+    dto: AdminReferralUpdateDto,
+  ): Promise<{ success: boolean; message: string }> {
+    const existing = await this.referralEnquiryRepository.findById(id);
+    if (!existing) {
+      throw new BadRequestException('Referral not found');
+    }
+
+    const status = dto.status ?? existing.status;
+    const coinsCredited =
+      status === 'Deal Closed' ? (dto.coinsCredited ?? existing.coinsCredited ?? 0) : 0;
+
+    await this.referralEnquiryRepository.update(id, {
+      status,
+      coinsCredited,
+    });
+
+    return {
+      success: true,
+      message: 'Referral updated successfully',
     };
   }
 
