@@ -19,12 +19,13 @@ export class CreateOwnerDto {
   name: string;
 
   @ApiProperty({
-    description: 'Owner email address',
+    description: 'Owner email address (optional)',
     example: 'john@example.com',
+    required: false,
   })
+  @IsOptional()
   @IsEmail({}, { message: 'Please provide a valid email address' })
-  @IsNotEmpty()
-  email: string;
+  email?: string;
 
   @ApiProperty({
     description: 'Owner phone number',

@@ -20,12 +20,13 @@ export class CreateChannelPartnerDto {
   name: string;
 
   @ApiProperty({
-    description: 'Channel partner email address',
+    description: 'Channel partner email address (optional)',
     example: 'jane@example.com',
+    required: false,
   })
+  @IsOptional()
   @IsEmail({}, { message: 'Please provide a valid email address' })
-  @IsNotEmpty()
-  email: string;
+  email?: string;
 
   @ApiProperty({
     description: 'Channel partner phone number',
