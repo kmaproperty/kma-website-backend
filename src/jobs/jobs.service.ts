@@ -6,7 +6,10 @@ import { ApplyType, Job, JobStatus } from './entities/job.entity';
 import { CreateJobCategoryDto, UpdateJobCategoryDto } from './dto/job-category.dto';
 import { CreateJobDto, UpdateJobDto } from './dto/job.dto';
 import { JobApplication } from './entities/job-application.entity';
-import { UpdateJobApplicationStatusDto } from './dto/job-application.dto';
+import {
+  CreateJobApplicationDto,
+  UpdateJobApplicationStatusDto,
+} from './dto/job-application.dto';
 
 @Injectable()
 export class JobsService {
@@ -181,6 +184,35 @@ export class JobsService {
       throw new BadRequestException(`Job with ID "${id}" not found`);
     }
     return { success: true, data };
+  }
+
+  async createPublicJobApplication(jobId: string, dto: CreateJobApplicationDto) {
+    const job = await this.jobRepository.findOne({
+      where: { id: jobId, isActive: true, status: JobStatus.PUBLISHED },
+    });
+    if (!job) {
+      throw new BadRequestException(`Job with ID "${jobId}" not found`);
+    }
+
+    const created = await this.applicationRepository.save(
+      this.applicationRepository.create({
+        jobId,
+        fullName: dto.fullName.trim(),
+        email: dto.email.trim().toLowerCase(),
+        phoneNumber: dto.phoneNumber.trim(),
+        resumeUrl: dto.resumeUrl?.trim() || null,
+        coverLetter: dto.coverLetter?.trim() || null,
+      }),
+    );
+
+    job.applyCount = (job.applyCount || 0) + 1;
+    await this.jobRepository.save(job);
+
+    return {
+      success: true,
+      message: 'Application submitted successfully',
+      data: created,
+    };
   }
 
   async getJob(id: string) {

@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CreateJobApplicationDto } from './dto/job-application.dto';
 import { JobStatus } from './entities/job.entity';
 import { JobsService } from './jobs.service';
 
@@ -42,5 +43,11 @@ export class JobsPublicController {
   @ApiOperation({ summary: 'Get published job details for end users' })
   getJob(@Param('id') id: string) {
     return this.jobsService.getPublicJob(id);
+  }
+
+  @Post('jobs/:id/applications')
+  @ApiOperation({ summary: 'Apply for a published job' })
+  applyToJob(@Param('id') id: string, @Body() dto: CreateJobApplicationDto) {
+    return this.jobsService.createPublicJobApplication(id, dto);
   }
 }

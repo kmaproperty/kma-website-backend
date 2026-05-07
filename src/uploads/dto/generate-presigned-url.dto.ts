@@ -25,6 +25,9 @@ export class GeneratePresignedUrlDto {
       'video/webm',
       'video/x-msvideo',
       'video/x-matroska',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ],
   })
   @IsString()
@@ -41,6 +44,9 @@ export class GeneratePresignedUrlDto {
     'video/webm',
     'video/x-msvideo',
     'video/x-matroska',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   ])
   contentType: string;
 
