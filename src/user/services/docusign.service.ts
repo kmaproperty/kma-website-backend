@@ -227,14 +227,16 @@ export class DocuSignService {
   private getTemplateId(
     role: AgreementRole = UserRole.CHANNEL_PARTNER,
   ): string | null {
-    // Role-specific template var falls back to the legacy DOCUSIGN_TEMPLATE_ID
-    // (which historically only held the CP template).
-    const roleKey =
-      role === UserRole.OWNER
-        ? 'DOCUSIGN_OWNER_TEMPLATE_ID'
-        : 'DOCUSIGN_CHANNEL_PARTNER_TEMPLATE_ID';
+    // Owner: only use template if owner-specific var is set — never fall back
+    // to the legacy DOCUSIGN_TEMPLATE_ID, which historically held the CP template.
+    if (role === UserRole.OWNER) {
+      return (
+        this.configService.get<string>('DOCUSIGN_OWNER_TEMPLATE_ID') || null
+      );
+    }
+    // Channel Partner: prefer the role-specific var, then the legacy var.
     return (
-      this.configService.get<string>(roleKey) ||
+      this.configService.get<string>('DOCUSIGN_CHANNEL_PARTNER_TEMPLATE_ID') ||
       this.configService.get<string>('DOCUSIGN_TEMPLATE_ID') ||
       null
     );
