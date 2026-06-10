@@ -1148,27 +1148,27 @@ export class PropertyService {
     }
 
     // Check KYC status for channel partners
-    if (user.role === UserRole.CHANNEL_PARTNER) {
-      if (!user.kycCompleted) {
-        // Check if all steps are completed but not approved
-        const agreementStatus = await this.userService.getDocuSignAgreementStatus(userId);
-        const allStepsCompleted =
-          user.livePhotoApproved &&
-          user.aadhaarVerified &&
-          user.bankDetailsFilled &&
-          agreementStatus.docusign_agreement_signed;
+    // if (user.role === UserRole.CHANNEL_PARTNER) {
+    //   if (!user.kycCompleted) {
+    //     // Check if all steps are completed but not approved
+    //     const agreementStatus = await this.userService.getDocuSignAgreementStatus(userId);
+    //     const allStepsCompleted =
+    //       user.livePhotoApproved &&
+    //       user.aadhaarVerified &&
+    //       user.bankDetailsFilled &&
+    //       agreementStatus.docusign_agreement_signed;
 
-        if (allStepsCompleted) {
-          throw new BadRequestException(
-            'Your KYC is under review. You can post property once it is approved.',
-          );
-        } else {
-          throw new BadRequestException(
-            'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
-          );
-        }
-      }
-    }
+    //     if (allStepsCompleted) {
+    //       throw new BadRequestException(
+    //         'Your KYC is under review. You can post property once it is approved.',
+    //       );
+    //     } else {
+    //       throw new BadRequestException(
+    //         'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
+    //       );
+    //     }
+    //   }
+    // }
 
     const {
       propertyId,
