@@ -1834,11 +1834,11 @@ export class PropertyService {
       throw new BadRequestException('User not found');
     }
 
-    if (user.role === UserRole.CHANNEL_PARTNER && !user.kycCompleted) {
-      throw new BadRequestException(
-        'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
-      );
-    }
+    // if (user.role === UserRole.CHANNEL_PARTNER && !user.kycCompleted) {
+    //   throw new BadRequestException(
+    //     'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
+    //   );
+    // }
 
     const property = await this.propertyRepository.findById(dto.propertyId);
     if (!property) {
@@ -2433,11 +2433,11 @@ export class PropertyService {
       throw new BadRequestException('User not found');
     }
 
-    if (user.role === UserRole.CHANNEL_PARTNER && !user.kycCompleted) {
-      throw new BadRequestException(
-        'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
-      );
-    }
+    // if (user.role === UserRole.CHANNEL_PARTNER && !user.kycCompleted) {
+    //   throw new BadRequestException(
+    //     'KYC verification must be completed before posting properties. Please complete all 4 verification steps.',
+    //   );
+    // }
 
     const property = await this.propertyRepository.findById(dto.propertyId);
     if (!property) {
