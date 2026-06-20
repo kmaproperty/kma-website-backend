@@ -162,69 +162,134 @@ export class GooglePlacesService {
   /**
    * Search for societies using Google Places API
    */
-  async searchSocieties(
-    query: string,
-    cityName?: string,
-  ): Promise<GooglePlaceSociety[]> {
-    if (!this.apiKey) {
-      this.logger.warn(
-        'Google Maps API key not configured - skipping Google API search',
-      );
-      return [];
-    }
+  // async searchSocieties(
+  //   query: string,
+  //   cityName?: string,
+  // ): Promise<GooglePlaceSociety[]> {
+  //   if (!this.apiKey) {
+  //     this.logger.warn(
+  //       'Google Maps API key not configured - skipping Google API search',
+  //     );
+  //     return [];
+  //   }
 
-    try {
-      const societies: GooglePlaceSociety[] = [];
+  //   try {
+  //     const societies: GooglePlaceSociety[] = [];
       
-      // Strategy 1: Search for residential areas and societies with specific types
-      const residentialResults = await this.searchSocietiesByType(
-        query,
-        cityName,
-        '(neighborhood|sublocality)',
-        'residential'
-      );
-      societies.push(...residentialResults);
+  //     // Strategy 1: Search for residential areas and societies with specific types
+  //     const residentialResults = await this.searchSocietiesByType(
+  //       query,
+  //       cityName,
+  //       '(neighborhood|sublocality)',
+  //       'residential'
+  //     );
+  //     societies.push(...residentialResults);
 
-      // Strategy 2: Search for specific society keywords
-      if (societies.length < 5) {
-        const societyKeywordResults = await this.searchSocietiesWithKeywords(
-          query,
-          cityName
-        );
-        societies.push(...societyKeywordResults);
-      }
+  //     // Strategy 2: Search for specific society keywords
+  //     if (societies.length < 5) {
+  //       const societyKeywordResults = await this.searchSocietiesWithKeywords(
+  //         query,
+  //         cityName
+  //       );
+  //       societies.push(...societyKeywordResults);
+  //     }
 
-      // Strategy 3: If we have city context, search for establishments with location bias
-      if (cityName && societies.length < 5) {
-        const establishmentResults = await this.searchSocietiesByType(
-          query,
-          cityName,
-          'establishment',
-          'society'
-        );
-        societies.push(...establishmentResults);
-      }
+  //     // Strategy 3: If we have city context, search for establishments with location bias
+  //     if (cityName && societies.length < 5) {
+  //       const establishmentResults = await this.searchSocietiesByType(
+  //         query,
+  //         cityName,
+  //         'establishment',
+  //         'society'
+  //       );
+  //       societies.push(...establishmentResults);
+  //     }
 
-      // Strategy 4: Fallback to broader search if still not enough results
-      if (societies.length < 3) {
-        const fallbackResults = await this.searchSocietiesFallback(
-          query,
-          cityName
-        );
-        societies.push(...fallbackResults);
-      }
+  //     // Strategy 4: Fallback to broader search if still not enough results
+  //     if (societies.length < 3) {
+  //       const fallbackResults = await this.searchSocietiesFallback(
+  //         query,
+  //         cityName
+  //       );
+  //       societies.push(...fallbackResults);
+  //     }
 
-      // Remove duplicates and filter for relevant results
-      const uniqueSocieties = this.filterAndDeduplicateSocieties(societies);
+  //     // Remove duplicates and filter for relevant results
+  //     const uniqueSocieties = this.filterAndDeduplicateSocieties(societies);
       
-      return uniqueSocieties.slice(0, 5);
-    } catch (error) {
-      this.logger.error(
-        `Error searching societies from Google: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-      return [];
-    }
+  //     return uniqueSocieties.slice(0, 5);
+  //   } catch (error) {
+  //     this.logger.error(
+  //       `Error searching societies from Google: ${error instanceof Error ? error.message : 'Unknown error'}`,
+  //     );
+  //     return [];
+  //   }
+  // }
+
+   async searchSocieties(
+  query: string,
+  cityName?: string,
+): Promise<GooglePlaceSociety[]> {
+  if (!this.apiKey) {
+    this.logger.warn(
+      'Google Maps API key not configured - skipping Google API search',
+    );
+    return [];
   }
+
+  try {
+    const societies: GooglePlaceSociety[] = [];
+    
+    let locationBias = '';
+    if (cityName) {
+      const cityCoords = await this.getCityCoordinates(cityName);
+      if (cityCoords) {
+        locationBias = `${cityCoords.lat},${cityCoords.lng}`;
+      }
+    }
+
+    const autocompleteUrl = `${this.baseUrl}/autocomplete/json`;
+    const params: any = {
+      input: cityName ? `${query}, ${cityName}, India` : `${query}, India`,
+      types: 'establishment',
+      components: 'country:in',
+      key: this.apiKey,
+    };
+
+    if (locationBias) {
+      params.location = locationBias;
+      params.radius = 25000;
+    }
+
+    const response = await axios.get(autocompleteUrl, { params });
+
+    if (
+      response.data.status === 'OK' &&
+      response.data.predictions &&
+      response.data.predictions.length > 0
+    ) {
+      for (const prediction of response.data.predictions.slice(0, 5)) {
+        try {
+          const placeDetails = await this.getSocietyDetails(prediction.place_id);
+          if (placeDetails) {
+            societies.push(placeDetails);
+          }
+        } catch (error) {
+          this.logger.error(`Error fetching society details: ${error.message}`);
+        }
+      }
+    }
+
+    const uniqueSocieties = this.filterAndDeduplicateSocieties(societies);
+    return uniqueSocieties.slice(0, 5);
+
+  } catch (error) {
+    this.logger.error(
+      `Error searching societies from Google: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+    return [];
+  }
+}
 
   /**
    * Search for societies using specific society-related keywords
