@@ -143,6 +143,7 @@ import { CreateAdminUserDto, AdminUserResponseDto, UpdateAdminPermissionsDto, Ad
 import { FaqService } from '../faq/faq.service';
 import { CreateFaqDto } from '../faq/dto/create-faq.dto';
 import { UpdateFaqDto } from '../faq/dto/update-faq.dto';
+import { CreateRedeemRequestDto } from './dto/create-redeem-request.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -1470,6 +1471,28 @@ export class AdminController {
     return this.adminService.updateReferral(id, dto);
   }
 
+  @Post('referrals/redeem-requests')
+  @ApiOperation({ summary: 'Save new client coin redeem request' })
+  async createRedeemRequest(@Body() dto: CreateRedeemRequestDto) {
+    return this.adminService.createRedeemRequest(dto);
+  }
+
+  // @Get('referrals/redeem-requests')
+  // @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
+  // @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
+  // @ApiBearerAuth('access-token')
+  // async listReferralRedeemRequests(
+  //   @Query('page') page = '1',
+  //   @Query('limit') limit = '10',
+  // ): Promise<{ data: any[]; total: number; page: number; limit: number }> {
+  //   return {
+  //     data: [],
+  //     total: 0,
+  //     page: Number(page) || 1,
+  //     limit: Number(limit) || 10,
+  //   };
+  // }
+
   @Get('referrals/redeem-requests')
   @UseGuards(AdminAuthGuard, AdminPermissionsGuard)
   @RequireAdminPermissions(AdminPermission.LEAD_MANAGEMENT)
@@ -1477,13 +1500,8 @@ export class AdminController {
   async listReferralRedeemRequests(
     @Query('page') page = '1',
     @Query('limit') limit = '10',
-  ): Promise<{ data: any[]; total: number; page: number; limit: number }> {
-    return {
-      data: [],
-      total: 0,
-      page: Number(page) || 1,
-      limit: Number(limit) || 10,
-    };
+  ) {
+    return this.adminService.listReferralRedeemRequests(Number(page), Number(limit));
   }
 
   @Get('referrals/payout-audit')

@@ -120,6 +120,7 @@ import {
   AdminDashboardStatsResponseDto,
   AdminDashboardChartsResponseDto,
 } from './dto';
+import { CreateRedeemRequestDto } from './dto/admin-redeem.dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
 import { CityRepository } from '../property/repositories/city.repository';
@@ -4145,6 +4146,130 @@ export class AdminService {
         weekly: customerWeekly,
       },
     };
+  }
+
+   async createRedeemRequest(dto: CreateRedeemRequestDto): Promise<{ success: boolean; message: string; data: any }> {
+    const { userMobile, redeemCoins, redeemAmount, bankDetails } = dto;
+    if (!userMobile || !redeemCoins || !bankDetails || !bankDetails.account_number || !bankDetails.ifsc_code) {
+    throw new BadRequestException({
+      success: false,
+      message: "Required financial bank account details (account_number, ifsc_code) are missing or malformed."
+    });
+  }
+    const now = new Date().toISOString();
+
+    await this.dataSource.query(`
+      CREATE TABLE IF NOT EXISTS referral_redeem_requests (
+        id SERIAL PRIMARY KEY,
+        "referrerMobile" VARCHAR(50) NOT NULL,
+        "coins" INT NOT NULL DEFAULT 0,
+        "amount" NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+        "accountNumber" VARCHAR(100) NOT NULL,
+        "ifscCode" VARCHAR(50) NOT NULL,
+        "accountHolderName" VARCHAR(255) NOT NULL,
+        "bankName" VARCHAR(255) NOT NULL,
+        "branchName" VARCHAR(255) DEFAULT '',
+        "status" VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+        "createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        "updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+      );
+    `);
+
+    const insertResult = await this.dataSource.query(
+      `INSERT INTO referral_redeem_requests (
+        "referrerMobile", 
+        "coins", 
+        "amount", 
+        "accountNumber", 
+        "ifscCode", 
+        "accountHolderName", 
+        "bankName", 
+        "branchName", 
+        "status", 
+        "createdAt", 
+        "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      [
+        userMobile,
+        Number(redeemCoins),
+        Number(redeemAmount),
+        bankDetails.account_number,
+        bankDetails.ifsc_code,
+        bankDetails.account_holder_name,
+        bankDetails.bank_name,
+        bankDetails.branch_name || '',
+        'PENDING',
+        now,
+        now
+      ]
+    );
+
+    return {
+      success: true,
+      message: 'Redeem request logged inside backend database loop successfully!',
+      data: insertResult[0] || null,
+    };
+  }
+
+  /**
+   * 🔄 Fetch and paginate redeem requests ledger for the Admin Panel
+   */
+  async listReferralRedeemRequests(page: number, limit: number): Promise<{ success: boolean; data: any[]; total: number; page: number; limit: number }> {
+    const skip = (page - 1) * limit;
+    try {
+      // Safety Table Check here also
+      await this.dataSource.query(`
+        CREATE TABLE IF NOT EXISTS referral_redeem_requests (
+          id SERIAL PRIMARY KEY,
+          "referrerMobile" VARCHAR(50) NOT NULL,
+          "coins" INT NOT NULL DEFAULT 0,
+          "amount" NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+          "accountNumber" VARCHAR(100) NOT NULL,
+          "ifscCode" VARCHAR(50) NOT NULL,
+          "accountHolderName" VARCHAR(255) NOT NULL,
+          "bankName" VARCHAR(255) NOT NULL,
+          "branchName" VARCHAR(255) DEFAULT '',
+          "status" VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+          "createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+          "updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+        );
+      `);
+
+      const countResult = await this.dataSource.query(
+        `SELECT COUNT(*)::int as count FROM referral_redeem_requests`
+      );
+      const total = countResult[0]?.count || 0;
+
+      const data = await this.dataSource.query(
+        `SELECT 
+          id,
+          "referrerMobile",
+          "coins",
+          "amount",
+          "accountNumber",
+          "ifscCode",
+          "accountHolderName",
+          "bankName",
+          "branchName",
+          status,
+          "createdAt" as "submittedAt"
+         FROM referral_redeem_requests 
+         ORDER BY "createdAt" DESC 
+         LIMIT $1 OFFSET $2`,
+        [limit, skip]
+      );
+
+      return {
+        success: true,
+        data: data || [],
+        total,
+        page,
+        limit
+      };
+    } catch (error) {
+      this.logger.error(`Failed reading redeem ledger indices logic paths: ${error.message}`);
+      return { success: true, data: [], total: 0, page, limit };
+    }
   }
 }
 
