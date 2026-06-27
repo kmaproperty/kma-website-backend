@@ -120,7 +120,8 @@ import {
   AdminDashboardStatsResponseDto,
   AdminDashboardChartsResponseDto,
 } from './dto';
-import { CreateRedeemRequestDto } from './dto/admin-redeem.dto';
+// import { CreateRedeemRequestDto } from './dto/admin-redeem.dto';
+import { CreateRedeemRequestDto } from './dto/create-redeem-request.dto';
 import { PropertyRepository } from '../property/repositories/property.repository';
 import { PropertyRejectionHistoryRepository } from '../property/repositories/property-rejection-history.repository';
 import { CityRepository } from '../property/repositories/city.repository';
