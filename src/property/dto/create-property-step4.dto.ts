@@ -11,6 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsNumber } from 'class-validator';
 
 export enum ImageView {
   LIVING_ROOM = 'Living Room',
@@ -37,6 +38,16 @@ export class PropertyPhotoDto {
   @ApiPropertyOptional({ description: 'Is this the cover image?', default: false })
   @IsOptional()
   isCoverImage?: boolean;
+
+  @ApiPropertyOptional({ description: 'Latitude coordinate of the photo location', example: 28.709919 })
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @ApiPropertyOptional({ description: 'Longitude coordinate of the photo location', example: 77.090057 })
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
 }
 
 export class PropertyVideoDto {
