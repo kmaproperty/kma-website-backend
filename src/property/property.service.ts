@@ -2499,12 +2499,20 @@ export class PropertyService {
       completionStep: newCompletionStep,
       listingScore,
       status: isInternalKma ? PropertyStatus.ACTIVE : 'pending_review',
+      // photos: dto.photos.map(p => ({
+      //   fileKey: p.fileKey,
+      //   view: p.view,
+      //   isCoverImage: p.isCoverImage || false,
+      //   approvalStatus: mediaApprovalStatus,
+      // })),
       photos: dto.photos.map(p => ({
-        fileKey: p.fileKey,
-        view: p.view,
-        isCoverImage: p.isCoverImage || false,
-        approvalStatus: mediaApprovalStatus,
-      })),
+      fileKey: p.fileKey,
+      view: p.view,
+      isCoverImage: p.isCoverImage || false,
+      approvalStatus: mediaApprovalStatus,
+      latitude: p.latitude !== undefined ? Number(p.latitude) : null,
+      longitude: p.longitude !== undefined ? Number(p.longitude) : null,
+  })),
     };
 
     if (isInternalKma) {
