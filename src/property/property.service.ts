@@ -593,12 +593,20 @@ export class PropertyService {
       category: property.category?.name ?? null,
       constructionStatus: property.constructionStatus ?? null,
       furnishingType: property.furnishType ?? null,
+      // photos:
+      //   property.photos?.map((p) => ({
+      //     fileKey: p.fileKey,
+      //     view: p.view,
+      //     isCoverImage: p.isCoverImage,
+      //   })) ?? [],
       photos:
-        property.photos?.map((p) => ({
+          property.photos?.map((p) => ({
           fileKey: p.fileKey,
           view: p.view,
           isCoverImage: p.isCoverImage,
-        })) ?? [],
+          latitude: p.latitude !== undefined ? Number(p.latitude) : null,
+          longitude: p.longitude !== undefined ? Number(p.longitude) : null,
+            })) ?? [],
       videos:
         property.videos?.map((v) => ({
           fileKey: v.fileKey,
