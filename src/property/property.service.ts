@@ -434,12 +434,21 @@ export class PropertyService {
       null;
 
     // Map all photos to PropertyMediaItemDto format
+    // const photos: PropertyMediaItemDto[] =
+    //   property.photos?.map((photo) => ({
+    //     fileKey: photo.fileKey,
+    //     view: photo.view,
+    //     isCoverImage: photo.isCoverImage ?? false,
+    //   })) ?? [];
+
     const photos: PropertyMediaItemDto[] =
-      property.photos?.map((photo) => ({
-        fileKey: photo.fileKey,
-        view: photo.view,
-        isCoverImage: photo.isCoverImage ?? false,
-      })) ?? [];
+    property.photos?.map((photo) => ({
+    fileKey: photo.fileKey,
+    view: photo.view,
+    isCoverImage: photo.isCoverImage ?? false,
+    latitude: photo.latitude ?? null,
+    longitude: photo.longitude ?? null,
+  })) ?? [];
 
     const areaFromMetadata = property.builtUpAreaMetadata?.superBuiltUpArea
       ? Number(property.builtUpAreaMetadata.superBuiltUpArea)
