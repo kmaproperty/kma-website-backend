@@ -2576,6 +2576,7 @@ export class UserService {
           videos: videos,
           imageCount: approvedPhotos.length,
           videoCount: approvedVideos.length,
+          isVerified: property.isVerified,
           isReraRegistered: false, // Add RERA field to Property entity if needed
           constructionStatus: property.constructionStatus || null,
           categoryId: property.category?.id ?? null,
@@ -2795,6 +2796,7 @@ export class UserService {
           imageUrl,
           images: images,
           videos: videos,
+          isVerified: property.isVerified,
           isReraRegistered: false,
           constructionStatus: property.constructionStatus || null,
           categoryId: property.category?.id ?? null,
@@ -5581,6 +5583,7 @@ export class UserService {
       videos,
       imageCount: approvedPhotos.length,
       videoCount: approvedVideos.length,
+      isVerified: property.isVerified,
       isReraRegistered: false,
       constructionStatus: property.constructionStatus || null,
       categoryId: property.category?.id ?? null,

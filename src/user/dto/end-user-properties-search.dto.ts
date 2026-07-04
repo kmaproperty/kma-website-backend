@@ -338,16 +338,19 @@ export class EndUserPropertyListItemDto {
   videos?: EndUserPropertyVideoDto[];
 
   @ApiProperty({
+    description: 'Whether the property listing is verified by admin',
+    example: 'verified',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  isVerified?: string;
+
+  @ApiProperty({
     description: 'Is RERA registered',
     example: true,
   })
   isReraRegistered: boolean;
-
-  @ApiProperty({
-    description: 'Is Verified',
-    example: 'verified',
-  })
-  isVerified?: string;
 
   @ApiProperty({
     description: 'Construction status',
