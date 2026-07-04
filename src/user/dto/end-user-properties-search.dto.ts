@@ -309,6 +309,10 @@ export class EndUserPropertyListItemDto {
   })
   address: string;
 
+  @IsOptional()
+  @IsString()
+  isVerified?: string;
+
   @ApiProperty({
     description: 'Property description',
     example: 'Introducing DLF Valley, a premier residential property...',
