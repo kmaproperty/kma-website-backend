@@ -309,10 +309,6 @@ export class EndUserPropertyListItemDto {
   })
   address: string;
 
-  @IsOptional()
-  @IsString()
-  isVerified?: string;
-
   @ApiProperty({
     description: 'Property description',
     example: 'Introducing DLF Valley, a premier residential property...',
@@ -346,6 +342,12 @@ export class EndUserPropertyListItemDto {
     example: true,
   })
   isReraRegistered: boolean;
+
+  @ApiProperty({
+    description: 'Is Verified',
+    example: 'verified',
+  })
+  isVerified?: string;
 
   @ApiProperty({
     description: 'Construction status',
