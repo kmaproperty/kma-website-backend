@@ -4460,6 +4460,211 @@ export class UserService {
    * Logged-in: provide Authorization; no OTP, create with userId.
    * Non-logged-in: provide X-Session-Id header and otp; create with sessionId after OTP verification.
    */
+  // async submitContactProperty(
+  //   propertyId: string,
+  //   submitDto: SubmitContactPropertyDto,
+  //   userId: string | null,
+  //   sessionId: string | null,
+  // ): Promise<SubmitContactPropertyResponseDto> {
+  //   const property = await this.propertyRepository.findById(propertyId);
+  //   if (!property) {
+  //     throw new BadRequestException('Property not found');
+  //   }
+  //   if (property.isDeleted) {
+  //     throw new BadRequestException('Property not available');
+  //   }
+
+  //   const { name, email, phone, countryCode } = submitDto;
+
+  //   if (userId) {
+  //     const user = await this.userRepository.findById(userId);
+  //     if (!user) {
+  //       throw new BadRequestException('User not found');
+  //     }
+  //     const contacted = await this.contactedPropertyRepository.create({
+  //       userId,
+  //       sessionId: null,
+  //       propertyId,
+  //       name: name || user.name || '',
+  //       email: email || user.email || '',
+  //       phone: phone || user.phone,
+  //       countryCode: countryCode ?? null,
+  //     });
+
+  //     // Auto-create lead for the property owner/channel partner
+  //     try {
+  //       const leadPhone = `${countryCode || '+91'}${phone || user.phone}`;
+  //       await this.leadService.createLeadFromPropertyContact({
+  //         propertyId,
+  //         name: name || user.name || '',
+  //         phone: leadPhone,
+  //         email: email || user.email || undefined,
+  //       });
+  //     } catch (err) {
+  //       // Don't fail the contact request if lead creation fails
+  //       this.logger.warn(`Failed to create lead for property ${propertyId}: ${err.message}`);
+  //     }
+
+  //     return {
+  //       success: true,
+  //       message: 'Contact request submitted successfully',
+  //       contactedPropertyId: contacted.id,
+  //     };
+  //   }
+
+  //   // if (!submitDto.otp) {
+  //   //   throw new BadRequestException(
+  //   //     'OTP is required for non-logged-in users. Please provide OTP or use POST /end-user/properties/:propertyId/contact/send-otp to get one.',
+  //   //   );
+  //   // }
+  //   // if (!sessionId) {
+  //   //   throw new BadRequestException(
+  //   //     'Session ID is required for non-logged-in users. Send X-Session-Id header.',
+  //   //   );
+  //   // }
+
+  //   const otpRecord = await this.otpRepository.findActiveByPhone(phone);
+  //   if (!otpRecord) {
+  //     throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
+  //   }
+  //   if (new Date() > otpRecord.expiresAt) {
+  //     throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
+  //   }
+  //   if (otpRecord.isUsed) {
+  //     throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
+  //   }
+  //   if (otpRecord.attempts >= 3) {
+  //     throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
+  //   }
+  //   if (otpRecord.otpCode !== submitDto.otp) {
+  //     await this.otpRepository.incrementAttempts(otpRecord.id);
+  //     throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
+  //   }
+
+  //   const queryRunner = this.dataSource.createQueryRunner();
+  //   await queryRunner.connect();
+  //   await queryRunner.startTransaction();
+  //   let issuedTokens: { accessToken: string; refreshToken: string } | null = null;
+  //   let issuedUser: User | null = null;
+  //   try {
+  //     await queryRunner.manager.update(
+  //       'otps',
+  //       { id: otpRecord.id },
+  //       { isUsed: true },
+  //     );
+  //     const contacted = await this.contactedPropertyRepository.create({
+  //       sessionId,
+  //       userId: null,
+  //       propertyId,
+  //       name,
+  //       email,
+  //       phone,
+  //       countryCode: countryCode ?? null,
+  //     });
+
+  //     // OTP is verified — treat the caller as authenticated going forward.
+  //     // Find any existing user by phone (any role) so we don't violate the
+  //     // users_active_phone_unique constraint. If no user exists, create an END_USER.
+  //     let endUser = await queryRunner.manager.findOne(User, {
+  //       where: { phone },
+  //     });
+
+  //     if (!endUser) {
+  //       const created = queryRunner.manager.create(User, {
+  //         phone,
+  //         role: UserRole.END_USER,
+  //         name: name || 'User',
+  //         email: null,
+  //         isActive: true,
+  //         phoneVerified: true,
+  //         isBlocked: false,
+  //         intent: null,
+  //       });
+  //       endUser = await queryRunner.manager.save(created);
+  //     } else if (!endUser.phoneVerified) {
+  //       await queryRunner.manager.update(
+  //         User,
+  //         { id: endUser.id },
+  //         { phoneVerified: true },
+  //       );
+  //       endUser.phoneVerified = true;
+  //     }
+
+  //     if (endUser.isBlocked || !endUser.isActive) {
+  //       // Account exists but cannot log in — skip token issue but keep the
+  //       // contact record so the lead still reaches the agent.
+  //       endUser = null;
+  //     } else {
+  //       const { accessToken, refreshToken } = this.generateTokens(endUser);
+  //       await queryRunner.manager.update(
+  //         User,
+  //         { id: endUser.id },
+  //         { token: accessToken, refreshToken },
+  //       );
+  //       issuedTokens = { accessToken, refreshToken };
+  //       issuedUser = endUser;
+  //     }
+
+  //     await queryRunner.commitTransaction();
+
+  //     // Auto-create lead for the property owner/channel partner
+  //     try {
+  //       const leadPhone = `${countryCode || '+91'}${phone}`;
+  //       await this.leadService.createLeadFromPropertyContact({
+  //         propertyId,
+  //         name,
+  //         phone: leadPhone,
+  //         email: email || undefined,
+  //       });
+  //     } catch (err) {
+  //       this.logger.warn(`Failed to create lead for property ${propertyId}: ${err.message}`);
+  //     }
+
+  //     if (sessionId && issuedUser) {
+  //       try {
+  //         await this.propertyViewTracker.mergeSessionWithUser(
+  //           sessionId,
+  //           issuedUser.id,
+  //         );
+  //       } catch (err) {
+  //         this.logger.warn(
+  //           `Failed to merge session ${sessionId} with user ${issuedUser.id}: ${err.message}`,
+  //         );
+  //       }
+  //     }
+
+  //     return {
+  //       success: true,
+  //       message: 'Contact request submitted successfully',
+  //       contactedPropertyId: contacted.id,
+  //       ...(issuedTokens && issuedUser
+  //         ? {
+  //             accessToken: issuedTokens.accessToken,
+  //             refreshToken: issuedTokens.refreshToken,
+  //             user: {
+  //               id: issuedUser.id,
+  //               name: issuedUser.name,
+  //               email: issuedUser.email,
+  //               phone: issuedUser.phone,
+  //               role: issuedUser.role,
+  //             },
+  //           }
+  //         : {}),
+  //     };
+  //   } catch (error) {
+  //     await queryRunner.rollbackTransaction();
+  //     throw error;
+  //   } finally {
+  //     await queryRunner.release();
+  //   }
+  // }
+
+
+  /**
+   * Submit contact property form.
+   * Logged-in: provide Authorization; no OTP, create with userId.
+   * Non-logged-in: provide X-Session-Id header; creates user role-agnostic without any OTP enforcement loop.
+   */
   async submitContactProperty(
     propertyId: string,
     submitDto: SubmitContactPropertyDto,
@@ -4491,7 +4696,6 @@ export class UserService {
         countryCode: countryCode ?? null,
       });
 
-      // Auto-create lead for the property owner/channel partner
       try {
         const leadPhone = `${countryCode || '+91'}${phone || user.phone}`;
         await this.leadService.createLeadFromPropertyContact({
@@ -4501,7 +4705,6 @@ export class UserService {
           email: email || user.email || undefined,
         });
       } catch (err) {
-        // Don't fail the contact request if lead creation fails
         this.logger.warn(`Failed to create lead for property ${propertyId}: ${err.message}`);
       }
 
@@ -4512,46 +4715,20 @@ export class UserService {
       };
     }
 
-    // if (!submitDto.otp) {
-    //   throw new BadRequestException(
-    //     'OTP is required for non-logged-in users. Please provide OTP or use POST /end-user/properties/:propertyId/contact/send-otp to get one.',
-    //   );
-    // }
     // if (!sessionId) {
     //   throw new BadRequestException(
     //     'Session ID is required for non-logged-in users. Send X-Session-Id header.',
     //   );
     // }
 
-    const otpRecord = await this.otpRepository.findActiveByPhone(phone);
-    if (!otpRecord) {
-      throw new BadRequestException(USER_MESSAGES.OTP.NO_VALID_OTP);
-    }
-    if (new Date() > otpRecord.expiresAt) {
-      throw new BadRequestException(USER_MESSAGES.OTP.EXPIRED);
-    }
-    if (otpRecord.isUsed) {
-      throw new BadRequestException(USER_MESSAGES.OTP.ALREADY_USED);
-    }
-    if (otpRecord.attempts >= 3) {
-      throw new BadRequestException(USER_MESSAGES.OTP.TOO_MANY_ATTEMPTS);
-    }
-    if (otpRecord.otpCode !== submitDto.otp) {
-      await this.otpRepository.incrementAttempts(otpRecord.id);
-      throw new BadRequestException(USER_MESSAGES.OTP.INVALID);
-    }
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    
     let issuedTokens: { accessToken: string; refreshToken: string } | null = null;
     let issuedUser: User | null = null;
+    
     try {
-      await queryRunner.manager.update(
-        'otps',
-        { id: otpRecord.id },
-        { isUsed: true },
-      );
       const contacted = await this.contactedPropertyRepository.create({
         sessionId,
         userId: null,
@@ -4562,9 +4739,6 @@ export class UserService {
         countryCode: countryCode ?? null,
       });
 
-      // OTP is verified — treat the caller as authenticated going forward.
-      // Find any existing user by phone (any role) so we don't violate the
-      // users_active_phone_unique constraint. If no user exists, create an END_USER.
       let endUser = await queryRunner.manager.findOne(User, {
         where: { phone },
       });
@@ -4591,8 +4765,6 @@ export class UserService {
       }
 
       if (endUser.isBlocked || !endUser.isActive) {
-        // Account exists but cannot log in — skip token issue but keep the
-        // contact record so the lead still reaches the agent.
         endUser = null;
       } else {
         const { accessToken, refreshToken } = this.generateTokens(endUser);
@@ -4607,7 +4779,7 @@ export class UserService {
 
       await queryRunner.commitTransaction();
 
-      // Auto-create lead for the property owner/channel partner
+      // Lead Service synchronization for real-time CRM updates
       try {
         const leadPhone = `${countryCode || '+91'}${phone}`;
         await this.leadService.createLeadFromPropertyContact({
