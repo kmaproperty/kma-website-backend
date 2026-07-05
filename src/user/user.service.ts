@@ -4512,16 +4512,16 @@ export class UserService {
       };
     }
 
-    if (!submitDto.otp) {
-      throw new BadRequestException(
-        'OTP is required for non-logged-in users. Please provide OTP or use POST /end-user/properties/:propertyId/contact/send-otp to get one.',
-      );
-    }
-    if (!sessionId) {
-      throw new BadRequestException(
-        'Session ID is required for non-logged-in users. Send X-Session-Id header.',
-      );
-    }
+    // if (!submitDto.otp) {
+    //   throw new BadRequestException(
+    //     'OTP is required for non-logged-in users. Please provide OTP or use POST /end-user/properties/:propertyId/contact/send-otp to get one.',
+    //   );
+    // }
+    // if (!sessionId) {
+    //   throw new BadRequestException(
+    //     'Session ID is required for non-logged-in users. Send X-Session-Id header.',
+    //   );
+    // }
 
     const otpRecord = await this.otpRepository.findActiveByPhone(phone);
     if (!otpRecord) {
