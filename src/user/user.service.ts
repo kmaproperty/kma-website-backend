@@ -515,11 +515,46 @@ export class UserService {
     // Fan out OTP delivery: WhatsApp (Meta Cloud API), SmartPing DLT SMS,
     // and Twilio SMS/WhatsApp. allSettled so a single channel failure
     // doesn't break OTP for the user — others still deliver.
-    await Promise.allSettled([
+    // await Promise.allSettled([
+    //   this.metaWhatsappService.sendOtp(phone, otpCode, 10),
+    //   this.smartpingSmsService.sendOtp(phone, otpCode, 10),
+    //   this.twilioSmsService.sendOtp(phone, otpCode, 10),
+    // ]);
+
+    const deliveryPromises: Promise<any>[] = [
       this.metaWhatsappService.sendOtp(phone, otpCode, 10),
       this.smartpingSmsService.sendOtp(phone, otpCode, 10),
       this.twilioSmsService.sendOtp(phone, otpCode, 10),
-    ]);
+    ];
+
+    const dbUser = await this.userRepository.findByPhone(phone);
+    if (dbUser && dbUser.email && dbUser.email.trim().length > 0) {
+      console.log(`[Login OTP Engine] Existing user detected. Dispatching verification code to: ${dbUser.email}`);
+      
+      const nodemailer = require("nodemailer");
+      const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER || "prerit.dev@gmail.com",
+          pass: process.env.SMTP_PASS || "seyq blgf svuf cbnv",
+        },
+      });
+
+      const emailPromise = transporter.sendMail({
+        from: `"KMA Global Property" <prerit.dev@gmail.com>`,
+        to: dbUser.email,
+        subject: `Your KMA Login Verification Code`,
+        text: `Your one-time verification password (OTP) for login is ${otpCode}. It is valid for 10 minutes.`,
+      }).catch((mailErr) => {
+        this.logger.error(`❌ Email OTP dispatch failure for ${dbUser.email}: ${mailErr.message}`);
+      });
+
+      deliveryPromises.push(emailPromise);
+    }
+
+    await Promise.allSettled(deliveryPromises);
 
     // In non-production environments, also log the OTP for easier debugging
     if (process.env.NODE_ENV !== 'production') {
