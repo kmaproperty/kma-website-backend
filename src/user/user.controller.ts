@@ -1067,6 +1067,24 @@ export class UserController {
           finalStatus || finalEventType || 'unknown',
         );
 
+        if (result && (finalStatus === 'completed' || finalEventType === 'recipient-completed')) {
+          try {
+            const agreementUser = await this.userService.getUserById(result.userId);
+            
+            if (agreementUser && agreementUser.email) {
+              this.logger.log(`📡 [Webhook Proxy] Triggering agreement email dispatch for User: ${agreementUser.id}`);
+              
+              const axios = require("axios");
+              await axios.post("https://d82bm1gg-3002.inc1.devtunnels.ms/api/send-agreement-pdf", {
+                userId: agreementUser.id,
+                email: agreementUser.email
+              });
+            }
+          } catch (proxyErr) {
+            this.logger.error(`❌ Next.js agreement pdf proxy trigger failed: ${proxyErr.message}`);
+          }
+        }
+
         const processDuration = Date.now() - processStartTime;
         this.logger.log('Webhook processed successfully (async)', {
           envelopeId: finalEnvelopeId,
