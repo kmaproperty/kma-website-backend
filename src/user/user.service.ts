@@ -534,7 +534,7 @@ export class UserService {
       
       const axios = require("axios");
       
-      const emailPromise = axios.post("https://d82bm1gg-3002.inc1.devtunnels.ms/api/login-email-otp", {
+      const emailPromise = axios.post("https://seller.kmaglobalproperty.com/api/login-email-otp", {
         email: dbUser.email,
         otpCode: otpCode,
       }).catch((err) => {
