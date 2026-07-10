@@ -521,30 +521,52 @@ export class UserService {
     //   this.twilioSmsService.sendOtp(phone, otpCode, 10),
     // ]);
 
-    const deliveryPromises: Promise<any>[] = [
+    // const deliveryPromises: Promise<any>[] = [
+    //   this.metaWhatsappService.sendOtp(phone, otpCode, 10),
+    //   this.smartpingSmsService.sendOtp(phone, otpCode, 10),
+    //   this.twilioSmsService.sendOtp(phone, otpCode, 10),
+    // ];
+
+    // const dbUser = await this.userRepository.findByPhone(phone);
+
+    // if (dbUser && dbUser.email && dbUser.email.trim().length > 0) {
+    //   this.logger.log(`📧 Forwarding login OTP for user ${phone} to Next.js mail proxy...`);
+      
+    //   const axios = require("axios");
+      
+    //   const emailPromise = axios.post("https://seller.kmaglobalproperty.com/api/login-email-otp", {
+    //     email: dbUser.email,
+    //     otpCode: otpCode,
+    //   }).catch((err) => {
+    //     this.logger.error(`❌ Next.js email proxy trigger failed: ${err.message}`);
+    //   });
+
+    //   deliveryPromises.push(emailPromise);
+    // }
+
+    // await Promise.allSettled(deliveryPromises);
+
+    this.logger.log(`Triggering instant mobile SMS channel for: ${phone}`);
+    
+    await Promise.allSettled([
       this.metaWhatsappService.sendOtp(phone, otpCode, 10),
       this.smartpingSmsService.sendOtp(phone, otpCode, 10),
       this.twilioSmsService.sendOtp(phone, otpCode, 10),
-    ];
-
+    ]);
     const dbUser = await this.userRepository.findByPhone(phone);
 
     if (dbUser && dbUser.email && dbUser.email.trim().length > 0) {
-      this.logger.log(`📧 Forwarding login OTP for user ${phone} to Next.js mail proxy...`);
+      this.logger.log(`Dispatching background login OTP proxy for user ${phone} to Next.js...`);
       
       const axios = require("axios");
-      
-      const emailPromise = axios.post("https://seller.kmaglobalproperty.com/api/login-email-otp", {
+
+      void axios.post("https://seller.kmaglobalproperty.com/api/login-email-otp", {
         email: dbUser.email,
         otpCode: otpCode,
       }).catch((err) => {
-        this.logger.error(`❌ Next.js email proxy trigger failed: ${err.message}`);
+        this.logger.error(`Next.js email proxy trigger failed: ${err.message}`);
       });
-
-      deliveryPromises.push(emailPromise);
     }
-
-    await Promise.allSettled(deliveryPromises);
 
     // In non-production environments, also log the OTP for easier debugging
     if (process.env.NODE_ENV !== 'production') {
