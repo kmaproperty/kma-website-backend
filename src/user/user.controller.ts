@@ -1075,7 +1075,7 @@ export class UserController {
               this.logger.log(`📡 [Webhook Proxy] Triggering agreement email dispatch for User: ${agreementUser.id}`);
               
               const axios = require("axios");
-              await axios.post("https://kmaglobalproperty.com/api/send-agreement-pdf", {
+              await axios.post("https://d82bm1gg-3002.inc1.devtunnels.ms/api/send-agreement-pdf", {
                 userId: agreementUser.id,
                 email: agreementUser.email
               });
