@@ -24,16 +24,38 @@ export class SmartpingSmsService {
   private readonly dltPrincipalEntityId: string;
   private readonly dltContentId: string;
 
-  constructor(private readonly configService: ConfigService) {
+  // constructor(private readonly configService: ConfigService) {
+  //   this.endpoint =
+  //     this.configService.get<string>('SMARTPING_ENDPOINT') ||
+  //     'https://pgapi.smartping.io/fe/api/v1/send';
+  //   this.username = this.configService.get<string>('SMARTPING_USERNAME') || '';
+  //   this.password = this.configService.get<string>('SMARTPING_PASSWORD') || '';
+  //   this.senderId = this.configService.get<string>('SMARTPING_SENDER_ID') || 'KMAPRP';
+  //   this.dltPrincipalEntityId =
+  //     this.configService.get<string>('SMARTPING_DLT_PRINCIPAL_ENTITY_ID') || '';
+  //   this.dltContentId = this.configService.get<string>('SMARTPING_DLT_CONTENT_ID') || '';
+
+  //   if (this.isConfigured()) {
+  //     this.logger.log('SmartPing SMS service configured');
+  //   } else {
+  //     this.logger.warn(
+  //       'SmartPing not fully configured. Set SMARTPING_USERNAME, SMARTPING_PASSWORD, SMARTPING_DLT_PRINCIPAL_ENTITY_ID, SMARTPING_DLT_CONTENT_ID.',
+  //     );
+  //   }
+  // }
+
+    constructor(private readonly configService: ConfigService) {
     this.endpoint =
       this.configService.get<string>('SMARTPING_ENDPOINT') ||
       'https://pgapi.smartping.io/fe/api/v1/send';
     this.username = this.configService.get<string>('SMARTPING_USERNAME') || '';
     this.password = this.configService.get<string>('SMARTPING_PASSWORD') || '';
-    this.senderId = this.configService.get<string>('SMARTPING_SENDER_ID') || 'KMAPRP';
+    // this.senderId = this.configService.get<string>('SMARTPING_SENDER_ID') || 'KMAPRP';
+    this.senderId = 'KMAGLP';
     this.dltPrincipalEntityId =
       this.configService.get<string>('SMARTPING_DLT_PRINCIPAL_ENTITY_ID') || '';
-    this.dltContentId = this.configService.get<string>('SMARTPING_DLT_CONTENT_ID') || '';
+    // this.dltContentId = this.configService.get<string>('SMARTPING_DLT_CONTENT_ID') || '';
+    this.dltContentId = '1077374780002274374';
 
     if (this.isConfigured()) {
       this.logger.log('SmartPing SMS service configured');
@@ -80,7 +102,8 @@ export class SmartpingSmsService {
 
     // DLT-approved template body. The {var1} placeholder must be replaced
     // with the literal OTP — DLT signature is computed on the resolved text.
-    const text = `Dear User, your OTP is ${otpCode} for account verifcation on KMA Property. - KMA GLOBAL PROPERTIES`;
+    // const text = `Dear User, your OTP is ${otpCode} for account verifcation on KMA Property. - KMA GLOBAL PROPERTIES`;
+    const text = `Dear User, your OTP is ${otpCode}. Verify your account at https://kmaglobalproperty.com. Do not share this OTP. - KMA GLOBAL PROPERTIES`;
 
     const params = new URLSearchParams({
       username: this.username,
