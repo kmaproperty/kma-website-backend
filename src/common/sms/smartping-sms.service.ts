@@ -52,10 +52,11 @@ export class SmartpingSmsService {
     this.password = this.configService.get<string>('SMARTPING_PASSWORD') || '';
     // this.senderId = this.configService.get<string>('SMARTPING_SENDER_ID') || 'KMAPRP';
     this.senderId = 'KMAGLP';
-    this.dltPrincipalEntityId =
-      this.configService.get<string>('SMARTPING_DLT_PRINCIPAL_ENTITY_ID') || '';
+    // this.dltPrincipalEntityId =
+    //   this.configService.get<string>('SMARTPING_DLT_PRINCIPAL_ENTITY_ID') || '';
+    this.dltPrincipalEntityId = '1077374780002274374';
     // this.dltContentId = this.configService.get<string>('SMARTPING_DLT_CONTENT_ID') || '';
-    this.dltContentId = '1077374780002274374';
+    this.dltContentId = '1547909';
 
     if (this.isConfigured()) {
       this.logger.log('SmartPing SMS service configured');
