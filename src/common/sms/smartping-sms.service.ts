@@ -114,7 +114,7 @@ export class SmartpingSmsService {
       to,
       dltPrincipalEntityId: this.dltPrincipalEntityId,
       dltContentId: this.dltContentId,
-      text: encodeURIComponent(text),
+      text,
     });
 
     const url = `${this.endpoint}?${params.toString()}`;
