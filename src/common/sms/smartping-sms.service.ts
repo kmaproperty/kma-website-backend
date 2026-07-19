@@ -54,7 +54,7 @@ export class SmartpingSmsService {
     this.senderId = 'KMAGLP';
     // this.dltPrincipalEntityId =
     //   this.configService.get<string>('SMARTPING_DLT_PRINCIPAL_ENTITY_ID') || '';
-    this.dltPrincipalEntityId = '1077374780002274374';
+    this.dltPrincipalEntityId = '1005484524288013642';
     // this.dltContentId = this.configService.get<string>('SMARTPING_DLT_CONTENT_ID') || '';
     this.dltContentId = '1077374780002274374';
 
