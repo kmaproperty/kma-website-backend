@@ -54,7 +54,7 @@ export class SmartpingSmsService {
     this.senderId = 'KMAGLP';
     // this.dltPrincipalEntityId =
     //   this.configService.get<string>('SMARTPING_DLT_PRINCIPAL_ENTITY_ID') || '';
-    this.dltPrincipalEntityId = '1001494860141442089';
+    this.dltPrincipalEntityId = '1077374780002274374';
     // this.dltContentId = this.configService.get<string>('SMARTPING_DLT_CONTENT_ID') || '';
     this.dltContentId = '1077374780002274374';
 
@@ -104,18 +104,32 @@ export class SmartpingSmsService {
     // DLT-approved template body. The {var1} placeholder must be replaced
     // with the literal OTP — DLT signature is computed on the resolved text.
     // const text = `Dear User, your OTP is ${otpCode} for account verifcation on KMA Property. - KMA GLOBAL PROPERTIES`;
-    const text = `Dear User, your OTP is ${otpCode}. Verify your account at https://kmaglobalproperty.com. Do not share this OTP. - KMA GLOBAL PROPERTIES`;
+    // const text = `Dear User, your OTP is ${otpCode}. Verify your account at https://kmaglobalproperty.com. Do not share this OTP. - KMA GLOBAL PROPERTIES`;
 
-    const params = new URLSearchParams({
-      username: this.username,
-      password: this.password,
-      unicode: 'false',
-      from: this.senderId,
-      to,
-      dltPrincipalEntityId: this.dltPrincipalEntityId,
-      dltContentId: this.dltContentId,
-      text,
-    });
+    // const params = new URLSearchParams({
+    //   username: this.username,
+    //   password: this.password,
+    //   unicode: 'false',
+    //   from: this.senderId,
+    //   to,
+    //   dltPrincipalEntityId: this.dltPrincipalEntityId,
+    //   dltContentId: this.dltContentId,
+    //   text,
+    // });
+
+    const text = `Dear User, your OTP is {#numeric#}. Verify your account at https://kmaglobalproperty.com. Do not share this OTP. - KMA GLOBAL PROPERTIES`;
+
+const params = new URLSearchParams({
+  username: this.username,
+  password: this.password,
+  unicode: 'false',
+  from: this.senderId,
+  to,
+  dltPrincipalEntityId: this.dltPrincipalEntityId,
+  dltContentId: this.dltContentId,
+  text,
+  var1: otpCode.toString() 
+});
 
     const url = `${this.endpoint}?${params.toString()}`;
 
