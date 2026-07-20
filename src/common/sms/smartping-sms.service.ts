@@ -51,11 +51,11 @@ export class SmartpingSmsService {
     this.username = this.configService.get<string>('SMARTPING_USERNAME') || '';
     this.password = this.configService.get<string>('SMARTPING_PASSWORD') || '';
     // this.senderId = this.configService.get<string>('SMARTPING_SENDER_ID') || 'KMAPRP';
-    this.senderId = 'KMAGLP';
+    this.senderId = 'KMAGRP';
     this.dltPrincipalEntityId =
-      this.configService.get<string>('SMARTPING_DLT_PRINCIPAL_ENTITY_ID') || '';
+      this.configService.get<string>('SMARTPING_DLT_PRINCIPAL_ENTITY_ID') || '1001494860141442089';
     // this.dltContentId = this.configService.get<string>('SMARTPING_DLT_CONTENT_ID') || '';
-    this.dltContentId = '1077374780002274374';
+    this.dltContentId = '1077520720008181824';
 
     if (this.isConfigured()) {
       this.logger.log('SmartPing SMS service configured');
@@ -103,7 +103,9 @@ export class SmartpingSmsService {
     // DLT-approved template body. The {var1} placeholder must be replaced
     // with the literal OTP — DLT signature is computed on the resolved text.
     // const text = `Dear User, your OTP is ${otpCode} for account verifcation on KMA Property. - KMA GLOBAL PROPERTIES`;
-    const text = `Dear User, your OTP is ${otpCode}. Verify your account at https://kmaglobalproperty.com. Do not share this OTP. - KMA GLOBAL PROPERTIES`;
+    // const text = `Dear User, your OTP is ${otpCode}. Verify your account at https://kmaglobalproperty.com. Do not share this OTP. - KMA GLOBAL PROPERTIES`;
+
+      const text = `Dear Customer, your OTP for KMA Global Properties account verification is ${otpCode}. This OTP is valid for 10 minutes. Please do not share it with anyone. - KMA Global Properties`;
 
     const params = new URLSearchParams({
       username: this.username,
