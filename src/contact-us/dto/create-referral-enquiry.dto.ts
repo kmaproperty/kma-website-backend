@@ -7,22 +7,22 @@ export class CreateReferralEnquiryDto {
   @IsNotEmpty()
   referrerName: string;
 
-  @ApiProperty({ description: 'Referrer mobile number', example: '9876543210' })
-  @IsString()
-  @IsNotEmpty()
-  @Matches(/^[1-9]\d{9}$/, { message: 'Referrer phone must be a valid 10-digit number' })
-  referrerPhone: string;
+  // @ApiProperty({ description: 'Referrer mobile number', example: '9876543210' })
+  // @IsString()
+  // @IsNotEmpty()
+  // @Matches(/^[1-9]\d{9}$/, { message: 'Referrer phone must be a valid 10-digit number' })
+  // referrerPhone: string;
 
   @ApiProperty({ description: 'Client name', example: 'Amit Verma' })
   @IsString()
   @IsNotEmpty()
   clientName: string;
 
-  @ApiProperty({ description: 'Client mobile number', example: '9988776655' })
-  @IsString()
-  @IsNotEmpty()
-  @Matches(/^[1-9]\d{9}$/, { message: 'Client mobile must be a valid 10-digit number' })
-  clientMobile: string;
+  // @ApiProperty({ description: 'Client mobile number', example: '9988776655' })
+  // @IsString()
+  // @IsNotEmpty()
+  // @Matches(/^[1-9]\d{9}$/, { message: 'Client mobile must be a valid 10-digit number' })
+  // clientMobile: string;
 
   @ApiProperty({ description: 'Property type', example: 'Buy', enum: ['Buy', 'Sell', 'Rent'] })
   @IsString()
