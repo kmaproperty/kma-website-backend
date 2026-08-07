@@ -167,7 +167,8 @@ export class PropertyService {
       customer: {
         name: asStr(user.name),
         email: asStr(user.email),
-        phone: asStr(user.phone),
+        // phone: asStr(user.phone),
+        phone: "+91"+asStr(user.phone),
         website_user_id: user.id,
       },
       property: {
