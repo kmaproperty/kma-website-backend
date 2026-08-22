@@ -162,6 +162,11 @@ export class PropertyService {
       property.propertyType?.name ||
       `Property ${property.id.slice(0, 8)}`;
     const sector = property.locality?.sector || property.locality?.name || NA;
+    const baseUrl = this.configService.get<string>('FRONTEND_URL') || 'https://kmaglobalproperty.com';
+    const cityId = property.cityId || property.city?.id || '';
+    const propertyUrl = cityId 
+      ? `${baseUrl}/projects/${cityId}/${property.id}`
+      : `${baseUrl}/projects/${property.id}`;
 
     return {
       customer: {
@@ -209,6 +214,7 @@ export class PropertyService {
         featured_amenities: NA,
         nearby_location: property.locality?.name || NA,
         website_property_id: property.id,
+        property_url: propertyUrl
       },
     };
   }
