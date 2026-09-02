@@ -14,6 +14,7 @@ import { BlogModule } from './blog/blog.module';
 import { FaqModule } from './faq/faq.module';
 import { CacheModule } from './common/cache/cache.module';
 import { JobsModule } from './jobs/jobs.module';
+import { SeoLandingPagesController } from './seo-landing-pages.controller';
 
 @Module({
   imports: [
@@ -35,7 +36,7 @@ import { JobsModule } from './jobs/jobs.module';
     FaqModule,
     JobsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, SeoLandingPagesController],
   providers: [AppService],
 })
 export class AppModule {}
