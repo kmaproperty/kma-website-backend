@@ -47,6 +47,9 @@ export class Property extends BaseEntity {
   @JoinColumn({ name: 'cityId' })
   city: MasterCity | null;
 
+  @Column({ type: 'varchar', nullable: true, default: null })
+  zone: string | null;
+
   // Society/Building/Apartment Name (includes locality name)
   @Column({ type: 'uuid', nullable: true })
   societyId: string | null;

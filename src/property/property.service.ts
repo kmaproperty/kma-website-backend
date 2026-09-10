@@ -1199,6 +1199,7 @@ export class PropertyService {
       listingTypeId,
       categoryId,
       propertyTypeId,
+      zone,
       bhk,
       transactionType,
       constructionStatus,
@@ -1535,6 +1536,9 @@ export class PropertyService {
         if (propertyTypeId !== undefined) {
           updateData.propertyTypeId = propertyTypeId;
         }
+        if (zone !== undefined) {
+          updateData.zone = zone || null;
+        }
         if (cityId !== null && cityId !== undefined) {
           updateData.cityId = cityId;
         }
@@ -1692,6 +1696,10 @@ export class PropertyService {
           status,
           completionStep: PropertyCompletionStep.STEP_1,
         };
+
+        if (zone !== undefined) {
+          createData.zone = zone || null;
+        }
 
         if (propertyTypeId !== undefined) {
           createData.propertyTypeId = propertyTypeId;
@@ -3055,6 +3063,7 @@ export class PropertyService {
             code: property.propertyType.code,
           }
         : null,
+      zone: property.zone || null,
       bhk: {
         id: property.bhkType?.id,
         name: property.bhkType?.name || '',
@@ -3471,6 +3480,7 @@ export class PropertyService {
       furnishType: property.furnishType || null,
       society: property.society?.name || null,
       locality: property.locality?.name || null,
+      zone: property.zone || null,
       city: property.city?.name || null,
       superBuiltUpArea: property.builtUpAreaMetadata?.superBuiltUpArea || null,
       carpetArea: property.builtUpAreaMetadata?.carpetArea || null,

@@ -519,6 +519,24 @@ export class CreatePropertyStep1Dto {
   city?: CityInfo;
 
   @ApiProperty({ 
+    description: 'Zone / Corridor of the property', 
+    example: 'Dwarka Expressway',
+    enum: [
+      'Golf Course Road',
+      'Golf Course Ext Road',
+      'Southern Peripheral Road',
+      'New Gurgaon',
+      'Dwarka Expressway',
+      'Sohna Road & NH48',
+      'Old Gurgaon',
+    ],
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  zone?: string;
+
+  @ApiProperty({ 
     description: 'Society information (can be ID or name for new society creation)', 
     type: SocietyInfo,
     required: false
