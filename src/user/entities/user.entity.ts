@@ -106,6 +106,14 @@ export class User extends BaseEntity {
   cities: string | null;
 
   @Column({
+    name: 'zone',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  zone: string | null;
+
+  @Column({
     name: 'business_since',
     type: 'date',
     nullable: true,

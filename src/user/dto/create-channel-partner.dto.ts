@@ -74,6 +74,15 @@ export class CreateChannelPartnerDto {
   cities: string;
 
   @ApiProperty({
+    description: 'Zone within the primary city',
+    example: 'Golf Course Road',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  zone?: string;
+
+  @ApiProperty({
     description: 'About yourself (optional)',
     example:
       'Experienced real estate professional with 5+ years in the industry',
@@ -131,6 +140,7 @@ export class CreateChannelPartnerResponseDto {
       phone: '+1234567890',
       role: 'CHANNEL_PARTNER',
       isActive: true,
+      zone: 'Golf Course Road',
     },
   })
   user: {
@@ -141,5 +151,6 @@ export class CreateChannelPartnerResponseDto {
     role: string;
     isActive: boolean;
     channelPartnerCode: string | null;
+    zone?: string;
   };
 }

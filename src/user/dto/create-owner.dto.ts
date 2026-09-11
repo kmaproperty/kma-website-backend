@@ -58,6 +58,15 @@ export class CreateOwnerDto {
   city?: string;
 
   @ApiProperty({
+    description: 'Zone within the city',
+    example: 'Dwarka Expressway',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  zone?: string;
+
+  @ApiProperty({
     description: 'Profile photo URL',
     example: 'https://example.com/profile-photo.jpg',
     required: false,
@@ -96,6 +105,7 @@ export class CreateOwnerResponseDto {
       role: 'OWNER',
       isActive: true,
       city: 'Mumbai',
+      zone: 'Dwarka Expressway',
     },
   })
   user: {
@@ -106,5 +116,6 @@ export class CreateOwnerResponseDto {
     role: string;
     isActive: boolean;
     city?: string;
+    zone?: string;
   };
 }

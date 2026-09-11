@@ -829,7 +829,7 @@ export class UserService {
       type: 'access_token' | 'refresh_token';
     },
   ): Promise<CreateOwnerResponseDto> {
-    const { name, email, intent, city, profilePhotoUrl } = createOwnerDto;
+    const { name, email, intent, city, zone, profilePhotoUrl } = createOwnerDto;
     const { sub: userId, phone } = tokenData;
 
     // Find user by ID (from token) to ensure we're updating the correct user
@@ -866,6 +866,7 @@ export class UserService {
       role: UserRole.OWNER,
       intent: intent || null,
       cities: city || null,
+      zone: zone || null,
       profileImage: profilePhotoUrl || null,
     });
 
@@ -876,6 +877,7 @@ export class UserService {
     // Fire-and-forget: notify Zoho Flow that a Property Owner account was created.
     this.syncAccountToZohoSafe(updatedUser, 'OWNER', {
       city: updatedUser.cities,
+      zone: updatedUser.zone,
       intent: updatedUser.intent,
     });
 
@@ -891,6 +893,7 @@ export class UserService {
         role: updatedUser.role,
         isActive: updatedUser.isActive,
         city: updatedUser.cities || undefined,
+        zone: updatedUser.zone || undefined,
       },
     };
   }
@@ -915,6 +918,7 @@ export class UserService {
       firmName,
       businessSince,
       cities,
+      zone,
       aboutYourSelf,
       intent,
       profilePhotoUrl,
@@ -965,6 +969,7 @@ export class UserService {
       firmName: firmName || null,
       businessSince: businessSince || null,
       cities: cities || null,
+      zone: zone || null,
       aboutYourSelf: aboutYourSelf || null,
       intent: intent || null,
       profileImage: profilePhotoUrl || null,
@@ -980,6 +985,7 @@ export class UserService {
       firmName: updatedUser.firmName,
       businessSince: updatedUser.businessSince,
       cities: updatedUser.cities,
+      zone: updatedUser.zone,
       aboutYourSelf: updatedUser.aboutYourSelf,
       intent: updatedUser.intent,
     });
@@ -996,6 +1002,7 @@ export class UserService {
         role: updatedUser.role,
         isActive: updatedUser.isActive,
         channelPartnerCode: updatedUser.channelPartnerCode || null,
+        zone: updatedUser.zone || undefined,
       },
     };
   }
