@@ -181,7 +181,7 @@ export class PropertyService {
         property_type: asStr(property.propertyType?.name),
         property_name: propertyName,
         property_sub_type: NA,
-        zone: NA,
+        zone: property.zone,
         sector,
         bhk: asStr(property.bhkType?.name),
         bhk_type: asStr(property.bhkType?.name),
