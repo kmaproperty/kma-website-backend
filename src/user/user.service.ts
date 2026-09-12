@@ -240,6 +240,15 @@ export class UserService {
     private readonly zohoService: ZohoService,
   ) {}
 
+  private formatPhoneWithCountryCode(phone: string | number | null | undefined): string | null {
+    if (!phone) return null;
+    const cleanPhone = String(phone).trim().replace(/^\+/, '');
+    if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+      return `+${cleanPhone}`;
+    }
+    return `+91${cleanPhone}`;
+  }
+
   /** Fire-and-forget Zoho Flow account-sync. Logs failures, never throws. */
   private syncAccountToZohoSafe(
     user: User,
@@ -253,7 +262,7 @@ export class UserService {
             id: user.id,
             name: user.name,
             email: user.email,
-            phone: user.phone,
+            phone: this.formatPhoneWithCountryCode(user.phone),
             role,
             createdAt: user.createdAt,
             ...extras,
