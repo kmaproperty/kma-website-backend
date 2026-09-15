@@ -168,6 +168,12 @@ export class PropertyService {
       ? `${baseUrl}/projects/${cityId}/${property.id}`
       : `${baseUrl}/projects/${property.id}`;
 
+      const listingTypeStr =
+      property.listingType?.name ||
+      property.listingType?.code ||
+      (typeof property.listingType === 'string' ? property.listingType : null) ||
+      (property.monthlyRent ? 'Rent' : 'Sell');
+
     return {
       customer: {
         name: asStr(user.name),
@@ -183,6 +189,7 @@ export class PropertyService {
         property_sub_type: NA,
         zone: property.zone,
         sector,
+        listingType: asStr(listingTypeStr),
         bhk: asStr(property.bhkType?.name),
         bhk_type: asStr(property.bhkType?.name),
         property_area_in: 'sq_ft',
