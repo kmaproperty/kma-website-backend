@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Property } from '../entities/property.entity';
 import { PropertyStatus } from '../enum/property-status.enum';
+import { ZONE_SECTOR_MAP, ZONE_ALIASES } from '../../common/constants/zone-sectors.constant';
 
 @Injectable()
 export class PropertyRepository {
@@ -676,12 +677,39 @@ export class PropertyRepository {
     }
 
     // Search by project name, locality, or builder
+    // if (filters.search?.trim()) {
+    //   const searchTerm = `%${filters.search.trim()}%`;
+    //   qb.andWhere(
+    //     '(society.name ILIKE :searchTerm OR locality.name ILIKE :searchTerm OR property.propertyDescription ILIKE :searchTerm)',
+    //     { searchTerm },
+    //   );
+    // }
+
     if (filters.search?.trim()) {
-      const searchTerm = `%${filters.search.trim()}%`;
-      qb.andWhere(
-        '(society.name ILIKE :searchTerm OR locality.name ILIKE :searchTerm OR property.propertyDescription ILIKE :searchTerm)',
-        { searchTerm },
-      );
+      const rawSearch = filters.search.trim();
+      const cleanSearch = rawSearch.toLowerCase();
+
+      const matchedZoneName =
+        ZONE_ALIASES[cleanSearch] ||
+        Object.keys(ZONE_SECTOR_MAP).find((z) => z.toLowerCase() === cleanSearch);
+
+      if (matchedZoneName && ZONE_SECTOR_MAP[matchedZoneName]) {
+        const sectors = ZONE_SECTOR_MAP[matchedZoneName];
+
+        qb.andWhere(
+          '(LOWER(property.zone) = LOWER(:matchedZoneName) OR locality.name IN (:...sectors) OR locality.sector IN (:...sectors) OR society.localityName IN (:...sectors))',
+          {
+            matchedZoneName,
+            sectors,
+          },
+        );
+      } else {
+        const searchTerm = `%${rawSearch}%`;
+        qb.andWhere(
+          '(society.name ILIKE :searchTerm OR locality.name ILIKE :searchTerm OR property.propertyDescription ILIKE :searchTerm OR property.zone ILIKE :searchTerm)',
+          { searchTerm },
+        );
+      }
     }
 
     // Location-based search (Near Me) - use society, locality, or city coordinates
