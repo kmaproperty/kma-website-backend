@@ -732,6 +732,9 @@ export class Property extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   videos: { fileKey: string; format: string; approvalStatus?: 'pending' | 'approved' | 'rejected'; rejectionReason?: string }[] | null;
 
+  @Column({ type: 'jsonb', nullable: true, default: [] })
+  virtualTours360: Array<{ fileKey: string; url: string; view: string; approvalStatus?: string }>;
+  
   @Column({ type: 'text', nullable: true })
   adminReviewComment: string | null;
 

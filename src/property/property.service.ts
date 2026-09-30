@@ -2568,6 +2568,17 @@ export class PropertyService {
         : null;
     }
 
+    if (dto.virtualTours360 !== undefined) {
+      updateData.virtualTours360 = dto.virtualTours360 && dto.virtualTours360.length > 0
+        ? dto.virtualTours360.map(vt => ({
+            fileKey: vt.fileKey,
+            url: vt.url,
+            view: vt.view,
+            approvalStatus: mediaApprovalStatus,
+          }))
+        : [];
+    }
+
     await this.propertyRepository.updateProperty(dto.propertyId, updateData);
     const updated = await this.propertyRepository.findById(dto.propertyId);
     if (!updated) {
@@ -2616,6 +2627,7 @@ export class PropertyService {
       propertyId: property.id,
       photos: property.photos || [],
       videos: property.videos || [],
+      virtualTours360: property.virtualTours360 || [],
       status: property.status,
       completionStep,
       progressPercentage,
@@ -2748,6 +2760,7 @@ export class PropertyService {
       constructionTypeOptions: null,
       photos: null,
       videos: null,
+      virtualTours360: null,
       adminReviewComment: null,
       adminReviewedBy: null,
       adminReviewedAt: null,
