@@ -2760,7 +2760,7 @@ export class PropertyService {
       constructionTypeOptions: null,
       photos: null,
       videos: null,
-      virtualTours360: null,
+      virtualTours360: [],
       adminReviewComment: null,
       adminReviewedBy: null,
       adminReviewedAt: null,
