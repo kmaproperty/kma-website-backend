@@ -265,6 +265,7 @@ export class UserService {
             phone: this.formatPhoneWithCountryCode(user.phone),
             role,
             createdAt: user.createdAt,
+            kycStatus: 'Account Created',
             ...extras,
           },
         },
@@ -888,6 +889,7 @@ export class UserService {
       city: updatedUser.cities,
       zone: updatedUser.zone,
       intent: updatedUser.intent,
+      kycStatus: 'Account Created',
     });
 
     return {
@@ -997,6 +999,7 @@ export class UserService {
       zone: updatedUser.zone,
       aboutYourSelf: updatedUser.aboutYourSelf,
       intent: updatedUser.intent,
+      kycStatus: 'Account Created',
     });
 
     return {
@@ -3960,6 +3963,11 @@ export class UserService {
       await this.userRepository.update(userId, {
         docusignAgreementSigned: true,
       });
+      if (user.role === UserRole.CHANNEL_PARTNER || user.role === UserRole.OWNER) {
+        this.syncAccountToZohoSafe(user, user.role as 'CHANNEL_PARTNER' | 'OWNER', {
+          kycStatus: 'Documents Signed',
+        });
+      }
     }
 
     return {
